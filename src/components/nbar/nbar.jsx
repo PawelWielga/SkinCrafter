@@ -1,4 +1,4 @@
-import './nbar.css';
+import "./nbar.css";
 
 function NBar() {
   return (
@@ -8,8 +8,8 @@ function NBar() {
         <div className="brand-name">SkinCrafter</div>
       </div>
       <div className="nav-links">
-        <a href="#" className="nav-link">Help</a>
-        <a href="#" className="nav-coffee-btn">Buy me a coffee</a>
+        {/* <a href="#" className="nav-link">Help</a>
+        <a href="#" className="nav-coffee-btn">Buy me a coffee</a> */}
       </div>
     </div>
   );
