@@ -4,8 +4,7 @@ function NBar() {
   return (
     <div className="navbar">
       <div className="logo-container">
-        <div className="logo">SC</div>
-        <div className="brand-name">SkinCrafter</div>
+        <img src="/logo.png" alt="Logo" className="logo" />
       </div>
       <div className="nav-links">
         {/* <a href="#" className="nav-link">Help</a>
