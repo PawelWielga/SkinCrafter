@@ -7,6 +7,8 @@ import PreviewArea from "./components/preview-area/preview-area.jsx";
 import WardrobeRace from "./components/wardrobe-sections/wardrobe-race.jsx";
 import skinColorMap from "./data/skinColorMap.js";
 import WardrobeSkinColor from "./components/wardrobe-sections/wardrobe-skincolor.jsx";
+import WardrobeEyes from "./components/wardrobe-sections/wardrobe-eyes.jsx";
+import WardrobeEyescolor from "./components/wardrobe-sections/wardrobe-eyescolor.jsx";
 
 function App() {
   const [race, setRace] = useState("Human");
@@ -30,6 +32,23 @@ function App() {
             selectedColor={skincolor}
             onChange={(selected) => setSkincolor(selected)}
           />
+          <span>TODO:</span>
+          <br />
+          <WardrobeEyes />
+          <WardrobeEyescolor />
+          <span>hair</span>
+          <br />
+          <span>haircolor</span>
+          <br />
+          <span>top</span>
+          <br />
+          <span>topCoat</span>
+          <br />
+          <span>bottom</span>
+          <br />
+          <span>boots</span>
+          <br />
+          <span>and ?</span>
         </div>
       </div>
     </div>
