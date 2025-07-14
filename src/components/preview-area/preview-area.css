@@ -22,19 +22,19 @@
   padding: 12px 24px;
   border: none;
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 1px;
   position: relative;
-  overflow: hidden;
 }
 
 .btn-primary {
   background: linear-gradient(45deg, #00d4ff, #00ff88);
   color: #ffffff;
+  position: relative;
 }
 
 .btn-secondary {
@@ -57,6 +57,36 @@
   box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
 }
 
+@property --angle{
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.btn.btn-primary::after{
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  background-image: conic-gradient(from var(--angle), transparent 50%, red);
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  z-index: -1;
+  padding: 3px;
+  border-radius: 13px;
+  animation: 3s spin linear infinite;
+}
+
 .btn-danger:hover {
   box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+}
+
+@keyframes spin {
+  from{
+    --angle: 0deg;
+  }
+  to{
+    --angle: 360deg;
+  }
 }
