@@ -1,9 +1,9 @@
-import { useState } from "react";
-import "./wardrobe.css";
-import races from "../../data/races.js";
+import { useState } from 'react';
+import './wardrobe.css';
+import races from '../../data/races.js';
 
 function WardrobeRace({ onChange }) {
-  const [selectedRace, setSelectedRace] = useState("Human");
+  const [selectedRace, setSelectedRace] = useState('Human');
 
   const handleClick = (race) => {
     setSelectedRace(race);
@@ -17,9 +17,7 @@ function WardrobeRace({ onChange }) {
         {races.map((race) => (
           <div
             key={race}
-            className={`section-grid-option ${
-              selectedRace === race ? "selected" : ""
-            }`}
+            className={`section-grid-option ${selectedRace === race ? 'selected' : ''}`}
             onClick={() => handleClick(race)}
           >
             {race}

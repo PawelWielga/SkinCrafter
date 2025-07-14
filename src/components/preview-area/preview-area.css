@@ -58,13 +58,13 @@
   box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
 }
 
-@property --angle{
-  syntax: "<angle>";
+@property --angle {
+  syntax: '<angle>';
   initial-value: 0deg;
   inherits: false;
 }
 
-.btn.btn-primary::after{
+.btn.btn-primary::after {
   content: '';
   position: absolute;
   height: 100%;
@@ -84,10 +84,10 @@
 }
 
 @keyframes spin {
-  from{
+  from {
     --angle: 0deg;
   }
-  to{
+  to {
     --angle: 360deg;
   }
 }

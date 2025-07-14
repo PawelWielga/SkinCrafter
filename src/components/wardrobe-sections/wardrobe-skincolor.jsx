@@ -1,4 +1,4 @@
-import "./wardrobe.css";
+import './wardrobe.css';
 
 function WardrobeSkinColor({ colors, selectedColor, onChange }) {
   return (
@@ -9,7 +9,7 @@ function WardrobeSkinColor({ colors, selectedColor, onChange }) {
           <div
             key={color}
             className={`color-option ${color.toLowerCase()} ${
-              selectedColor === color ? "selected" : ""
+              selectedColor === color ? 'selected' : ''
             }`}
             data-color={color.toLowerCase()}
             onClick={() => onChange?.(color)}

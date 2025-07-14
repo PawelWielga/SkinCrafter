@@ -1,4 +1,4 @@
-import "./nbar.css";
+import './nbar.css';
 
 function NBar() {
   return (

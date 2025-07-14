@@ -1,4 +1,4 @@
-import "./wardrobe.css";
+import './wardrobe.css';
 
 function WardrobeEyescolor() {
   return <div>{WardrobeEyescolor.name}</div>;
