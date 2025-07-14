@@ -9,14 +9,15 @@ export default function ThreePreview() {
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(
-      75,
+      52,
       container.clientWidth / container.clientHeight,
       0.1,
       1000
     )
     camera.position.z = 40
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+      renderer.setClearColor(0x000000, 0);
     renderer.setSize(container.clientWidth, container.clientHeight)
     container.appendChild(renderer.domElement)
 
@@ -25,9 +26,10 @@ export default function ThreePreview() {
     scene.add(light)
 
     const group = new THREE.Group()
-    scene.add(group)
+      scene.add(group)
+      group.position.y = -10;
 
-    const loader = new THREE.TextureLoader()
+    const loader = new THREE.TextureLoader() 
     loader.load('/textures/steve.png', (texture) => {
       texture.magFilter = THREE.NearestFilter
       texture.minFilter = THREE.NearestFilter
@@ -67,8 +69,8 @@ export default function ThreePreview() {
       }
 
       const headMap = {
-        right: [0, 8, 8, 16],
-        left: [16, 8, 24, 16],
+        left: [0, 8, 8, 16],
+        right: [16, 8, 24, 16],
         top: [8, 0, 16, 8],
         bottom: [16, 0, 24, 8],
         front: [8, 8, 16, 16],
@@ -102,7 +104,7 @@ export default function ThreePreview() {
         back: [12, 20, 16, 32],
       }
 
-      const head = createBox(8, 8, 8, 0, 24, 0, headMap)
+      const head = createBox(8, 8, 8, 0, 22, 0, headMap)
       const body = createBox(8, 12, 4, 0, 12, 0, bodyMap)
       const armL = createBox(4, 12, 4, -6, 12, 0, armMap)
       const armR = createBox(4, 12, 4, 6, 12, 0, armMap)
