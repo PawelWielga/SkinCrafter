@@ -32,39 +32,82 @@ export default function ThreePreview() {
       texture.magFilter = THREE.NearestFilter
       texture.minFilter = THREE.NearestFilter
 
-      const createBox = (w, h, d, x, y, z, uvOffset) => {
+      const texSize = 64
+
+      const setUV = (mat, rect) => {
+        mat.map = texture.clone()
+        mat.map.magFilter = THREE.NearestFilter
+        mat.map.minFilter = THREE.NearestFilter
+        mat.map.repeat.set((rect[2] - rect[0]) / texSize, (rect[3] - rect[1]) / texSize)
+        mat.map.offset.set(rect[0] / texSize, 1 - rect[3] / texSize)
+        mat.map.needsUpdate = true
+      }
+
+      const createBox = (w, h, d, x, y, z, uvMap) => {
         const geometry = new THREE.BoxGeometry(w, h, d)
+        const materials = [
+          new THREE.MeshBasicMaterial(), // right
+          new THREE.MeshBasicMaterial(), // left
+          new THREE.MeshBasicMaterial(), // top
+          new THREE.MeshBasicMaterial(), // bottom
+          new THREE.MeshBasicMaterial(), // front
+          new THREE.MeshBasicMaterial(), // back
+        ]
 
-        // Zastosuj UV mapping (prosto – wszystkie ściany taki sam fragment)
-        const faceUV = []
-        for (let i = 0; i < 6; i++) {
-          faceUV.push(new THREE.Vector2(uvOffset.u, uvOffset.v))
-        }
-        geometry.faceVertexUvs = [[]] // czyszczę, ale dokładne UV możesz uzupełnić ręcznie
+        setUV(materials[0], uvMap.right)
+        setUV(materials[1], uvMap.left)
+        setUV(materials[2], uvMap.top)
+        setUV(materials[3], uvMap.bottom)
+        setUV(materials[4], uvMap.front)
+        setUV(materials[5], uvMap.back)
 
-        const material = new THREE.MeshBasicMaterial({ map: texture })
-        const box = new THREE.Mesh(geometry, material)
+        const box = new THREE.Mesh(geometry, materials)
         box.position.set(x, y, z)
         return box
       }
 
-      // Głowa 8x8x8
-      const head = createBox(8, 8, 8, 0, 24, 0, { u: 0, v: 0 })
+      const headMap = {
+        right: [0, 8, 8, 16],
+        left: [16, 8, 24, 16],
+        top: [8, 0, 16, 8],
+        bottom: [16, 0, 24, 8],
+        front: [8, 8, 16, 16],
+        back: [24, 8, 32, 16],
+      }
 
-      // Ciało 8x12x4
-      const body = createBox(8, 12, 4, 0, 12, 0, { u: 16, v: 16 })
+      const bodyMap = {
+        right: [28, 20, 32, 32],
+        left: [16, 20, 20, 32],
+        top: [20, 16, 28, 20],
+        bottom: [28, 16, 36, 20],
+        front: [20, 20, 28, 32],
+        back: [32, 20, 40, 32],
+      }
 
-      // Ręka lewa 4x12x4
-      const armL = createBox(4, 12, 4, -6, 12, 0, { u: 32, v: 48 })
+      const armMap = {
+        right: [40, 20, 44, 32],
+        left: [48, 20, 52, 32],
+        top: [44, 16, 48, 20],
+        bottom: [48, 16, 52, 20],
+        front: [44, 20, 48, 32],
+        back: [52, 20, 56, 32],
+      }
 
-      // Ręka prawa 4x12x4
-      const armR = createBox(4, 12, 4, 6, 12, 0, { u: 40, v: 16 })
+      const legMap = {
+        right: [0, 20, 4, 32],
+        left: [8, 20, 12, 32],
+        top: [4, 16, 8, 20],
+        bottom: [8, 16, 12, 20],
+        front: [4, 20, 8, 32],
+        back: [12, 20, 16, 32],
+      }
 
-      // Noga lewa 4x12x4
-      const legL = createBox(4, 12, 4, -2, 0, 0, { u: 0, v: 16 })
-
-      // Noga prawa 4x12x4
-      const legR = createBox(4, 12, 4, 2, 0, 0, { u: 0, v: 16 })
+      const head = createBox(8, 8, 8, 0, 24, 0, headMap)
+      const body = createBox(8, 12, 4, 0, 12, 0, bodyMap)
+      const armL = createBox(4, 12, 4, -6, 12, 0, armMap)
+      const armR = createBox(4, 12, 4, 6, 12, 0, armMap)
+      const legL = createBox(4, 12, 4, -2, 0, 0, legMap)
+      const legR = createBox(4, 12, 4, 2, 0, 0, legMap)
 
       group.add(head, body, armL, armR, legL, legR)
     })
