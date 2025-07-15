@@ -11,6 +11,10 @@ import {
   bodyOverlayMap,
   armOverlayMap,
   legOverlayMap,
+  leftArmMap,
+  leftLegMap,
+  leftArmOverlayMap,
+  leftLegOverlayMap,
 } from './skin-maps';
 
 export default function ThreePreview({ texture, pose = 'default', showOverlay = true }) {
@@ -79,9 +83,9 @@ export default function ThreePreview({ texture, pose = 'default', showOverlay = 
 
       const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
-      const armL = createBox(tex, 4, 12, 4, -6, 12, 0, armMap);
+      const armL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmMap);
       const armR = createBox(tex, 4, 12, 4, 6, 12, 0, armMap);
-      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, legMap);
+      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap);
       const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap);
 
       armLRef.current = armL;
@@ -97,7 +101,7 @@ export default function ThreePreview({ texture, pose = 'default', showOverlay = 
         transparent: true,
         expand: 0.5,
       });
-      const armLOL = createBox(tex, 4, 12, 4, -6, 12, 0, armOverlayMap, {
+      const armLOL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
@@ -105,7 +109,7 @@ export default function ThreePreview({ texture, pose = 'default', showOverlay = 
         transparent: true,
         expand: 0.5,
       });
-      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, legOverlayMap, {
+      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
