@@ -18,6 +18,8 @@ export default function createBox(tex, w, h, d, x, y, z, uvMap, options = {}) {
     mat.map = tex.clone();
     mat.map.magFilter = THREE.NearestFilter;
     mat.map.minFilter = THREE.NearestFilter;
+    mat.map.wrapS = THREE.RepeatWrapping;
+    mat.map.wrapT = THREE.RepeatWrapping;
     mat.map.repeat.set((rect[2] - rect[0]) / TEX_SIZE, (rect[3] - rect[1]) / TEX_SIZE);
     mat.map.offset.set(rect[0] / TEX_SIZE, 1 - rect[3] / TEX_SIZE);
     mat.map.needsUpdate = true;

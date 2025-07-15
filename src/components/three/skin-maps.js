@@ -69,3 +69,27 @@ export const legOverlayMap = {
   front: [4, 36, 8, 48],
   back: [12, 36, 16, 48],
 };
+
+export const leftArmMap = {
+  ...armMap,
+  front: [armMap.front[2], armMap.front[1], armMap.front[0], armMap.front[3]],
+  back: [armMap.back[2], armMap.back[1], armMap.back[0], armMap.back[3]],
+};
+
+export const leftLegMap = {
+  ...legMap,
+  front: [legMap.front[2], legMap.front[1], legMap.front[0], legMap.front[3]],
+  back: [legMap.back[2], legMap.back[1], legMap.back[0], legMap.back[3]],
+};
+
+export const leftArmOverlayMap = {
+  ...armOverlayMap,
+  front: [armOverlayMap.front[2], armOverlayMap.front[1], armOverlayMap.front[0], armOverlayMap.front[3]],
+  back: [armOverlayMap.back[2], armOverlayMap.back[1], armOverlayMap.back[0], armOverlayMap.back[3]],
+};
+
+export const leftLegOverlayMap = {
+  ...legOverlayMap,
+  front: [legOverlayMap.front[2], legOverlayMap.front[1], legOverlayMap.front[0], legOverlayMap.front[3]],
+  back: [legOverlayMap.back[2], legOverlayMap.back[1], legOverlayMap.back[0], legOverlayMap.back[3]],
+};
