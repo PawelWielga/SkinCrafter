@@ -6,6 +6,7 @@ const skinColorMap = {
   Zombie: ['Rotten', 'Mossy'],
   Skeleton: ['Bone'],
   Enderman: ['Void'],
+  Template: ['0,0,0'],
 };
 
 export default skinColorMap;
