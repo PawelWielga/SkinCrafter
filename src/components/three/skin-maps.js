@@ -17,8 +17,8 @@ export const bodyMap = {
 };
 
 export const armMap = {
-  right: [40, 20, 44, 32],
-  left: [48, 20, 52, 32],
+  left: [40, 20, 44, 32],
+  right: [48, 20, 52, 32],
   top: [44, 16, 48, 20],
   bottom: [48, 16, 52, 20],
   front: [44, 20, 48, 32],
@@ -26,8 +26,8 @@ export const armMap = {
 };
 
 export const legMap = {
-  right: [0, 20, 4, 32],
-  left: [8, 20, 12, 32],
+  left: [0, 20, 4, 32],
+  right: [8, 20, 12, 32],
   top: [4, 16, 8, 20],
   bottom: [8, 16, 12, 20],
   front: [4, 20, 8, 32],
@@ -53,8 +53,8 @@ export const bodyOverlayMap = {
 };
 
 export const armOverlayMap = {
-  right: [40, 36, 44, 48],
-  left: [48, 36, 52, 48],
+  left: [40, 36, 44, 48],
+  right: [48, 36, 52, 48],
   top: [44, 32, 48, 36],
   bottom: [48, 32, 52, 36],
   front: [44, 36, 48, 48],
@@ -62,8 +62,8 @@ export const armOverlayMap = {
 };
 
 export const legOverlayMap = {
-  right: [0, 36, 4, 48],
-  left: [8, 36, 12, 48],
+  left: [0, 36, 4, 48],
+  right: [8, 36, 12, 48],
   top: [4, 32, 8, 36],
   bottom: [8, 32, 12, 36],
   front: [4, 36, 8, 48],
