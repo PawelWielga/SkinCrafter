@@ -13,7 +13,7 @@ import {
   legOverlayMap,
 } from './skin-maps';
 
-export default function ThreePreview({ texture, pose = 'default' }) {
+export default function ThreePreview({ texture, pose = 'default', showOverlay = true }) {
   const containerRef = useRef();
   const armLRef = useRef();
   const armRRef = useRef();
@@ -23,6 +23,17 @@ export default function ThreePreview({ texture, pose = 'default' }) {
   const armROLRef = useRef();
   const legLOLRef = useRef();
   const legROLRef = useRef();
+  const headOLRef = useRef();
+  const bodyOLRef = useRef();
+
+  const overlayRefs = [
+    headOLRef,
+    bodyOLRef,
+    armLOLRef,
+    armROLRef,
+    legLOLRef,
+    legROLRef,
+  ];
 
   const applyPoseLocal = (p) =>
     applyPose(p, {
@@ -103,12 +114,20 @@ export default function ThreePreview({ texture, pose = 'default' }) {
         expand: 0.5,
       });
 
+      headOLRef.current = headOL;
+      bodyOLRef.current = bodyOL;
       armLOLRef.current = armLOL;
       armROLRef.current = armROL;
       legLOLRef.current = legLOL;
       legROLRef.current = legROL;
 
       group.add(head, body, armL, armR, legL, legR, headOL, bodyOL, armLOL, armROL, legLOL, legROL);
+
+      overlayRefs.forEach((ref) => {
+        if (ref.current) {
+          ref.current.visible = showOverlay;
+        }
+      });
 
       applyPoseLocal(pose);
     });
@@ -129,6 +148,14 @@ export default function ThreePreview({ texture, pose = 'default' }) {
   useEffect(() => {
     applyPoseLocal(pose);
   }, [pose]);
+
+  useEffect(() => {
+    overlayRefs.forEach((ref) => {
+      if (ref.current) {
+        ref.current.visible = showOverlay;
+      }
+    });
+  }, [showOverlay]);
 
   return (
     <div
