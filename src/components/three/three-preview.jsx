@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-export default function ThreePreview() {
+export default function ThreePreview({ texture }) {
   const containerRef = useRef();
 
   useEffect(() => {
@@ -30,14 +30,14 @@ export default function ThreePreview() {
     group.position.y = -10;
 
     const loader = new THREE.TextureLoader();
-    loader.load('/textures/steve.png', (texture) => {
-      texture.magFilter = THREE.NearestFilter;
-      texture.minFilter = THREE.NearestFilter;
+    loader.load(texture || '/textures/steve.png', (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
 
       const texSize = 64;
 
       const setUV = (mat, rect) => {
-        mat.map = texture.clone();
+        mat.map = tex.clone();
         mat.map.magFilter = THREE.NearestFilter;
         mat.map.minFilter = THREE.NearestFilter;
         mat.map.repeat.set((rect[2] - rect[0]) / texSize, (rect[3] - rect[1]) / texSize);
@@ -125,7 +125,7 @@ export default function ThreePreview() {
       renderer.dispose();
       container.innerHTML = '';
     };
-  }, []);
+  }, [texture]);
 
   return (
     <div
