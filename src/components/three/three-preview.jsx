@@ -1,8 +1,51 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-export default function ThreePreview({ texture }) {
+export default function ThreePreview({ texture, pose = 'default' }) {
   const containerRef = useRef();
+  const armLRef = useRef();
+  const armRRef = useRef();
+  const legLRef = useRef();
+  const legRRef = useRef();
+  const armLOLRef = useRef();
+  const armROLRef = useRef();
+  const legLOLRef = useRef();
+  const legROLRef = useRef();
+
+  const applyPose = (p) => {
+    const armL = armLRef.current;
+    const armR = armRRef.current;
+    const legL = legLRef.current;
+    const legR = legRRef.current;
+    const armLOL = armLOLRef.current;
+    const armROL = armROLRef.current;
+    const legLOL = legLOLRef.current;
+    const legROL = legROLRef.current;
+
+    if (!armL || !armR || !legL || !legR) return;
+
+    [armL, armR, legL, legR, armLOL, armROL, legLOL, legROL].forEach((part) => {
+      if (part) part.rotation.set(0, 0, 0);
+    });
+
+    if (p === 'tpose') {
+      if (armL) armL.rotation.z = Math.PI / 2;
+      if (armR) armR.rotation.z = -Math.PI / 2;
+      if (armLOL) armLOL.rotation.z = Math.PI / 2;
+      if (armROL) armROL.rotation.z = -Math.PI / 2;
+    } else if (p === 'walking') {
+      const forward = -Math.PI / 4;
+      const backward = Math.PI / 4;
+      if (armL) armL.rotation.x = forward;
+      if (armR) armR.rotation.x = backward;
+      if (legL) legL.rotation.x = backward;
+      if (legR) legR.rotation.x = forward;
+      if (armLOL) armLOL.rotation.x = forward;
+      if (armROL) armROL.rotation.x = backward;
+      if (legLOL) legLOL.rotation.x = backward;
+      if (legROL) legROL.rotation.x = forward;
+    }
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -148,6 +191,11 @@ export default function ThreePreview({ texture }) {
       const legL = createBox(4, 12, 4, -2, 0, 0, legMap);
       const legR = createBox(4, 12, 4, 2, 0, 0, legMap);
 
+      armLRef.current = armL;
+      armRRef.current = armR;
+      legLRef.current = legL;
+      legRRef.current = legR;
+
       const headOL = createBox(8, 8, 8, 0, 22, 0, headOverlayMap, {
         transparent: true,
         expand: 0.5,
@@ -173,20 +221,14 @@ export default function ThreePreview({ texture }) {
         expand: 0.5,
       });
 
-      group.add(
-        head,
-        body,
-        armL,
-        armR,
-        legL,
-        legR,
-        headOL,
-        bodyOL,
-        armLOL,
-        armROL,
-        legLOL,
-        legROL
-      );
+      armLOLRef.current = armLOL;
+      armROLRef.current = armROL;
+      legLOLRef.current = legLOL;
+      legROLRef.current = legROL;
+
+      group.add(head, body, armL, armR, legL, legR, headOL, bodyOL, armLOL, armROL, legLOL, legROL);
+
+      applyPose(pose);
     });
 
     const animate = () => {
@@ -201,6 +243,10 @@ export default function ThreePreview({ texture }) {
       container.innerHTML = '';
     };
   }, [texture]);
+
+  useEffect(() => {
+    applyPose(pose);
+  }, [pose]);
 
   return (
     <div
