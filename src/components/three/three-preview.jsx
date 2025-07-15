@@ -36,10 +36,24 @@ export default function ThreePreview({ texture, pose = 'default' }) {
     } else if (p === 'walking') {
       const forward = -Math.PI / 4;
       const backward = Math.PI / 4;
-      if (armL) armL.rotation.x = forward;
-      if (armR) armR.rotation.x = backward;
-      if (legL) legL.rotation.x = backward;
-      if (legR) legR.rotation.x = forward;
+      if (armL) {
+        armL.rotation.x = forward;
+        armL.position.z = 3;
+      }
+      if (armR) {
+        armR.rotation.x = backward;
+        armR.position.z = -3;
+      }
+      if (legL) {
+        legL.rotation.x = backward;
+        legL.position.z = -4;
+        legL.position.y = 1;
+      }
+      if (legR) {
+        legR.rotation.x = forward;
+        legR.position.z = 4;
+        legR.position.y = 1;
+      }
       if (armLOL) armLOL.rotation.x = forward;
       if (armROL) armROL.rotation.x = backward;
       if (legLOL) legLOL.rotation.x = backward;
