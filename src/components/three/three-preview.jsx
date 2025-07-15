@@ -1,5 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import applyPose from './pose-utils';
+import createBox from './create-box';
+import {
+  headMap,
+  bodyMap,
+  armMap,
+  legMap,
+  headOverlayMap,
+  bodyOverlayMap,
+  armOverlayMap,
+  legOverlayMap,
+} from './skin-maps';
 
 export default function ThreePreview({ texture, pose = 'default' }) {
   const containerRef = useRef();
@@ -12,79 +24,17 @@ export default function ThreePreview({ texture, pose = 'default' }) {
   const legLOLRef = useRef();
   const legROLRef = useRef();
 
-  const applyPose = (p) => {
-    const armL = armLRef.current;
-    const armR = armRRef.current;
-    const legL = legLRef.current;
-    const legR = legRRef.current;
-    const armLOL = armLOLRef.current;
-    const armROL = armROLRef.current;
-    const legLOL = legLOLRef.current;
-    const legROL = legROLRef.current;
-
-    if (!armL || !armR || !legL || !legR) return;
-
-    [armL, armR, legL, legR, armLOL, armROL, legLOL, legROL].forEach((part) => {
-      if (part) {
-        part.rotation.set(0, 0, 0);
-      }
+  const applyPoseLocal = (p) =>
+    applyPose(p, {
+      armL: armLRef.current,
+      armR: armRRef.current,
+      legL: legLRef.current,
+      legR: legRRef.current,
+      armLOL: armLOLRef.current,
+      armROL: armROLRef.current,
+      legLOL: legLOLRef.current,
+      legROL: legROLRef.current,
     });
-
-    if (armL) armL.position.set(-6, 12, 0);
-    if (armR) armR.position.set(6, 12, 0);
-    if (legL) legL.position.set(-2, 0, 0);
-    if (legR) legR.position.set(2, 0, 0);
-    if (armLOL) armLOL.position.set(-6, 12, 0);
-    if (armROL) armROL.position.set(6, 12, 0);
-    if (legLOL) legLOL.position.set(-2, 0, 0);
-    if (legROL) legROL.position.set(2, 0, 0);
-
-    if (p === 'tpose') {
-      if (armL) armL.rotation.z = Math.PI / 2;
-      if (armR) armR.rotation.z = -Math.PI / 2;
-      if (armLOL) armLOL.rotation.z = Math.PI / 2;
-      if (armROL) armROL.rotation.z = -Math.PI / 2;
-    } else if (p === 'walking') {
-      const forward = -Math.PI / 4;
-      const backward = Math.PI / 4;
-      if (armL) {
-        armL.rotation.x = forward;
-        armL.position.z = 3;
-      }
-      if (armR) {
-        armR.rotation.x = backward;
-        armR.position.z = -3;
-      }
-      if (legL) {
-        legL.rotation.x = backward;
-        legL.position.z = -4;
-        legL.position.y = 1;
-      }
-      if (legR) {
-        legR.rotation.x = forward;
-        legR.position.z = 4;
-        legR.position.y = 1;
-      }
-      if (armLOL) {
-        armLOL.rotation.x = forward;
-        armLOL.position.z = 3;
-      }
-      if (armROL) {
-        armROL.rotation.x = backward;
-        armROL.position.z = -3;
-      }
-      if (legLOL) {
-        legLOL.rotation.x = backward;
-        legLOL.position.z = -4;
-        legLOL.position.y = 1;
-      }
-      if (legROL) {
-        legROL.rotation.x = forward;
-        legROL.position.z = 4;
-        legROL.position.y = 1;
-      }
-    }
-  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -116,146 +66,39 @@ export default function ThreePreview({ texture, pose = 'default' }) {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
 
-      const texSize = 64;
-
-      const setUV = (mat, rect) => {
-        mat.map = tex.clone();
-        mat.map.magFilter = THREE.NearestFilter;
-        mat.map.minFilter = THREE.NearestFilter;
-        mat.map.repeat.set((rect[2] - rect[0]) / texSize, (rect[3] - rect[1]) / texSize);
-        mat.map.offset.set(rect[0] / texSize, 1 - rect[3] / texSize);
-        mat.map.needsUpdate = true;
-      };
-
-      const createBox = (w, h, d, x, y, z, uvMap, options = {}) => {
-        const { transparent = false, expand = 0 } = options;
-        const geometry = new THREE.BoxGeometry(w + expand, h + expand, d + expand);
-        const materials = [
-          new THREE.MeshBasicMaterial({ transparent }), // right
-          new THREE.MeshBasicMaterial({ transparent }), // left
-          new THREE.MeshBasicMaterial({ transparent }), // top
-          new THREE.MeshBasicMaterial({ transparent }), // bottom
-          new THREE.MeshBasicMaterial({ transparent }), // front
-          new THREE.MeshBasicMaterial({ transparent }), // back
-        ];
-
-        setUV(materials[0], uvMap.right);
-        setUV(materials[1], uvMap.left);
-        setUV(materials[2], uvMap.top);
-        setUV(materials[3], uvMap.bottom);
-        setUV(materials[4], uvMap.front);
-        setUV(materials[5], uvMap.back);
-
-        const box = new THREE.Mesh(geometry, materials);
-        box.position.set(x, y, z);
-        return box;
-      };
-
-      const headMap = {
-        left: [0, 8, 8, 16],
-        right: [16, 8, 24, 16],
-        top: [8, 0, 16, 8],
-        bottom: [16, 0, 24, 8],
-        front: [8, 8, 16, 16],
-        back: [24, 8, 32, 16],
-      };
-
-      const bodyMap = {
-        right: [28, 20, 32, 32],
-        left: [16, 20, 20, 32],
-        top: [20, 16, 28, 20],
-        bottom: [28, 16, 36, 20],
-        front: [20, 20, 28, 32],
-        back: [32, 20, 40, 32],
-      };
-
-      const armMap = {
-        right: [40, 20, 44, 32],
-        left: [48, 20, 52, 32],
-        top: [44, 16, 48, 20],
-        bottom: [48, 16, 52, 20],
-        front: [44, 20, 48, 32],
-        back: [52, 20, 56, 32],
-      };
-
-      const legMap = {
-        right: [0, 20, 4, 32],
-        left: [8, 20, 12, 32],
-        top: [4, 16, 8, 20],
-        bottom: [8, 16, 12, 20],
-        front: [4, 20, 8, 32],
-        back: [12, 20, 16, 32],
-      };
-
-      const headOverlayMap = {
-        left: [32, 8, 40, 16],
-        right: [48, 8, 56, 16],
-        top: [40, 0, 48, 8],
-        bottom: [48, 0, 56, 8],
-        front: [40, 8, 48, 16],
-        back: [56, 8, 64, 16],
-      };
-
-      const bodyOverlayMap = {
-        right: [28, 36, 32, 48],
-        left: [16, 36, 20, 48],
-        top: [20, 32, 28, 36],
-        bottom: [28, 32, 36, 36],
-        front: [20, 36, 28, 48],
-        back: [32, 36, 40, 48],
-      };
-
-      const armOverlayMap = {
-        right: [40, 36, 44, 48],
-        left: [48, 36, 52, 48],
-        top: [44, 32, 48, 36],
-        bottom: [48, 32, 52, 36],
-        front: [44, 36, 48, 48],
-        back: [52, 36, 56, 48],
-      };
-
-      const legOverlayMap = {
-        right: [0, 36, 4, 48],
-        left: [8, 36, 12, 48],
-        top: [4, 32, 8, 36],
-        bottom: [8, 32, 12, 36],
-        front: [4, 36, 8, 48],
-        back: [12, 36, 16, 48],
-      };
-
-      const head = createBox(8, 8, 8, 0, 22, 0, headMap);
-      const body = createBox(8, 12, 4, 0, 12, 0, bodyMap);
-      const armL = createBox(4, 12, 4, -6, 12, 0, armMap);
-      const armR = createBox(4, 12, 4, 6, 12, 0, armMap);
-      const legL = createBox(4, 12, 4, -2, 0, 0, legMap);
-      const legR = createBox(4, 12, 4, 2, 0, 0, legMap);
+      const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
+      const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
+      const armL = createBox(tex, 4, 12, 4, -6, 12, 0, armMap);
+      const armR = createBox(tex, 4, 12, 4, 6, 12, 0, armMap);
+      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, legMap);
+      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap);
 
       armLRef.current = armL;
       armRRef.current = armR;
       legLRef.current = legL;
       legRRef.current = legR;
 
-      const headOL = createBox(8, 8, 8, 0, 22, 0, headOverlayMap, {
+      const headOL = createBox(tex, 8, 8, 8, 0, 22, 0, headOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
-      const bodyOL = createBox(8, 12, 4, 0, 12, 0, bodyOverlayMap, {
+      const bodyOL = createBox(tex, 8, 12, 4, 0, 12, 0, bodyOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
-      const armLOL = createBox(4, 12, 4, -6, 12, 0, armOverlayMap, {
+      const armLOL = createBox(tex, 4, 12, 4, -6, 12, 0, armOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
-      const armROL = createBox(4, 12, 4, 6, 12, 0, armOverlayMap, {
+      const armROL = createBox(tex, 4, 12, 4, 6, 12, 0, armOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
-      const legLOL = createBox(4, 12, 4, -2, 0, 0, legOverlayMap, {
+      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, legOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
-      const legROL = createBox(4, 12, 4, 2, 0, 0, legOverlayMap, {
+      const legROL = createBox(tex, 4, 12, 4, 2, 0, 0, legOverlayMap, {
         transparent: true,
         expand: 0.5,
       });
@@ -267,7 +110,7 @@ export default function ThreePreview({ texture, pose = 'default' }) {
 
       group.add(head, body, armL, armR, legL, legR, headOL, bodyOL, armLOL, armROL, legLOL, legROL);
 
-      applyPose(pose);
+      applyPoseLocal(pose);
     });
 
     const animate = () => {
@@ -284,7 +127,7 @@ export default function ThreePreview({ texture, pose = 'default' }) {
   }, [texture]);
 
   useEffect(() => {
-    applyPose(pose);
+    applyPoseLocal(pose);
   }, [pose]);
 
   return (
