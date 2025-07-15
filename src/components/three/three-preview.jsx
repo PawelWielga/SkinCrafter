@@ -45,15 +45,16 @@ export default function ThreePreview({ texture }) {
         mat.map.needsUpdate = true;
       };
 
-      const createBox = (w, h, d, x, y, z, uvMap) => {
-        const geometry = new THREE.BoxGeometry(w, h, d);
+      const createBox = (w, h, d, x, y, z, uvMap, options = {}) => {
+        const { transparent = false, expand = 0 } = options;
+        const geometry = new THREE.BoxGeometry(w + expand, h + expand, d + expand);
         const materials = [
-          new THREE.MeshBasicMaterial(), // right
-          new THREE.MeshBasicMaterial(), // left
-          new THREE.MeshBasicMaterial(), // top
-          new THREE.MeshBasicMaterial(), // bottom
-          new THREE.MeshBasicMaterial(), // front
-          new THREE.MeshBasicMaterial(), // back
+          new THREE.MeshBasicMaterial({ transparent }), // right
+          new THREE.MeshBasicMaterial({ transparent }), // left
+          new THREE.MeshBasicMaterial({ transparent }), // top
+          new THREE.MeshBasicMaterial({ transparent }), // bottom
+          new THREE.MeshBasicMaterial({ transparent }), // front
+          new THREE.MeshBasicMaterial({ transparent }), // back
         ];
 
         setUV(materials[0], uvMap.right);
@@ -104,6 +105,42 @@ export default function ThreePreview({ texture }) {
         back: [12, 20, 16, 32],
       };
 
+      const headOverlayMap = {
+        left: [32, 8, 40, 16],
+        right: [48, 8, 56, 16],
+        top: [40, 0, 48, 8],
+        bottom: [48, 0, 56, 8],
+        front: [40, 8, 48, 16],
+        back: [56, 8, 64, 16],
+      };
+
+      const bodyOverlayMap = {
+        right: [28, 36, 32, 48],
+        left: [16, 36, 20, 48],
+        top: [20, 32, 28, 36],
+        bottom: [28, 32, 36, 36],
+        front: [20, 36, 28, 48],
+        back: [32, 36, 40, 48],
+      };
+
+      const armOverlayMap = {
+        right: [40, 36, 44, 48],
+        left: [48, 36, 52, 48],
+        top: [44, 32, 48, 36],
+        bottom: [48, 32, 52, 36],
+        front: [44, 36, 48, 48],
+        back: [52, 36, 56, 48],
+      };
+
+      const legOverlayMap = {
+        right: [0, 36, 4, 48],
+        left: [8, 36, 12, 48],
+        top: [4, 32, 8, 36],
+        bottom: [8, 32, 12, 36],
+        front: [4, 36, 8, 48],
+        back: [12, 36, 16, 48],
+      };
+
       const head = createBox(8, 8, 8, 0, 22, 0, headMap);
       const body = createBox(8, 12, 4, 0, 12, 0, bodyMap);
       const armL = createBox(4, 12, 4, -6, 12, 0, armMap);
@@ -111,7 +148,45 @@ export default function ThreePreview({ texture }) {
       const legL = createBox(4, 12, 4, -2, 0, 0, legMap);
       const legR = createBox(4, 12, 4, 2, 0, 0, legMap);
 
-      group.add(head, body, armL, armR, legL, legR);
+      const headOL = createBox(8, 8, 8, 0, 22, 0, headOverlayMap, {
+        transparent: true,
+        expand: 0.5,
+      });
+      const bodyOL = createBox(8, 12, 4, 0, 12, 0, bodyOverlayMap, {
+        transparent: true,
+        expand: 0.5,
+      });
+      const armLOL = createBox(4, 12, 4, -6, 12, 0, armOverlayMap, {
+        transparent: true,
+        expand: 0.5,
+      });
+      const armROL = createBox(4, 12, 4, 6, 12, 0, armOverlayMap, {
+        transparent: true,
+        expand: 0.5,
+      });
+      const legLOL = createBox(4, 12, 4, -2, 0, 0, legOverlayMap, {
+        transparent: true,
+        expand: 0.5,
+      });
+      const legROL = createBox(4, 12, 4, 2, 0, 0, legOverlayMap, {
+        transparent: true,
+        expand: 0.5,
+      });
+
+      group.add(
+        head,
+        body,
+        armL,
+        armR,
+        legL,
+        legR,
+        headOL,
+        bodyOL,
+        armLOL,
+        armROL,
+        legLOL,
+        legROL
+      );
     });
 
     const animate = () => {
