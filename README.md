@@ -4,7 +4,7 @@ SkinCrafter is a small React application for previewing Minecraft skins. The pre
 
 ## Running locally
 
-Install dependencies and start the development server:
+Install dependencies and start the development server (React 18, Node 20 recommended):
 
 ```bash
 npm install
