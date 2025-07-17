@@ -30,14 +30,7 @@ export default function ThreePreview({ texture, pose = 'default', showOverlay = 
   const headOLRef = useRef();
   const bodyOLRef = useRef();
 
-  const overlayRefs = [
-    headOLRef,
-    bodyOLRef,
-    armLOLRef,
-    armROLRef,
-    legLOLRef,
-    legROLRef,
-  ];
+  const overlayRefs = [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef];
 
   const applyPoseLocal = (p) =>
     applyPose(p, {

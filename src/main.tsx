@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import App from './App';
-import McSkinView from './McSkinView.jsx';
+import McSkinView from './McSkinView';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 

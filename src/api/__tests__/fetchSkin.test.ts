@@ -19,7 +19,7 @@ describe('fetchSkin', () => {
     global.fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: 'uuid123' })
+        json: () => Promise.resolve({ id: 'uuid123' }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -28,12 +28,10 @@ describe('fetchSkin', () => {
             properties: [
               {
                 name: 'textures',
-                value: btoa(
-                  JSON.stringify({ textures: { SKIN: { url: skinUrl } } })
-                )
-              }
-            ]
-          })
+                value: btoa(JSON.stringify({ textures: { SKIN: { url: skinUrl } } })),
+              },
+            ],
+          }),
       });
 
     await expect(fetchSkin(username)).resolves.toBe(skinUrl);
@@ -49,7 +47,7 @@ describe('fetchSkin', () => {
     global.fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: 'uuid123' })
+        json: () => Promise.resolve({ id: 'uuid123' }),
       })
       .mockResolvedValueOnce({ ok: false });
 
@@ -60,11 +58,11 @@ describe('fetchSkin', () => {
     global.fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: 'uuid123' })
+        json: () => Promise.resolve({ id: 'uuid123' }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ properties: [] })
+        json: () => Promise.resolve({ properties: [] }),
       });
 
     await expect(fetchSkin('Steve')).rejects.toThrow('Skin texture not found');

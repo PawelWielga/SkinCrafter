@@ -1,6 +1,6 @@
 # SkinCrafter
 
-SkinCrafter is a small React application for previewing Minecraft skins. The preview uses Three.js and React Router to display the model in 3D across multiple pages.
+SkinCrafter is a small React + TypeScript application for previewing Minecraft skins. The preview uses Three.js and React Router to display the model in 3D across multiple pages.
 
 ## Running locally
 
