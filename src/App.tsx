@@ -2,14 +2,14 @@ import './App.css';
 
 import { useState } from 'react';
 
-import NBar from './components/nbar/nbar.jsx';
-import PreviewArea from './components/preview-area/preview-area.jsx';
-import WardrobeRace from './components/wardrobe-sections/wardrobe-race.jsx';
-import skinColorMap from './data/skinColorMap.js';
-import raceTextureMap from './data/raceTextureMap.js';
-import WardrobeSkinColor from './components/wardrobe-sections/wardrobe-skincolor.jsx';
-import WardrobeEyes from './components/wardrobe-sections/wardrobe-eyes.jsx';
-import WardrobeEyescolor from './components/wardrobe-sections/wardrobe-eyescolor.jsx';
+import NBar from './components/nbar/nbar';
+import PreviewArea from './components/preview-area/preview-area';
+import WardrobeRace from './components/wardrobe-sections/wardrobe-race';
+import skinColorMap from './data/skinColorMap';
+import raceTextureMap from './data/raceTextureMap';
+import WardrobeSkinColor from './components/wardrobe-sections/wardrobe-skincolor';
+import WardrobeEyes from './components/wardrobe-sections/wardrobe-eyes';
+import WardrobeEyescolor from './components/wardrobe-sections/wardrobe-eyescolor';
 
 function App() {
   const [race, setRace] = useState('Human');

@@ -1,8 +1,8 @@
 import './App.css';
 import { useState } from 'react';
-import fetchSkin from './api/fetchSkin.js';
-import NBar from './components/nbar/nbar.jsx';
-import PreviewArea from './components/preview-area/preview-area.jsx';
+import fetchSkin from './api/fetchSkin';
+import NBar from './components/nbar/nbar';
+import PreviewArea from './components/preview-area/preview-area';
 
 function McSkinView() {
   const [username, setUsername] = useState('');

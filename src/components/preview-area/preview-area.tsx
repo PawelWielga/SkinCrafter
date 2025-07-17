@@ -19,10 +19,7 @@ function PreviewArea({ texture }) {
         <button className="btn btn-secondary" onClick={cyclePose}>
           Change Pose
         </button>
-        <button
-          className="btn btn-secondary"
-          onClick={() => setShowOverlay((v) => !v)}
-        >
+        <button className="btn btn-secondary" onClick={() => setShowOverlay((v) => !v)}>
           {showOverlay ? 'Hide' : 'Show'} Overlay
         </button>
         <button className="btn btn-primary">Download Skin</button>

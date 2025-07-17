@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './wardrobe.css';
-import races from '../../data/races.js';
+import races from '../../data/races';
 
 function WardrobeRace({ onChange }) {
   const [selectedRace, setSelectedRace] = useState('Human');
