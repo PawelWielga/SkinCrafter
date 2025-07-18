@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import './App.css';
 
 import { Race } from '../data/races';
-import NBar from '../components/nbar/Nbar';
+import NBar from '../components/nbar/NBar';
 import PreviewArea from '../components/preview-area/PreviewArea';
 import WardrobeRace from '../components/wardrobe-sections/WardrobeRace';
 import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor';
