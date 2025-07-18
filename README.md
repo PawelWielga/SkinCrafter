@@ -27,3 +27,12 @@ To create a production build run:
 ```bash
 npm run build
 ```
+
+## Sitemap
+
+Generate `public/sitemap.xml` whenever new routes are added so search engines can
+index the site correctly:
+
+```bash
+npm run sitemap
+```
