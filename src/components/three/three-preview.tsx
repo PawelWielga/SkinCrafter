@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+// src/components/ThreePreview.tsx
+
+import React, { useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
-import applyPose from './pose-utils';
+import applyPose, { Pose } from './pose-utils';
 import createBox from './create-box';
 import {
   headMap,
@@ -17,8 +19,6 @@ import {
   leftLegOverlayMap,
 } from './skin-maps';
 
-type Pose = 'default' | 'tpose' | 'walking';
-
 interface ThreePreviewProps {
   texture: string | null;
   pose?: Pose;
@@ -30,28 +30,24 @@ export default function ThreePreview({
   pose = 'default',
   showOverlay = true,
 }: ThreePreviewProps): JSX.Element {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const armLRef = useRef<THREE.Object3D | null>(null);
-  const armRRef = useRef<THREE.Object3D | null>(null);
-  const legLRef = useRef<THREE.Object3D | null>(null);
-  const legRRef = useRef<THREE.Object3D | null>(null);
-  const armLOLRef = useRef<THREE.Object3D | null>(null);
-  const armROLRef = useRef<THREE.Object3D | null>(null);
-  const legLOLRef = useRef<THREE.Object3D | null>(null);
-  const legROLRef = useRef<THREE.Object3D | null>(null);
-  const headOLRef = useRef<THREE.Object3D | null>(null);
-  const bodyOLRef = useRef<THREE.Object3D | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const overlayRefs: Array<React.RefObject<THREE.Object3D>> = [
-    headOLRef,
-    bodyOLRef,
-    armLOLRef,
-    armROLRef,
-    legLOLRef,
-    legROLRef,
-  ];
+  const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const legLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const legRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
 
-  const applyPoseLocal = (p: Pose): void =>
+  const armLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const armROLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const legLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const legROLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+
+  const headOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  const bodyOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+
+  const overlayRefs = [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef] as const;
+
+  const applyPoseLocal = useCallback((p: Pose) => {
     applyPose(p, {
       armL: armLRef.current,
       armR: armRRef.current,
@@ -62,9 +58,11 @@ export default function ThreePreview({
       legLOL: legLOLRef.current,
       legROL: legROLRef.current,
     });
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
+    if (!container) return;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -85,16 +83,19 @@ export default function ThreePreview({
     scene.add(light);
 
     const group = new THREE.Group();
-    scene.add(group);
     group.position.y = -10;
+    scene.add(group);
 
     const loader = new THREE.TextureLoader();
-    loader.load(texture || '/textures/steve.png', (tex) => {
+    const src = texture ?? '/textures/steve.png';
+
+    loader.load(src, (tex) => {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
 
       const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
+
       const armL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmMap);
       const armR = createBox(tex, 4, 12, 4, 6, 12, 0, armMap);
       const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap);
@@ -140,9 +141,7 @@ export default function ThreePreview({
       group.add(head, body, armL, armR, legL, legR, headOL, bodyOL, armLOL, armROL, legLOL, legROL);
 
       overlayRefs.forEach((ref) => {
-        if (ref.current) {
-          ref.current.visible = showOverlay;
-        }
+        if (ref.current) ref.current.visible = showOverlay;
       });
 
       applyPoseLocal(pose);
@@ -159,17 +158,15 @@ export default function ThreePreview({
       renderer.dispose();
       container.innerHTML = '';
     };
-  }, [texture]);
+  }, [texture, applyPoseLocal, pose, showOverlay]);
 
   useEffect(() => {
     applyPoseLocal(pose);
-  }, [pose]);
+  }, [pose, applyPoseLocal]);
 
   useEffect(() => {
     overlayRefs.forEach((ref) => {
-      if (ref.current) {
-        ref.current.visible = showOverlay;
-      }
+      if (ref.current) ref.current.visible = showOverlay;
     });
   }, [showOverlay]);
 

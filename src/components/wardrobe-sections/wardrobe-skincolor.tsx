@@ -10,18 +10,18 @@ function WardrobeSkinColor({
   colors,
   selectedColor,
   onChange,
-}: WardrobeSkinColorProps): JSX.Element {
+}: WardrobeSkinColorProps): React.JSX.Element {
   return (
     <div className="section">
       <h3 className="section-title">Skin Color</h3>
       <div className="color-palette">
         {colors.map((color) => (
-          <div
+          <button
             key={color}
-            className={`color-option ${color.toLowerCase()} ${
-              selectedColor === color ? 'selected' : ''
-            }`}
-            data-color={color.toLowerCase()}
+            type="button"
+            className={`color-option${selectedColor === color ? ' selected' : ''}`}
+            style={{ backgroundColor: color }}
+            aria-label={`Kolor skóry ${color}`}
             onClick={() => onChange?.(color)}
           />
         ))}

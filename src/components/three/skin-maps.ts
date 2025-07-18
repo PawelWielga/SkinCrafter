@@ -1,4 +1,10 @@
-export const headMap = {
+export type UVRect = [number, number, number, number];
+
+export type Direction = 'left' | 'right' | 'top' | 'bottom' | 'front' | 'back';
+
+export type RectMap = Record<Direction, UVRect>;
+
+export const headMap: RectMap = {
   left: [0, 8, 8, 16],
   right: [16, 8, 24, 16],
   top: [8, 0, 16, 8],
@@ -7,7 +13,7 @@ export const headMap = {
   back: [24, 8, 32, 16],
 };
 
-export const bodyMap = {
+export const bodyMap: RectMap = {
   right: [28, 20, 32, 32],
   left: [16, 20, 20, 32],
   top: [20, 16, 28, 20],
@@ -16,7 +22,7 @@ export const bodyMap = {
   back: [32, 20, 40, 32],
 };
 
-export const armMap = {
+export const armMap: RectMap = {
   left: [40, 20, 44, 32],
   right: [48, 20, 52, 32],
   top: [44, 16, 48, 20],
@@ -25,7 +31,7 @@ export const armMap = {
   back: [56, 20, 52, 32],
 };
 
-export const legMap = {
+export const legMap: RectMap = {
   left: [0, 20, 4, 32],
   right: [8, 20, 12, 32],
   top: [4, 16, 8, 20],
@@ -34,7 +40,7 @@ export const legMap = {
   back: [16, 20, 12, 32],
 };
 
-export const headOverlayMap = {
+export const headOverlayMap: RectMap = {
   left: [32, 8, 40, 16],
   right: [48, 8, 56, 16],
   top: [40, 0, 48, 8],
@@ -43,7 +49,7 @@ export const headOverlayMap = {
   back: [56, 8, 64, 16],
 };
 
-export const bodyOverlayMap = {
+export const bodyOverlayMap: RectMap = {
   right: [28, 36, 32, 48],
   left: [16, 36, 20, 48],
   top: [20, 32, 28, 36],
@@ -52,7 +58,7 @@ export const bodyOverlayMap = {
   back: [32, 36, 40, 48],
 };
 
-export const armOverlayMap = {
+export const armOverlayMap: RectMap = {
   left: [40, 36, 44, 48],
   right: [48, 36, 52, 48],
   top: [44, 32, 48, 36],
@@ -61,7 +67,7 @@ export const armOverlayMap = {
   back: [56, 36, 52, 48],
 };
 
-export const legOverlayMap = {
+export const legOverlayMap: RectMap = {
   left: [0, 36, 4, 48],
   right: [8, 36, 12, 48],
   top: [4, 32, 8, 36],
@@ -70,18 +76,7 @@ export const legOverlayMap = {
   back: [16, 36, 12, 48],
 };
 
-export const leftArmMap = {
-  ...armMap,
-};
-
-export const leftLegMap = {
-  ...legMap,
-};
-
-export const leftArmOverlayMap = {
-  ...armOverlayMap,
-};
-
-export const leftLegOverlayMap = {
-  ...legOverlayMap,
-};
+export const leftArmMap: RectMap = { ...armMap };
+export const leftLegMap: RectMap = { ...legMap };
+export const leftArmOverlayMap: RectMap = { ...armOverlayMap };
+export const leftLegOverlayMap: RectMap = { ...legOverlayMap };

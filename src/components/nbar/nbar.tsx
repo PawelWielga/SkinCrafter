@@ -1,17 +1,27 @@
+import React from 'react';
 import './nbar.css';
 
-function NBar(): JSX.Element {
+interface NBarProps {
+  logoSrc?: string;
+  logoAlt?: string;
+}
+
+const NBar: React.FC<NBarProps> = ({ logoSrc = '/logo.png', logoAlt = 'Logo aplikacji' }) => {
   return (
-    <div className="navbar">
+    <nav className="navbar" role="navigation" aria-label="Główna nawigacja">
       <div className="logo-container">
-        <img src="/logo.png" alt="Logo" className="logo" />
+        <img src={logoSrc} alt={logoAlt} className="logo" draggable={false} />
       </div>
       <div className="nav-links">
-        {/* <a href="#" className="nav-link">Help</a>
-        <a href="#" className="nav-coffee-btn">Buy me a coffee</a> */}
+        {/* <a href="#" className="nav-link" aria-label="Pomoc">
+          Help
+        </a>
+        <a href="#" className="nav-coffee-btn" aria-label="Kup mi kawę">
+          Buy me a coffee
+        </a> */}
       </div>
-    </div>
+    </nav>
   );
-}
+};
 
 export default NBar;

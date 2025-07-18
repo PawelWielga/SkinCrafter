@@ -1,6 +1,7 @@
+import React from 'react';
 import './wardrobe.css';
 
-function WardrobeEyes(): JSX.Element {
+function WardrobeEyes(): React.JSX.Element {
   return <div>{WardrobeEyes.name}</div>;
 }
 

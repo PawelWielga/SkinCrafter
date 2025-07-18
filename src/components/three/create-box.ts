@@ -1,11 +1,39 @@
 import * as THREE from 'three';
 
+export type UVRect = [number, number, number, number];
+
+export interface UVMap {
+  right: UVRect;
+  left: UVRect;
+  top: UVRect;
+  bottom: UVRect;
+  front: UVRect;
+  back: UVRect;
+}
+
+export interface CreateBoxOptions {
+  transparent?: boolean;
+  expand?: number;
+}
+
 const TEX_SIZE = 64;
 
-export default function createBox(tex, w, h, d, x, y, z, uvMap, options = {}) {
+export default function createBox(
+  tex: THREE.Texture,
+  width: number,
+  height: number,
+  depth: number,
+  x: number,
+  y: number,
+  z: number,
+  uvMap: UVMap,
+  options: CreateBoxOptions = {}
+): THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> {
   const { transparent = false, expand = 0 } = options;
-  const geometry = new THREE.BoxGeometry(w + expand, h + expand, d + expand);
-  const materials = [
+
+  const geometry = new THREE.BoxGeometry(width + expand, height + expand, depth + expand);
+
+  const materials: THREE.MeshBasicMaterial[] = [
     new THREE.MeshBasicMaterial({ transparent }), // right
     new THREE.MeshBasicMaterial({ transparent }), // left
     new THREE.MeshBasicMaterial({ transparent }), // top
@@ -14,15 +42,16 @@ export default function createBox(tex, w, h, d, x, y, z, uvMap, options = {}) {
     new THREE.MeshBasicMaterial({ transparent }), // back
   ];
 
-  const setUV = (mat, rect) => {
-    mat.map = tex.clone();
-    mat.map.magFilter = THREE.NearestFilter;
-    mat.map.minFilter = THREE.NearestFilter;
-    mat.map.wrapS = THREE.RepeatWrapping;
-    mat.map.wrapT = THREE.RepeatWrapping;
-    mat.map.repeat.set((rect[2] - rect[0]) / TEX_SIZE, (rect[3] - rect[1]) / TEX_SIZE);
-    mat.map.offset.set(rect[0] / TEX_SIZE, 1 - rect[3] / TEX_SIZE);
-    mat.map.needsUpdate = true;
+  const setUV = (mat: THREE.MeshBasicMaterial, rect: UVRect): void => {
+    const map = tex.clone();
+    map.magFilter = THREE.NearestFilter;
+    map.minFilter = THREE.NearestFilter;
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set((rect[2] - rect[0]) / TEX_SIZE, (rect[3] - rect[1]) / TEX_SIZE);
+    map.offset.set(rect[0] / TEX_SIZE, 1 - rect[3] / TEX_SIZE);
+    map.needsUpdate = true;
+    mat.map = map;
   };
 
   setUV(materials[0], uvMap.right);
@@ -34,5 +63,6 @@ export default function createBox(tex, w, h, d, x, y, z, uvMap, options = {}) {
 
   const box = new THREE.Mesh(geometry, materials);
   box.position.set(x, y, z);
+
   return box;
 }

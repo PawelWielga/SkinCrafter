@@ -1,35 +1,49 @@
-import { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './wardrobe.css';
-import races from '../../data/races';
+import races, { Race } from '../../data/races';
 
-interface WardrobeRaceProps {
-  onChange?: (race: string) => void;
+export interface WardrobeRaceProps {
+  onChange?: (race: Race) => void;
 }
 
-function WardrobeRace({ onChange }: WardrobeRaceProps): JSX.Element {
-  const [selectedRace, setSelectedRace] = useState<string>('Human');
+const WardrobeRace: React.FC<WardrobeRaceProps> = React.memo(({ onChange }) => {
+  const [selectedRace, setSelectedRace] = useState<Race>('Human');
 
-  const handleClick = (race: string): void => {
-    setSelectedRace(race);
-    onChange?.(race);
-  };
+  const handleClick = useCallback(
+    (race: Race) => {
+      setSelectedRace(race);
+      onChange?.(race);
+    },
+    [onChange]
+  );
 
   return (
-    <div className="section">
+    <div className="section" role="group" aria-label="Select Race">
       <h3 className="section-title">Race</h3>
       <div className="section-grid">
-        {races.map((race) => (
-          <div
-            key={race}
-            className={`section-grid-option ${selectedRace === race ? 'selected' : ''}`}
-            onClick={() => handleClick(race)}
-          >
-            {race}
-          </div>
-        ))}
+        {races.map((race) => {
+          const isSelected = selectedRace === race;
+          return (
+            <button
+              key={race}
+              type="button"
+              className={`section-grid-option${isSelected ? ' selected' : ''}`}
+              aria-pressed={isSelected}
+              onClick={() => handleClick(race)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClick(race);
+                }
+              }}
+            >
+              {race}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
-}
+});
 
 export default WardrobeRace;
