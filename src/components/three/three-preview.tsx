@@ -17,22 +17,41 @@ import {
   leftLegOverlayMap,
 } from './skin-maps';
 
-export default function ThreePreview({ texture, pose = 'default', showOverlay = true }) {
-  const containerRef = useRef();
-  const armLRef = useRef();
-  const armRRef = useRef();
-  const legLRef = useRef();
-  const legRRef = useRef();
-  const armLOLRef = useRef();
-  const armROLRef = useRef();
-  const legLOLRef = useRef();
-  const legROLRef = useRef();
-  const headOLRef = useRef();
-  const bodyOLRef = useRef();
+type Pose = 'default' | 'tpose' | 'walking';
 
-  const overlayRefs = [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef];
+interface ThreePreviewProps {
+  texture: string | null;
+  pose?: Pose;
+  showOverlay?: boolean;
+}
 
-  const applyPoseLocal = (p) =>
+export default function ThreePreview({
+  texture,
+  pose = 'default',
+  showOverlay = true,
+}: ThreePreviewProps): JSX.Element {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const armLRef = useRef<THREE.Object3D | null>(null);
+  const armRRef = useRef<THREE.Object3D | null>(null);
+  const legLRef = useRef<THREE.Object3D | null>(null);
+  const legRRef = useRef<THREE.Object3D | null>(null);
+  const armLOLRef = useRef<THREE.Object3D | null>(null);
+  const armROLRef = useRef<THREE.Object3D | null>(null);
+  const legLOLRef = useRef<THREE.Object3D | null>(null);
+  const legROLRef = useRef<THREE.Object3D | null>(null);
+  const headOLRef = useRef<THREE.Object3D | null>(null);
+  const bodyOLRef = useRef<THREE.Object3D | null>(null);
+
+  const overlayRefs: Array<React.RefObject<THREE.Object3D>> = [
+    headOLRef,
+    bodyOLRef,
+    armLOLRef,
+    armROLRef,
+    legLOLRef,
+    legROLRef,
+  ];
+
+  const applyPoseLocal = (p: Pose): void =>
     applyPose(p, {
       armL: armLRef.current,
       armR: armRRef.current,

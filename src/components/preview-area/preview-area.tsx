@@ -2,11 +2,17 @@ import ThreePreview from '../three/three-preview';
 import './preview-area.css';
 import { useState } from 'react';
 
-function PreviewArea({ texture }) {
-  const [pose, setPose] = useState('default');
-  const [showOverlay, setShowOverlay] = useState(true);
+type Pose = 'default' | 'tpose' | 'walking';
 
-  const cyclePose = () => {
+interface PreviewAreaProps {
+  texture: string | null;
+}
+
+function PreviewArea({ texture }: PreviewAreaProps): JSX.Element {
+  const [pose, setPose] = useState<Pose>('default');
+  const [showOverlay, setShowOverlay] = useState<boolean>(true);
+
+  const cyclePose = (): void => {
     setPose((p) => (p === 'default' ? 'tpose' : p === 'tpose' ? 'walking' : 'default'));
   };
 

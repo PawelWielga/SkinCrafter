@@ -11,10 +11,10 @@ import WardrobeSkinColor from './components/wardrobe-sections/wardrobe-skincolor
 import WardrobeEyes from './components/wardrobe-sections/wardrobe-eyes';
 import WardrobeEyescolor from './components/wardrobe-sections/wardrobe-eyescolor';
 
-function App() {
-  const [race, setRace] = useState('Human');
-  const [skincolor, setSkincolor] = useState('Light');
-  const skinColors = skinColorMap[race] || [];
+function App(): JSX.Element {
+  const [race, setRace] = useState<string>('Human');
+  const [skincolor, setSkincolor] = useState<string | null>('Light');
+  const skinColors: string[] = skinColorMap[race] || [];
 
   return (
     <div className="container">

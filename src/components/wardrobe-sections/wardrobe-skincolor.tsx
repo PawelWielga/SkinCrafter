@@ -1,6 +1,16 @@
 import './wardrobe.css';
 
-function WardrobeSkinColor({ colors, selectedColor, onChange }) {
+interface WardrobeSkinColorProps {
+  colors: string[];
+  selectedColor: string | null;
+  onChange?: (color: string) => void;
+}
+
+function WardrobeSkinColor({
+  colors,
+  selectedColor,
+  onChange,
+}: WardrobeSkinColorProps): JSX.Element {
   return (
     <div className="section">
       <h3 className="section-title">Skin Color</h3>
