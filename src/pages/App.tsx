@@ -9,7 +9,7 @@ import PreviewArea from '../components/preview-area/preview-area';
 import WardrobeRace from '../components/wardrobe-sections/wardrobe-race';
 import WardrobeSkinColor from '../components/wardrobe-sections/wardrobe-skincolor';
 import WardrobeEyes from '../components/wardrobe-sections/wardrobe-eyes';
-import WardrobeEyesColor from '../components/wardrobe-sections/wardrobe-eyescolor';
+import WardrobeEyesColor from '../components/wardrobe-sections/WardrobeEyesColor';
 
 import skinColorMap from '../data/skinColorMap';
 import raceTextureMap from '../data/raceTextureMap';
