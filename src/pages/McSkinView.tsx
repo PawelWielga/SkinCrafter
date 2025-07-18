@@ -1,7 +1,7 @@
 import React, { useState, useCallback, FormEvent, ChangeEvent } from 'react';
 import './App.css';
 import fetchSkin from '../api/fetchSkin';
-import NBar from '../components/nbar/Nbar';
+import NBar from '../components/nbar/NBar';
 import PreviewArea from '../components/preview-area/PreviewArea';
 
 const McSkinView: React.FC = () => {
