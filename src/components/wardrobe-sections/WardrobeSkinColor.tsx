@@ -1,4 +1,4 @@
-import './wardrobe.css';
+import './Wardrobe.css';
 
 interface WardrobeSkinColorProps {
   colors: string[];

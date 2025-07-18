@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import './wardrobe.css';
+import './Wardrobe.css';
 import races, { Race } from '../../data/races';
 
 export interface WardrobeRaceProps {

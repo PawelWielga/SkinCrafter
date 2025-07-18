@@ -1,10 +1,8 @@
-// src/McSkinView.tsx
-
 import React, { useState, useCallback, FormEvent, ChangeEvent } from 'react';
 import './App.css';
 import fetchSkin from '../api/fetchSkin';
-import NBar from '../components/nbar/nbar';
-import PreviewArea from '../components/preview-area/preview-area';
+import NBar from '../components/nbar/Nbar';
+import PreviewArea from '../components/preview-area/PreviewArea';
 
 const McSkinView: React.FC = () => {
   const [username, setUsername] = useState<string>('');

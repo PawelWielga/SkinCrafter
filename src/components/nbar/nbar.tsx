@@ -1,5 +1,5 @@
 import React from 'react';
-import './nbar.css';
+import './Nbar.css';
 
 interface NBarProps {
   logoSrc?: string;

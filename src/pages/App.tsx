@@ -1,14 +1,12 @@
-// src/App.tsx
-
 import React, { useState, useMemo, useCallback } from 'react';
 import './App.css';
 
 import { Race } from '../data/races';
-import NBar from '../components/nbar/nbar';
-import PreviewArea from '../components/preview-area/preview-area';
-import WardrobeRace from '../components/wardrobe-sections/wardrobe-race';
-import WardrobeSkinColor from '../components/wardrobe-sections/wardrobe-skincolor';
-import WardrobeEyes from '../components/wardrobe-sections/wardrobe-eyes';
+import NBar from '../components/nbar/Nbar';
+import PreviewArea from '../components/preview-area/PreviewArea';
+import WardrobeRace from '../components/wardrobe-sections/WardrobeRace';
+import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor';
+import WardrobeEyes from '../components/wardrobe-sections/WardrobeEyes';
 import WardrobeEyesColor from '../components/wardrobe-sections/WardrobeEyesColor';
 
 import skinColorMap from '../data/skinColorMap';
@@ -18,12 +16,10 @@ const App: React.FC = () => {
   const [race, setRace] = useState<Race>('Human');
   const [skinColor, setSkinColor] = useState<string>(skinColorMap.Human[0]);
 
-  // Przeliczana tylko, gdy zmieni się race
   const skinColors = useMemo(() => skinColorMap[race], [race]);
 
   const handleRaceChange = useCallback((newRace: Race) => {
     setRace(newRace);
-    // resetuj kolor skóry do pierwszego z listy
     setSkinColor(skinColorMap[newRace][0]);
   }, []);
 
