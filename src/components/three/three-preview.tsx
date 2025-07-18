@@ -154,8 +154,9 @@ export default function ThreePreview({
       applyPoseLocal(pose);
     });
 
+    let animationFrameId: number;
     const animate = () => {
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       group.rotation.y += 0.01;
       renderer.render(scene, camera);
     };
@@ -177,6 +178,7 @@ export default function ThreePreview({
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
       renderer.dispose();
       if (renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
