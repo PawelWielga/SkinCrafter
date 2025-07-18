@@ -1,4 +1,3 @@
-import React from 'react';
 import './Wardrobe.css';
 
 function WardrobeEyes(): React.JSX.Element {
