@@ -1,6 +1,6 @@
 import './nbar.css';
 
-function NBar() {
+function NBar(): JSX.Element {
   return (
     <div className="navbar">
       <div className="logo-container">

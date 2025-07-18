@@ -4,24 +4,28 @@ import fetchSkin from './api/fetchSkin';
 import NBar from './components/nbar/nbar';
 import PreviewArea from './components/preview-area/preview-area';
 
-function McSkinView() {
-  const [username, setUsername] = useState('');
-  const [texture, setTexture] = useState(null);
-  const [error, setError] = useState(null);
+function McSkinView(): JSX.Element {
+  const [username, setUsername] = useState<string>('');
+  const [texture, setTexture] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="container">
       <NBar />
       <div className="main-content">
         <form
-          onSubmit={async (e) => {
+          onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();
             setError(null);
             try {
               const url = await fetchSkin(username);
               setTexture(url);
-            } catch (err) {
-              setError(err.message);
+            } catch (err: unknown) {
+              if (err instanceof Error) {
+                setError(err.message);
+              } else {
+                setError('Unknown error');
+              }
               setTexture(null);
             }
           }}
@@ -30,7 +34,9 @@ function McSkinView() {
           <input
             type="text"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setUsername(e.target.value)
+            }
             placeholder="Minecraft username"
           />
           <button type="submit">Load Skin</button>

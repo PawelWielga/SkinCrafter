@@ -1,6 +1,6 @@
 import './wardrobe.css';
 
-function WardrobeEyescolor() {
+function WardrobeEyescolor(): JSX.Element {
   return <div>{WardrobeEyescolor.name}</div>;
 }
 

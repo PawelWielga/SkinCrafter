@@ -2,10 +2,14 @@ import { useState } from 'react';
 import './wardrobe.css';
 import races from '../../data/races';
 
-function WardrobeRace({ onChange }) {
-  const [selectedRace, setSelectedRace] = useState('Human');
+interface WardrobeRaceProps {
+  onChange?: (race: string) => void;
+}
 
-  const handleClick = (race) => {
+function WardrobeRace({ onChange }: WardrobeRaceProps): JSX.Element {
+  const [selectedRace, setSelectedRace] = useState<string>('Human');
+
+  const handleClick = (race: string): void => {
     setSelectedRace(race);
     onChange?.(race);
   };
