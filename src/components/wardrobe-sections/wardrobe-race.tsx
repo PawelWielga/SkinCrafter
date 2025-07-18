@@ -30,7 +30,7 @@ const WardrobeRace: React.FC<WardrobeRaceProps> = React.memo(({ onChange }) => {
               className={`section-grid-option${isSelected ? ' selected' : ''}`}
               aria-pressed={isSelected}
               onClick={() => handleClick(race)}
-              onKeyDown={(e) => {
+              onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   handleClick(race);
