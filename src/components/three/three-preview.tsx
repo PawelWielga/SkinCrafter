@@ -31,6 +31,8 @@ export default function ThreePreview({
   showOverlay = true,
 }: ThreePreviewProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer>();
+  const cameraRef = useRef<THREE.PerspectiveCamera>();
 
   const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
@@ -64,19 +66,24 @@ export default function ThreePreview({
     const container = containerRef.current;
     if (!container) return;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      52,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.z = 40;
+    // Set initial sizes
+    const width = container.clientWidth;
+    const height = container.clientHeight;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setClearColor(0x000000, 0);
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
+    camera.position.z = 40;
+    cameraRef.current = camera;
+
+    // Scene
+    const scene = new THREE.Scene();
 
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(10, 10, 10);
@@ -154,8 +161,26 @@ export default function ThreePreview({
     };
     animate();
 
+    // Resize handler
+    const handleResize = () => {
+      if (container && rendererRef.current && cameraRef.current) {
+        const newWidth = container.clientWidth;
+        const newHeight = container.clientHeight;
+        rendererRef.current.setSize(newWidth, newHeight);
+        cameraRef.current.aspect = newWidth / newHeight;
+        cameraRef.current.updateProjectionMatrix();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial sizing
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       renderer.dispose();
+      if (renderer.domElement.parentNode) {
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      }
       container.innerHTML = '';
     };
   }, [texture, applyPoseLocal, pose, showOverlay]);
