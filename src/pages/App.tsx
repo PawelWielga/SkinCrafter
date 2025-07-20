@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import './App.css';
 
 import { Race } from '../data/races';
@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [hat, setHat] = useState<Hat>('None');
   const layerOrder: LayerOrder = defaultLayerOrder;
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
+  const particlesRef = useRef<HTMLDivElement | null>(null);
 
   const skinColors = useMemo(() => skinColorMap[race], [race]);
 
@@ -39,7 +40,6 @@ const App: React.FC = () => {
     setHat(newHat);
   }, []);
 
-
   useEffect(() => {
     const textures: (string | null)[] = [];
     layerOrder.forEach((layer) => {
@@ -53,8 +53,25 @@ const App: React.FC = () => {
     combineTextures(textures).then((tex) => setCombinedTexture(tex));
   }, [race, hat]);
 
+  useEffect(() => {
+    const container = particlesRef.current;
+    if (!container) return;
+    for (let i = 0; i < 20; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.animationDelay = Math.random() * 6 + 's';
+      particle.style.animationDuration = 6 + Math.random() * 4 + 's';
+      container.appendChild(particle);
+    }
+    return () => {
+      container.innerHTML = '';
+    };
+  }, []);
+
   return (
     <div className="container">
+      <div className="particles" ref={particlesRef} />
       <NBar />
 
       <div className="main-content">
