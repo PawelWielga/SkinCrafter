@@ -1,4 +1,4 @@
-import{j as Dt,r as lt}from"./index-CM7xZdgj.js";const sp=({logoSrc:i="/logo.png",logoAlt:e="Logo aplikacji"})=>Dt.jsxs("nav",{className:"navbar",role:"navigation","aria-label":"Główna nawigacja",children:[Dt.jsx("div",{className:"logo-container",children:Dt.jsx("img",{src:i,alt:e,className:"logo",draggable:!1})}),Dt.jsx("div",{className:"nav-links"})]});/**
+import{j as Dt,r as lt}from"./index-By4PWt8W.js";const sp=({logoSrc:i="/logo.png",logoAlt:e="Logo aplikacji"})=>Dt.jsxs("nav",{className:"navbar",role:"navigation","aria-label":"Główna nawigacja",children:[Dt.jsx("div",{className:"logo-container",children:Dt.jsx("img",{src:i,alt:e,className:"logo",draggable:!1})}),Dt.jsx("div",{className:"nav-links"})]});/**
  * @license
  * Copyright 2010-2025 Three.js Authors
  * SPDX-License-Identifier: MIT
