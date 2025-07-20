@@ -9,9 +9,8 @@ import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor
 import WardrobeEyes from '../components/wardrobe-sections/WardrobeEyes';
 import WardrobeEyesColor from '../components/wardrobe-sections/WardrobeEyesColor';
 import WardrobeHat from '../components/wardrobe-sections/WardrobeHat';
-import WardrobeLayerOrder, {
-  LayerOrder,
-} from '../components/wardrobe-sections/WardrobeLayerOrder';
+import type { LayerOrder } from '../data/layerOrder';
+import defaultLayerOrder from '../data/layerOrder';
 
 import skinColorMap from '../data/skinColorMap';
 import raceTextureMap from '../data/raceTextureMap';
@@ -22,7 +21,7 @@ const App: React.FC = () => {
   const [race, setRace] = useState<Race>('Human');
   const [skinColor, setSkinColor] = useState<string>(skinColorMap.Human[0]);
   const [hat, setHat] = useState<Hat>('None');
-  const [layerOrder, setLayerOrder] = useState<LayerOrder>(['race', 'hat']);
+  const layerOrder: LayerOrder = defaultLayerOrder;
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
 
   const skinColors = useMemo(() => skinColorMap[race], [race]);
@@ -40,9 +39,6 @@ const App: React.FC = () => {
     setHat(newHat);
   }, []);
 
-  const handleLayerOrderChange = useCallback((order: LayerOrder) => {
-    setLayerOrder(order);
-  }, []);
 
   useEffect(() => {
     const textures: (string | null)[] = [];
@@ -55,7 +51,7 @@ const App: React.FC = () => {
     });
 
     combineTextures(textures).then((tex) => setCombinedTexture(tex));
-  }, [race, hat, layerOrder]);
+  }, [race, hat]);
 
   return (
     <div className="container">
@@ -74,8 +70,6 @@ const App: React.FC = () => {
           />
 
           <WardrobeHat onChange={handleHatChange} />
-
-          <WardrobeLayerOrder order={layerOrder} onChange={handleLayerOrderChange} />
 
           <WardrobeEyes />
 
