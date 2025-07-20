@@ -39,3 +39,11 @@
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
+
+.theme-select {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--wow-bronze);
+  background: var(--wow-light-blue);
+  color: var(--wow-gold);
+}

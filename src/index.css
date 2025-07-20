@@ -13,6 +13,21 @@
   --wow-shadow: rgba(0, 0, 0, 0.8);
 }
 
+body.theme-forest {
+  --wow-gold: #d4af37;
+  --wow-dark-gold: #f4e781;
+  --wow-bronze: #8b6914;
+  --wow-dark-blue: #1a2b1a;
+  --wow-medium-blue: #2d4a2d;
+  --wow-light-blue: #3d5f3d;
+  --wow-purple: #4a6741;
+  --wow-green: #87a96b;
+  --wow-red: #ffbf00;
+  --wow-stone: #4b3621;
+  --wow-stone-light: #6b4a2a;
+  --wow-shadow: rgba(15, 25, 15, 0.8);
+}
+
 * {
   margin: 0;
   padding: 0;
