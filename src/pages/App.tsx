@@ -3,6 +3,7 @@ import './App.css';
 
 import { Race } from '../data/races';
 import NBar from '../components/nbar/NBar';
+import UnderConstructionBanner from '../components/UnderConstructionBanner';
 import PreviewArea from '../components/preview-area/PreviewArea';
 import WardrobeRace from '../components/wardrobe-sections/WardrobeRace';
 import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor';
@@ -73,6 +74,7 @@ const App: React.FC = () => {
     <div className="container">
       <div className="particles" ref={particlesRef} />
       <NBar />
+      <UnderConstructionBanner />
 
       <div className="main-content">
         <PreviewArea texture={combinedTexture} />

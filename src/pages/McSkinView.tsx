@@ -3,6 +3,7 @@ import './App.css';
 import fetchSkin from '../api/fetchSkin';
 import NBar from '../components/nbar/NBar';
 import PreviewArea from '../components/preview-area/PreviewArea';
+import UnderConstructionBanner from '../components/UnderConstructionBanner';
 
 const McSkinView: React.FC = () => {
   const [username, setUsername] = useState<string>('');
@@ -45,6 +46,7 @@ const McSkinView: React.FC = () => {
   return (
     <div className="container">
       <NBar />
+      <UnderConstructionBanner />
       <div className="main-content">
         <form onSubmit={handleSubmit} style={{ marginBottom: '1rem' }}>
           <input
