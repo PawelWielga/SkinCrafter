@@ -1,4 +1,4 @@
-import{j as wt,r as lt}from"./index-DpBvwehc.js";const sp=({logoSrc:i="/logo.png",logoAlt:e="Logo aplikacji"})=>wt.jsxs("nav",{className:"navbar",role:"navigation","aria-label":"Główna nawigacja",children:[wt.jsx("div",{className:"logo-container",children:wt.jsx("img",{src:i,alt:e,className:"logo",draggable:!1})}),wt.jsx("div",{className:"nav-links"})]});function ap(){return wt.jsx("div",{className:"under-construction-banner",role:"status",children:"Site under construction"})}/**
+import{j as wt,r as lt}from"./index-CjDvVpLL.js";const sp=({logoSrc:i="/logo.png",logoAlt:e="Logo aplikacji"})=>wt.jsxs("nav",{className:"navbar",role:"navigation","aria-label":"Główna nawigacja",children:[wt.jsx("div",{className:"logo-container",children:wt.jsx("img",{src:i,alt:e,className:"logo",draggable:!1})}),wt.jsx("div",{className:"nav-links"})]});function ap(){return wt.jsx("div",{className:"under-construction-banner",role:"status",children:"Site under construction"})}/**
  * @license
  * Copyright 2010-2025 Three.js Authors
  * SPDX-License-Identifier: MIT
