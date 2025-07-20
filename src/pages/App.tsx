@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import './App.css';
 
 import { Race } from '../data/races';
@@ -8,13 +8,22 @@ import WardrobeRace from '../components/wardrobe-sections/WardrobeRace';
 import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor';
 import WardrobeEyes from '../components/wardrobe-sections/WardrobeEyes';
 import WardrobeEyesColor from '../components/wardrobe-sections/WardrobeEyesColor';
+import WardrobeHat from '../components/wardrobe-sections/WardrobeHat';
+import WardrobeLayerOrder, {
+  LayerOrder,
+} from '../components/wardrobe-sections/WardrobeLayerOrder';
 
 import skinColorMap from '../data/skinColorMap';
 import raceTextureMap from '../data/raceTextureMap';
+import hatTextureMap, { Hat } from '../data/hatTextureMap';
+import combineTextures from '../utils/combineTextures';
 
 const App: React.FC = () => {
   const [race, setRace] = useState<Race>('Human');
   const [skinColor, setSkinColor] = useState<string>(skinColorMap.Human[0]);
+  const [hat, setHat] = useState<Hat>('None');
+  const [layerOrder, setLayerOrder] = useState<LayerOrder>(['race', 'hat']);
+  const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
 
   const skinColors = useMemo(() => skinColorMap[race], [race]);
 
@@ -27,12 +36,33 @@ const App: React.FC = () => {
     setSkinColor(color);
   }, []);
 
+  const handleHatChange = useCallback((newHat: Hat) => {
+    setHat(newHat);
+  }, []);
+
+  const handleLayerOrderChange = useCallback((order: LayerOrder) => {
+    setLayerOrder(order);
+  }, []);
+
+  useEffect(() => {
+    const textures: (string | null)[] = [];
+    layerOrder.forEach((layer) => {
+      if (layer === 'race') {
+        textures.push(raceTextureMap[race]);
+      } else if (layer === 'hat') {
+        textures.push(hatTextureMap[hat]);
+      }
+    });
+
+    combineTextures(textures).then((tex) => setCombinedTexture(tex));
+  }, [race, hat, layerOrder]);
+
   return (
     <div className="container">
       <NBar />
 
       <div className="main-content">
-        <PreviewArea texture={raceTextureMap[race]} />
+        <PreviewArea texture={combinedTexture} />
 
         <div className="wardrobe-container">
           <WardrobeRace onChange={handleRaceChange} />
@@ -42,6 +72,10 @@ const App: React.FC = () => {
             selectedColor={skinColor}
             onChange={handleSkinColorChange}
           />
+
+          <WardrobeHat onChange={handleHatChange} />
+
+          <WardrobeLayerOrder order={layerOrder} onChange={handleLayerOrderChange} />
 
           <WardrobeEyes />
 
