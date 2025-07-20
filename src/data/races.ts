@@ -1,12 +1,13 @@
+const isDev = import.meta.env.DEV;
 export const races = [
   'Human',
+  ...(isDev ? ['Template'] : []),
   //   'Elf',
   //   'Dwarf',
   //   'Orc',
   //   'Zombie',
   //   'Skeleton',
   //   'Enderman',
-  'Template',
 ] as const;
 
 export type Race = (typeof races)[number];
