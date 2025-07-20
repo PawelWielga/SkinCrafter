@@ -5,7 +5,7 @@ const raceTextureMap: Record<Race, string> = {
   // Elf: '/textures/race/elf.png',
   // Dwarf: '/textures/race/dwarf.png',
   // Orc: '/textures/race/orc.png',
-  // Zombie: '/textures/race/zombie.png',
+  Zombie: '/textures/race/zombie.png',
   // Skeleton: '/textures/race/skeleton.png',
   // Enderman: '/textures/race/enderman.png',
   Template: '/textures/race/template.png',

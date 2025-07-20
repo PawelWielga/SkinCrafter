@@ -5,7 +5,7 @@ const skinColorMap: Record<Race, string[]> = {
   // Elf: ['#F1E9DF', '#E0CBA6'],
   // Dwarf: ['#D2B48C', '#BDB76B'],
   // Orc: ['#008000', '#006400'],
-  // Zombie: ['#663300', '#556B2F'],
+  Zombie: ['#556B2F'],
   // Skeleton: ['#F0F0F0'],
   // Enderman: ['#141414'],
   Template: ['#FFFFFF'],
