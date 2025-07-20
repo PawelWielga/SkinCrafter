@@ -33,6 +33,7 @@ export default function ThreePreview({
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const rotationRef = useRef<number>(0);
 
   const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
@@ -91,6 +92,7 @@ export default function ThreePreview({
 
     const group = new THREE.Group();
     group.position.y = -10;
+    group.rotation.y = rotationRef.current;
     scene.add(group);
 
     const loader = new THREE.TextureLoader();
@@ -179,13 +181,14 @@ export default function ThreePreview({
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
+      rotationRef.current = group.rotation.y;
       renderer.dispose();
       if (renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
       container.innerHTML = '';
     };
-  }, [texture, applyPoseLocal, pose, showOverlay]);
+  }, [texture, applyPoseLocal]);
 
   useEffect(() => {
     applyPoseLocal(pose);
