@@ -43,23 +43,31 @@ const McSkinView: React.FC = () => {
   );
 
   return (
-    <div className="container">
+    <div className="max-w-3xl mx-auto p-4">
       <NBar />
-      <div className="main-content">
-        <form onSubmit={handleSubmit} style={{ marginBottom: '1rem' }}>
+      <div className="flex flex-col items-center gap-4">
+        <form
+          onSubmit={handleSubmit}
+          className="mb-4 flex flex-col sm:flex-row gap-2 w-full justify-center"
+        >
           <input
             type="text"
             value={username}
             onChange={handleUsernameChange}
             placeholder="Minecraft username"
             aria-label="Minecraft username"
+            className="flex-grow border rounded px-2 py-1"
           />
-          <button type="submit" disabled={loading}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
             {loading ? 'Loading…' : 'Load Skin'}
           </button>
         </form>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && <div className="text-red-600">{error}</div>}
 
         <PreviewArea texture={texture} />
       </div>
