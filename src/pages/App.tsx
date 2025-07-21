@@ -4,11 +4,7 @@ import '../styles/App.scss';
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';
-import WardrobeRace from '../components/wardrobe-sections/WardrobeRace';
-import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor';
-import WardrobeEyes from '../components/wardrobe-sections/WardrobeEyes';
-import WardrobeEyesColor from '../components/wardrobe-sections/WardrobeEyesColor';
-import WardrobeHat from '../components/wardrobe-sections/WardrobeHat';
+import Wardrobe from '../components/wardrobe';
 import type { LayerOrder } from '../data/layerOrder';
 import defaultLayerOrder from '../data/layerOrder';
 
@@ -59,23 +55,13 @@ const App: React.FC = () => {
       <div className="main-content">
         <PreviewArea texture={combinedTexture} />
 
-        <div className="wardrobe-container">
-          <WardrobeRace onChange={handleRaceChange} />
-
-          <WardrobeSkinColor
-            colors={skinColors}
-            selectedColor={skinColor}
-            onChange={handleSkinColorChange}
-          />
-
-          <WardrobeHat onChange={handleHatChange} />
-
-          <WardrobeEyes />
-
-          <WardrobeEyesColor />
-
-          {/* TODO: hair, hairColor, top, topCoat, bottom, boots, etc. */}
-        </div>
+        <Wardrobe
+          skinColors={skinColors}
+          selectedSkinColor={skinColor}
+          onRaceChange={handleRaceChange}
+          onSkinColorChange={handleSkinColorChange}
+          onHatChange={handleHatChange}
+        />
       </div>
     </div>
   );
