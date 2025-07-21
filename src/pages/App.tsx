@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import '../styles/App.scss';
+import '../styles/main.scss';
 
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
@@ -16,6 +16,7 @@ import skinColorMap from '../data/skinColorMap';
 import raceTextureMap from '../data/raceTextureMap';
 import hatTextureMap, { Hat } from '../data/hatTextureMap';
 import combineTextures from '../utils/combineTextures';
+import MyFooter from '../components/myFooter';
 
 const App: React.FC = () => {
   const [race, setRace] = useState<Race>('Human');
@@ -77,6 +78,8 @@ const App: React.FC = () => {
           {/* TODO: hair, hairColor, top, topCoat, bottom, boots, etc. */}
         </div>
       </div>
+
+      <MyFooter />
     </div>
   );
 };
