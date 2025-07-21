@@ -3,12 +3,12 @@ import '../styles/App.scss';
 
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
-import PreviewArea from '../components/preview-area/previewArea';
-import WardrobeRace from '../components/wardrobe-sections/wardrobeRace';
-import WardrobeSkinColor from '../components/wardrobe-sections/wardrobeSkinColor';
-import WardrobeEyes from '../components/wardrobe-sections/wardrobeEyes';
-import WardrobeEyesColor from '../components/wardrobe-sections/wardrobeEyesColor';
-import WardrobeHat from '../components/wardrobe-sections/wardrobeHat';
+import PreviewArea from '../components/previewArea';
+import WardrobeRace from '../components/wardrobe-sections/WardrobeRace';
+import WardrobeSkinColor from '../components/wardrobe-sections/WardrobeSkinColor';
+import WardrobeEyes from '../components/wardrobe-sections/WardrobeEyes';
+import WardrobeEyesColor from '../components/wardrobe-sections/WardrobeEyesColor';
+import WardrobeHat from '../components/wardrobe-sections/WardrobeHat';
 import type { LayerOrder } from '../data/layerOrder';
 import defaultLayerOrder from '../data/layerOrder';
 

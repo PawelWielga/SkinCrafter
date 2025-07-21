@@ -2,7 +2,7 @@ import React, { useState, useCallback, FormEvent, ChangeEvent } from 'react';
 import '../styles/App.scss';
 import fetchSkin from '../api/fetchSkin';
 import NBar from '../components/nbar';
-import PreviewArea from '../components/preview-area/previewArea';
+import PreviewArea from '../components/previewArea';
 
 const McSkinView: React.FC = () => {
   const [username, setUsername] = useState<string>('');
