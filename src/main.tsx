@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import './index.css';
+import './styles/main.scss';
 
 const App = lazy(() => import('./pages/App'));
 const McSkinView = lazy(() => import('./pages/McSkinView'));

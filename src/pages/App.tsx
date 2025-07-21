@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import './App.css';
+import '../styles/App.scss';
 
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
