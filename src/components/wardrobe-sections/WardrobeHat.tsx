@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import './Wardrobe.css';
+import '../../styles/_wardrobe.scss';
 import { hats, Hat } from '../../data/hatTextureMap';
 
 export interface WardrobeHatProps {

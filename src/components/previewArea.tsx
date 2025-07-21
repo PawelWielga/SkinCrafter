@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ThreePreview from '../three/three-preview';
 import type { Pose } from '../three/pose-utils';
-import './PreviewArea.css';
+import '../styles/_previewArea.scss';
 
 interface PreviewAreaProps {
   texture: string | null;
