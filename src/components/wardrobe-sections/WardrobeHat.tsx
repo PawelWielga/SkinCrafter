@@ -17,16 +17,18 @@ const WardrobeHat: React.FC<WardrobeHatProps> = React.memo(({ onChange }) => {
   );
 
   return (
-    <div className="section" role="group" aria-label="Select Hat">
-      <h3 className="section-title">Hat</h3>
-      <div className="section-grid">
+    <div className="mb-4" role="group" aria-label="Select Hat">
+      <h3 className="mb-2 font-semibold">Hat</h3>
+      <div className="grid grid-cols-3 gap-2">
         {hats.map((hat) => {
           const isSelected = selectedHat === hat;
           return (
             <button
               key={hat}
               type="button"
-              className={`section-grid-option${isSelected ? ' selected' : ''}`}
+              className={`px-2 py-1 border rounded hover:bg-gray-200${
+                isSelected ? ' bg-blue-500 text-white' : ''
+              }`}
               aria-pressed={isSelected}
               onClick={() => handleClick(hat)}
               onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {

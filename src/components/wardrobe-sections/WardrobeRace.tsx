@@ -17,16 +17,18 @@ const WardrobeRace: React.FC<WardrobeRaceProps> = React.memo(({ onChange }) => {
   );
 
   return (
-    <div className="section" role="group" aria-label="Select Race">
-      <h3 className="section-title">Race</h3>
-      <div className="section-grid">
+    <div className="mb-4" role="group" aria-label="Select Race">
+      <h3 className="mb-2 font-semibold">Race</h3>
+      <div className="grid grid-cols-3 gap-2">
         {races.map((race) => {
           const isSelected = selectedRace === race;
           return (
             <button
               key={race}
               type="button"
-              className={`section-grid-option${isSelected ? ' selected' : ''}`}
+              className={`px-2 py-1 border rounded hover:bg-gray-200${
+                isSelected ? ' bg-blue-500 text-white' : ''
+              }`}
               aria-pressed={isSelected}
               onClick={() => handleClick(race)}
               onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {

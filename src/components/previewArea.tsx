@@ -27,15 +27,15 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
   };
 
   return (
-    <div className="preview-area">
-      <div className="character-preview">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="w-full">
         <ThreePreview texture={texture} pose={pose} showOverlay={showOverlay} />
       </div>
 
-      <div className="action-buttons">
+      <div className="mt-2 flex flex-wrap gap-2 justify-center">
         <button
           type="button"
-          className="btn btn-secondary"
+          className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
           aria-label="Change character pose"
           onClick={cyclePose}
         >
@@ -44,7 +44,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
 
         <button
           type="button"
-          className="btn btn-secondary"
+          className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
           aria-label={showOverlay ? 'Hide overlay' : 'Show overlay'}
           onClick={toggleOverlay}
         >
@@ -53,7 +53,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
 
         <button
           type="button"
-          className="btn btn-primary"
+          className="px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
           aria-label="Download character skin"
           onClick={downloadSkin}
         >
