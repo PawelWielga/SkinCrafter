@@ -1,5 +1,3 @@
-import '../../styles/_wardrobe.scss';
-
 interface WardrobeSkinColorProps {
   colors: string[];
   selectedColor: string | null;

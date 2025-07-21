@@ -1,5 +1,5 @@
 import React, { useState, useCallback, FormEvent, ChangeEvent } from 'react';
-import '../styles/App.scss';
+import '../styles/main.scss';
 import fetchSkin from '../api/fetchSkin';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';

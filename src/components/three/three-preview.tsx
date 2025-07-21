@@ -1,5 +1,3 @@
-// src/components/ThreePreview.tsx
-
 import React, { useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import applyPose, { Pose } from './pose-utils';
