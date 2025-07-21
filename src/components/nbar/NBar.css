@@ -74,3 +74,8 @@
 .nav-coffee-btn::before {
   content: '☕';
 }
+
+.under-construction {
+  color: #ff4d4d;
+  font-weight: bold;
+}

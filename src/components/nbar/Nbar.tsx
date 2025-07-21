@@ -13,6 +13,7 @@ const NBar: React.FC<NBarProps> = ({ logoSrc = '/logo.png', logoAlt = 'Logo apli
         <img src={logoSrc} alt={logoAlt} className="logo" draggable={false} />
       </div>
       <div className="nav-links">
+        <span className="under-construction">Under Construction</span>
         {/* <a href="#" className="nav-link" aria-label="Pomoc">
           Help
         </a>
