@@ -4,10 +4,12 @@ import { hats, Hat } from '../../data/hatTextureMap';
 export interface WardrobeHatProps {
   selectedHat: Hat;
   onChange?: (hat: Hat) => void;
+  hideLabel?: boolean;
+  className?: string;
 }
 
 const WardrobeHat: React.FC<WardrobeHatProps> = React.memo(
-  ({ selectedHat, onChange }) => {
+  ({ selectedHat, onChange, hideLabel = false, className }) => {
     const handleClick = useCallback(
       (hat: Hat) => {
         onChange?.(hat);
@@ -16,8 +18,12 @@ const WardrobeHat: React.FC<WardrobeHatProps> = React.memo(
     );
 
     return (
-      <div className="mb-4" role="group" aria-label="Select Hat">
-        <h3 className="mb-2 font-semibold">Hat</h3>
+      <div
+        className={className ?? 'mb-4'}
+        role="group"
+        aria-label="Select Hat"
+      >
+        {!hideLabel && <h3 className="mb-2 font-semibold">Hat</h3>}
         <div className="grid grid-cols-3 gap-2">
           {hats.map((hat) => {
             const isSelected = selectedHat === hat;

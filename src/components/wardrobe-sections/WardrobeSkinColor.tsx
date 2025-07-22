@@ -2,16 +2,20 @@ interface WardrobeSkinColorProps {
   colors: string[];
   selectedColor: string | null;
   onChange?: (color: string) => void;
+  hideLabel?: boolean;
+  className?: string;
 }
 
 function WardrobeSkinColor({
   colors,
   selectedColor,
   onChange,
+  hideLabel = false,
+  className,
 }: WardrobeSkinColorProps): React.JSX.Element {
   return (
-    <div className="mb-4">
-      <h3 className="mb-2 font-semibold">Skin Color</h3>
+    <div className={className ?? 'mb-4'}>
+      {!hideLabel && <h3 className="mb-2 font-semibold">Skin Color</h3>}
       <div className="flex flex-wrap gap-2">
         {colors.map((color) => (
           <button

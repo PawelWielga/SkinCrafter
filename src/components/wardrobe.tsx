@@ -27,22 +27,63 @@ export default function Wardrobe({
   onHatChange,
 }: WardrobeProps): React.JSX.Element {
   return (
-    <div>
-      <WardrobeRace selectedRace={selectedRace} onChange={onRaceChange} />
+    <section className="overflow-y-scroll h-full pr-2 customization-panel">
+      <div className="custom-scrollbar">
+        <div className="custom-scrollbar-thumb" />
+      </div>
+      <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
+        <i className="fas fa-sliders mr-2 text-green-700" /> Customization
+      </h2>
 
-      <WardrobeSkinColor
-        colors={skinColors}
-        selectedColor={selectedSkinColor}
-        onChange={onSkinColorChange}
-      />
+      <div className="space-y-2 options-container">
+        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
+          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
+            <i className="fas fa-user-tag mr-2 text-amber-600" /> Character Race
+          </h3>
+          <WardrobeRace
+            selectedRace={selectedRace}
+            onChange={onRaceChange}
+            hideLabel
+            className="mt-4"
+          />
+        </div>
 
-      <WardrobeHat selectedHat={selectedHat} onChange={onHatChange} />
+        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
+          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
+            <i className="fas fa-palette mr-2 text-amber-600" /> Skin Color
+          </h3>
+          <WardrobeSkinColor
+            colors={skinColors}
+            selectedColor={selectedSkinColor}
+            onChange={onSkinColorChange}
+            hideLabel
+            className="mt-4"
+          />
+        </div>
 
-      <WardrobeEyes />
+        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
+          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
+            <i className="fas fa-tshirt mr-2 text-amber-600" /> Hat
+          </h3>
+          <WardrobeHat
+            selectedHat={selectedHat}
+            onChange={onHatChange}
+            hideLabel
+            className="mt-4"
+          />
+        </div>
 
-      <WardrobeEyesColor />
-
-      {/* TODO: hair, hairColor, top, topCoat, bottom, boots, etc. */}
-    </div>
+        {/* Placeholder sections */}
+        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
+          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
+            <i className="fas fa-eye mr-2 text-amber-600" /> Eyes
+          </h3>
+          <div className="mt-4">
+            <WardrobeEyes />
+            <WardrobeEyesColor />
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

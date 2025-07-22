@@ -4,10 +4,12 @@ import races, { Race } from '../../data/races';
 export interface WardrobeRaceProps {
   selectedRace: Race;
   onChange?: (race: Race) => void;
+  hideLabel?: boolean;
+  className?: string;
 }
 
 const WardrobeRace: React.FC<WardrobeRaceProps> = React.memo(
-  ({ selectedRace, onChange }) => {
+  ({ selectedRace, onChange, hideLabel = false, className }) => {
     const handleClick = useCallback(
       (race: Race) => {
         onChange?.(race);
@@ -16,8 +18,12 @@ const WardrobeRace: React.FC<WardrobeRaceProps> = React.memo(
     );
 
     return (
-      <div className="mb-4" role="group" aria-label="Select Race">
-        <h3 className="mb-2 font-semibold">Race</h3>
+      <div
+        className={className ?? 'mb-4'}
+        role="group"
+        aria-label="Select Race"
+      >
+        {!hideLabel && <h3 className="mb-2 font-semibold">Race</h3>}
         <div className="grid grid-cols-3 gap-2">
           {races.map((race) => {
             const isSelected = selectedRace === race;
