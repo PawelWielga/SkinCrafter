@@ -45,7 +45,7 @@ export default function PreviewArea({ texture, footerHeight }: PreviewAreaProps)
         <i className="fas fa-eye mr-2 text-green-700"></i> Preview
       </h2>
 
-      <div className="bg-gray-800 shadow-lg overflow-hidden pixel-border flex-grow h-full">
+      <div className="bg-gray-800 shadow-lg overflow-hidden pixel-border flex-grow h-full max-h-[70dvh] md:max-h-full">
         <div className="flex justify-center items-center model-placeholder">
           <ThreePreview
             texture={texture}
