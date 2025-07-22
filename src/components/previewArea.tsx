@@ -60,17 +60,17 @@ export default function PreviewArea({ texture, footerHeight }: PreviewAreaProps)
         <button
           className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label="Change character pose"
-          onClick={downloadSkin}
+          onClick={cyclePose}
         >
-          <i className="fas fa-download mr-2" />
+          <i className="fas fa-arrows-rotate mr-2" />
           Change Pose
         </button>
         <button
           className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label={showOverlay ? 'Hide overlay' : 'Show overlay'}
-          onClick={downloadSkin}
+          onClick={toggleOverlay}
         >
-          <i className="fas fa-download mr-2" />
+          <i className="fas fa-layer-group mr-2" />
           {showOverlay ? 'Hide' : 'Show'} Overlay
         </button>
         <button
