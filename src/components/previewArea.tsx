@@ -4,9 +4,10 @@ import type { Pose } from './three/pose-utils';
 
 interface PreviewAreaProps {
   texture: string | null;
+  footerHeight: number;
 }
 
-export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.Element {
+export default function PreviewArea({ texture, footerHeight }: PreviewAreaProps): React.JSX.Element {
   const [pose, setPose] = useState<Pose>('default');
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
   const [offset, setOffset] = useState<number>(0);
@@ -30,12 +31,13 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
 
   useEffect(() => {
     const measure = () => {
-      setOffset(buttonsRef.current?.offsetHeight ?? 0);
+      const buttons = buttonsRef.current?.offsetHeight ?? 0;
+      setOffset(buttons + footerHeight);
     };
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, []);
+  }, [footerHeight]);
 
   return (
     <section className="mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4">
