@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 
+import '../styles/main.css';
+
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';

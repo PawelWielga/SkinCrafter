@@ -7,21 +7,17 @@ interface NBarProps {
 
 const NBar: React.FC<NBarProps> = ({ logoSrc = '/logo.png', logoAlt = 'Logo aplikacji' }) => {
   return (
-    <nav
-      className="flex items-center justify-between bg-gray-800 text-white p-4 mb-4"
-      role="navigation"
-      aria-label="Główna nawigacja"
-    >
-      <div className="flex items-center">
-        <img src={logoSrc} alt={logoAlt} className="h-10 select-none" draggable={false} />
-      </div>
-      <div className="flex space-x-4">
-        {/* <a href="#" className="nav-link" aria-label="Pomoc">
-          Help
-        </a>
-        <a href="#" className="nav-coffee-btn" aria-label="Kup mi kawę">
-          Buy me a coffee
-        </a> */}
+    <nav className="bg-green-800 text-white px-4 py-3 shadow-md">
+      <div className="container mx-auto flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-amber-500 flex items-center justify-center pixel-border">
+            <i className="fas fa-cube text-sm"></i>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight">SkinCrafter</h1>
+        </div>
+        <button className="pixel-button bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded pixel-border transition-colors">
+          <i className="fas fa-user mr-1"></i> My Skins
+        </button>
       </div>
     </nav>
   );
