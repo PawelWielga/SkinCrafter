@@ -15,8 +15,11 @@ const NBar: React.FC<NBarProps> = ({ logoSrc = '/logo.png', logoAlt = 'Logo apli
           </div>
           <h1 className="text-xl font-bold tracking-tight">SkinCrafter</h1>
         </div>
-        <button className="pixel-button bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded pixel-border transition-colors">
+        <button className="pixel-button bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded pixel-border transition-colors hidden">
           <i className="fas fa-user mr-1"></i> My Skins
+        </button>
+        <button className="pixel-button bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded pixel-border transition-colors">
+          Under Construction
         </button>
       </div>
     </nav>
