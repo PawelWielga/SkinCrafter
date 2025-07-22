@@ -93,7 +93,7 @@ const App: React.FC = () => {
   }, [race, hat]);
 
   return (
-    <div className="max-w-full min-h-dvh md:h-screen overflow-x-visible overflow-y-hidden flex flex-col">
+    <div className="max-w-full min-h-dvh md:h-screen overflow-x-visible overflow-y-auto flex flex-col">
       <NBar />
 
       <div className="flex-1 flex flex-col md:flex-row">
