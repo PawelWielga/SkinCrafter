@@ -124,6 +124,12 @@
 }
 
 .options-container {
-  max-height: calc(100vh - 240px);
-  overflow-y: auto;
+  overflow-y: visible;
+}
+
+@media (min-width: 768px) {
+  .options-container {
+    max-height: calc(100vh - 240px);
+    overflow-y: auto;
+  }
 }
