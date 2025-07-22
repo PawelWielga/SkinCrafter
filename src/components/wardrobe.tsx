@@ -23,7 +23,7 @@ export default function Wardrobe({
   onHatChange,
 }: WardrobeProps): React.JSX.Element {
   return (
-    <div className="space-y-6">
+    <div>
       <WardrobeRace onChange={onRaceChange} />
 
       <WardrobeSkinColor

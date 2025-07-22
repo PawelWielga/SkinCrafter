@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 
-import '../styles/main.css';
-
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';
@@ -51,19 +49,22 @@ const App: React.FC = () => {
   }, [race, hat]);
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-full min-h-dvh md:h-screen overflow-hidden flex flex-col">
       <NBar />
 
-      <div className="flex flex-col md:flex-row gap-8">
-        <PreviewArea texture={combinedTexture} />
-
-        <Wardrobe
-          skinColors={skinColors}
-          selectedSkinColor={skinColor}
-          onRaceChange={handleRaceChange}
-          onSkinColorChange={handleSkinColorChange}
-          onHatChange={handleHatChange}
-        />
+      <div className="flex-1 flex flex-col md:flex-row gap-8">
+        <div className="flex-1">
+          <PreviewArea texture={combinedTexture} />
+        </div>
+        <div className="flex-1">
+          <Wardrobe
+            skinColors={skinColors}
+            selectedSkinColor={skinColor}
+            onRaceChange={handleRaceChange}
+            onSkinColorChange={handleSkinColorChange}
+            onHatChange={handleHatChange}
+          />
+        </div>
       </div>
 
       <MyFooter />
