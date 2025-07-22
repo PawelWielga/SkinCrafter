@@ -27,34 +27,43 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
   };
 
   return (
-    <div className="">
-      <div className="">
-        <ThreePreview texture={texture} pose={pose} showOverlay={showOverlay} />
+    <section className="mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4">
+      <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
+        <i className="fas fa-eye mr-2 text-green-700"></i> Preview
+      </h2>
+
+      <div className="bg-gray-200 rounded-lg shadow-lg overflow-hidden pixel-border flex-grow h-full">
+        <div className="flex justify-center items-center model-placeholder">
+          <ThreePreview texture={texture} pose={pose} showOverlay={showOverlay} />
+        </div>
       </div>
 
-      <div className="">
-        <button type="button" className="" aria-label="Change character pose" onClick={cyclePose}>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 rounded pixel-border transition-colors flex items-center justify-center"
+          aria-label="Change character pose"
+          onClick={downloadSkin}
+        >
+          <i className="fas fa-download mr-2" />
           Change Pose
         </button>
-
         <button
-          type="button"
-          className=""
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 rounded pixel-border transition-colors flex items-center justify-center"
           aria-label={showOverlay ? 'Hide overlay' : 'Show overlay'}
-          onClick={toggleOverlay}
+          onClick={downloadSkin}
         >
+          <i className="fas fa-download mr-2" />
           {showOverlay ? 'Hide' : 'Show'} Overlay
         </button>
-
         <button
-          type="button"
-          className=""
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 rounded pixel-border transition-colors flex items-center justify-center"
           aria-label="Download character skin"
           onClick={downloadSkin}
         >
-          Download Skin
+          <i className="fas fa-download mr-2" />
+          Download
         </button>
       </div>
-    </div>
+    </section>
   );
 }

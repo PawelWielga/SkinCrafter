@@ -207,7 +207,8 @@ export default function ThreePreview({
       ref={containerRef}
       style={{
         width: '100%',
-        height: '400px',
+        minHeight: '200px',
+        height: '100%',
         position: 'relative',
       }}
     />
