@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ThreePreview from './three/three-preview';
 import type { Pose } from './three/pose-utils';
 
@@ -9,6 +9,8 @@ interface PreviewAreaProps {
 export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.Element {
   const [pose, setPose] = useState<Pose>('default');
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
+  const [offset, setOffset] = useState<number>(0);
+  const buttonsRef = useRef<HTMLDivElement>(null);
 
   const cyclePose = (): void => {
     setPose((p) => (p === 'default' ? 'tpose' : p === 'tpose' ? 'walking' : 'default'));
@@ -26,6 +28,15 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
     link.click();
   };
 
+  useEffect(() => {
+    const measure = () => {
+      setOffset(buttonsRef.current?.offsetHeight ?? 0);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
   return (
     <section className="mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4">
       <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
@@ -34,11 +45,16 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
 
       <div className="bg-gray-200 shadow-lg overflow-hidden pixel-border flex-grow h-full">
         <div className="flex justify-center items-center model-placeholder">
-          <ThreePreview texture={texture} pose={pose} showOverlay={showOverlay} />
+          <ThreePreview
+            texture={texture}
+            pose={pose}
+            showOverlay={showOverlay}
+            bottomOffset={offset}
+          />
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div ref={buttonsRef} className="mt-4 grid grid-cols-3 gap-2">
         <button
           className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label="Change character pose"
