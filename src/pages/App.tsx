@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 
 import { Race } from '../data/races';
 import NBar from '../components/nbar';
@@ -19,6 +19,8 @@ const App: React.FC = () => {
   const [hat, setHat] = useState<Hat>('None');
   const layerOrder: LayerOrder = defaultLayerOrder;
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
+  const footerRef = useRef<HTMLElement>(null);
+  const [footerHeight, setFooterHeight] = useState<number>(0);
 
   const skinColors = useMemo(() => skinColorMap[race], [race]);
 
@@ -33,6 +35,15 @@ const App: React.FC = () => {
 
   const handleHatChange = useCallback((newHat: Hat) => {
     setHat(newHat);
+  }, []);
+
+  useEffect(() => {
+    const measure = () => {
+      setFooterHeight(footerRef.current?.offsetHeight ?? 0);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, []);
 
   useEffect(() => {
@@ -54,7 +65,7 @@ const App: React.FC = () => {
 
       <div className="flex-1 flex flex-col md:flex-row gap-8">
         <div className="flex-1 w-full md:w-1/2">
-          <PreviewArea texture={combinedTexture} />
+          <PreviewArea texture={combinedTexture} footerHeight={footerHeight} />
         </div>
         <div className="flex-1 w-full md:w-1/2">
           <Wardrobe
@@ -67,7 +78,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <MyFooter />
+      <MyFooter ref={footerRef} />
     </div>
   );
 };
