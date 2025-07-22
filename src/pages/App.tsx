@@ -96,7 +96,7 @@ const App: React.FC = () => {
     <div className="max-w-full min-h-dvh md:h-screen overflow-hidden flex flex-col">
       <NBar />
 
-      <div className="flex-1 flex flex-col md:flex-row gap-8">
+      <div className="flex-1 flex flex-col md:flex-row">
         <div className="flex-1 w-full md:w-1/2">
           <PreviewArea texture={combinedTexture} footerHeight={footerHeight} />
         </div>

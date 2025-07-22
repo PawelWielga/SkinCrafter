@@ -27,10 +27,7 @@ export default function Wardrobe({
   onHatChange,
 }: WardrobeProps): React.JSX.Element {
   return (
-    <section className="overflow-y-scroll h-full pr-2 customization-panel">
-      <div className="custom-scrollbar">
-        <div className="custom-scrollbar-thumb" />
-      </div>
+    <section className="overflow-y-scroll mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4 customization-panel">
       <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
         <i className="fas fa-sliders mr-2 text-green-700" /> Customization
       </h2>
