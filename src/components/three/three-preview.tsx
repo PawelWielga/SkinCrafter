@@ -173,11 +173,15 @@ export default function ThreePreview({
       }
     };
 
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(container);
+
     window.addEventListener('resize', handleResize);
     handleResize(); // Initial sizing
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
       rotationRef.current = group.rotation.y;
       renderer.dispose();
