@@ -32,7 +32,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
         <i className="fas fa-eye mr-2 text-green-700"></i> Preview
       </h2>
 
-      <div className="bg-gray-200 rounded-lg shadow-lg overflow-hidden pixel-border flex-grow h-full">
+      <div className="bg-gray-200 shadow-lg overflow-hidden pixel-border flex-grow h-full">
         <div className="flex justify-center items-center model-placeholder">
           <ThreePreview texture={texture} pose={pose} showOverlay={showOverlay} />
         </div>
@@ -40,7 +40,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <button
-          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 rounded pixel-border transition-colors flex items-center justify-center"
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label="Change character pose"
           onClick={downloadSkin}
         >
@@ -48,7 +48,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
           Change Pose
         </button>
         <button
-          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 rounded pixel-border transition-colors flex items-center justify-center"
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label={showOverlay ? 'Hide overlay' : 'Show overlay'}
           onClick={downloadSkin}
         >
@@ -56,7 +56,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
           {showOverlay ? 'Hide' : 'Show'} Overlay
         </button>
         <button
-          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 rounded pixel-border transition-colors flex items-center justify-center"
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label="Download character skin"
           onClick={downloadSkin}
         >
