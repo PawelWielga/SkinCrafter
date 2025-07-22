@@ -21,12 +21,14 @@ interface ThreePreviewProps {
   texture: string | null;
   pose?: Pose;
   showOverlay?: boolean;
+  bottomOffset?: number;
 }
 
 export default function ThreePreview({
   texture,
   pose = 'default',
   showOverlay = true,
+  bottomOffset = 0,
 }: ThreePreviewProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
@@ -207,14 +209,15 @@ export default function ThreePreview({
     const updateHeight = () => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
-        setContainerHeight(window.innerHeight - rect.top);
+        const height = window.innerHeight - rect.top - bottomOffset;
+        setContainerHeight(height > 0 ? height : 0);
       }
     };
 
     updateHeight();
     window.addEventListener('resize', updateHeight);
     return () => window.removeEventListener('resize', updateHeight);
-  }, []);
+  }, [bottomOffset]);
 
   return (
     <div
