@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import applyPose, { Pose } from './pose-utils';
 import createBox from './create-box';
@@ -32,6 +32,7 @@ export default function ThreePreview({
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const rotationRef = useRef<number>(0);
+  const [containerHeight, setContainerHeight] = useState<number>(0);
 
   const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
@@ -202,13 +203,26 @@ export default function ThreePreview({
     });
   }, [showOverlay]);
 
+  useEffect(() => {
+    const updateHeight = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setContainerHeight(window.innerHeight - rect.top);
+      }
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+
   return (
     <div
       ref={containerRef}
       style={{
         width: '100%',
         minHeight: '200px',
-        height: '100%',
+        height: containerHeight ? `${containerHeight}px` : '100%',
         position: 'relative',
       }}
     />
