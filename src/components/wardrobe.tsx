@@ -10,6 +10,8 @@ import type { Hat } from '../data/hatTextureMap';
 interface WardrobeProps {
   skinColors: string[];
   selectedSkinColor: string | null;
+  selectedRace: Race;
+  selectedHat: Hat;
   onRaceChange?: (race: Race) => void;
   onSkinColorChange?: (color: string) => void;
   onHatChange?: (hat: Hat) => void;
@@ -18,13 +20,15 @@ interface WardrobeProps {
 export default function Wardrobe({
   skinColors,
   selectedSkinColor,
+  selectedRace,
+  selectedHat,
   onRaceChange,
   onSkinColorChange,
   onHatChange,
 }: WardrobeProps): React.JSX.Element {
   return (
     <div>
-      <WardrobeRace onChange={onRaceChange} />
+      <WardrobeRace selectedRace={selectedRace} onChange={onRaceChange} />
 
       <WardrobeSkinColor
         colors={skinColors}
@@ -32,7 +36,7 @@ export default function Wardrobe({
         onChange={onSkinColorChange}
       />
 
-      <WardrobeHat onChange={onHatChange} />
+      <WardrobeHat selectedHat={selectedHat} onChange={onHatChange} />
 
       <WardrobeEyes />
 

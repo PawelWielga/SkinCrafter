@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 
-import { Race } from '../data/races';
+import races, { Race } from '../data/races';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';
 import Wardrobe from '../components/wardrobe';
@@ -9,7 +9,7 @@ import defaultLayerOrder from '../data/layerOrder';
 
 import skinColorMap from '../data/skinColorMap';
 import raceTextureMap from '../data/raceTextureMap';
-import hatTextureMap, { Hat } from '../data/hatTextureMap';
+import hatTextureMap, { Hat, hats } from '../data/hatTextureMap';
 import combineTextures from '../utils/combineTextures';
 import MyFooter from '../components/myFooter';
 
@@ -21,6 +21,27 @@ const App: React.FC = () => {
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
   const footerRef = useRef<HTMLElement>(null);
   const [footerHeight, setFooterHeight] = useState<number>(0);
+
+  useEffect(() => {
+    const storedRace = localStorage.getItem('wardrobeRace');
+    let raceToSet: Race = 'Human';
+    if (storedRace && races.includes(storedRace as Race)) {
+      raceToSet = storedRace as Race;
+      setRace(raceToSet);
+    }
+
+    const storedColor = localStorage.getItem('wardrobeSkinColor');
+    if (storedColor && skinColorMap[raceToSet].includes(storedColor)) {
+      setSkinColor(storedColor);
+    } else {
+      setSkinColor(skinColorMap[raceToSet][0]);
+    }
+
+    const storedHat = localStorage.getItem('wardrobeHat');
+    if (storedHat && hats.includes(storedHat as Hat)) {
+      setHat(storedHat as Hat);
+    }
+  }, []);
 
   const skinColors = useMemo(() => skinColorMap[race], [race]);
 
@@ -36,6 +57,18 @@ const App: React.FC = () => {
   const handleHatChange = useCallback((newHat: Hat) => {
     setHat(newHat);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('wardrobeRace', race);
+  }, [race]);
+
+  useEffect(() => {
+    localStorage.setItem('wardrobeSkinColor', skinColor);
+  }, [skinColor]);
+
+  useEffect(() => {
+    localStorage.setItem('wardrobeHat', hat);
+  }, [hat]);
 
   useEffect(() => {
     const measure = () => {
@@ -71,6 +104,8 @@ const App: React.FC = () => {
           <Wardrobe
             skinColors={skinColors}
             selectedSkinColor={skinColor}
+            selectedRace={race}
+            selectedHat={hat}
             onRaceChange={handleRaceChange}
             onSkinColorChange={handleSkinColorChange}
             onHatChange={handleHatChange}

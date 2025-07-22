@@ -13,6 +13,7 @@ npm run dev
 
 The app will be available at `http://localhost:5173` by default.
 Navigate to `/` for the wardrobe interface or `/mcskinview` to view skins from the Mojang API.
+The wardrobe remembers your last selected race, skin color and hat using `localStorage`.
 
 ## Loading a Minecraft skin
 
