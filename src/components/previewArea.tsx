@@ -43,7 +43,7 @@ export default function PreviewArea({ texture }: PreviewAreaProps): React.JSX.El
         <i className="fas fa-eye mr-2 text-green-700"></i> Preview
       </h2>
 
-      <div className="bg-gray-200 shadow-lg overflow-hidden pixel-border flex-grow h-full">
+      <div className="bg-gray-800 shadow-lg overflow-hidden pixel-border flex-grow h-full">
         <div className="flex justify-center items-center model-placeholder">
           <ThreePreview
             texture={texture}
