@@ -22,6 +22,7 @@ interface ThreePreviewProps {
   pose?: Pose;
   showOverlay?: boolean;
   bottomOffset?: number;
+  style?: React.CSSProperties;
 }
 
 export default function ThreePreview({
@@ -29,6 +30,7 @@ export default function ThreePreview({
   pose = 'default',
   showOverlay = true,
   bottomOffset = 0,
+  style,
 }: ThreePreviewProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
@@ -209,7 +211,8 @@ export default function ThreePreview({
     const updateHeight = () => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
-        const height = window.innerHeight - rect.top - bottomOffset;
+        const viewportHeight = document.documentElement.clientHeight;
+        const height = viewportHeight - rect.top - bottomOffset;
         setContainerHeight(height > 0 ? height : 0);
       }
     };
@@ -227,6 +230,7 @@ export default function ThreePreview({
         minHeight: '200px',
         height: containerHeight ? `${containerHeight}px` : '100%',
         position: 'relative',
+        ...(style ?? {}),
       }}
     />
   );
