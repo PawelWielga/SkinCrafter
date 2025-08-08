@@ -1,15 +1,16 @@
-import fetchSkin from '../fetchSkin';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fetchSkin, { FetchSkinResult } from '../fetchSkin';
 
 describe('fetchSkin', () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
     if (!global.atob) {
-      global.atob = (str) => Buffer.from(str, 'base64').toString('binary');
+      global.atob = (str: string) => Buffer.from(str, 'base64').toString('binary');
     }
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   it('resolves to skin url on success', async () => {
@@ -65,6 +66,6 @@ describe('fetchSkin', () => {
         json: () => Promise.resolve({ properties: [] }),
       });
 
-    await expect(fetchSkin('Steve')).rejects.toThrow('Skin texture not found');
+    await expect(fetchSkin('Steve')).resolves.toEqual({ ok: false, error: 'Skin texture not found' });
   });
 });

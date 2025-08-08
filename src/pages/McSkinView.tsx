@@ -2,8 +2,10 @@ import React, { useState, useCallback, FormEvent, ChangeEvent } from 'react';
 import fetchSkin from '../api/fetchSkin';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';
+import { useToast } from '../components/ui/toast';
 
 const McSkinView: React.FC = () => {
+  const { push } = useToast();
   const [username, setUsername] = useState<string>('');
   const [texture, setTexture] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ const McSkinView: React.FC = () => {
 
         {error && <div className="text-red-600">{error}</div>}
 
-        <PreviewArea texture={texture} />
+        <PreviewArea texture={texture} loading={loading} />
       </div>
     </div>
   );

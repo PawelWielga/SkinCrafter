@@ -1,237 +1,236 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import applyPose, { Pose } from './pose-utils';
 import createBox from './create-box';
 import {
-  headMap,
-  bodyMap,
-  armMap,
-  legMap,
-  headOverlayMap,
-  bodyOverlayMap,
-  armOverlayMap,
-  legOverlayMap,
-  leftArmMap,
-  leftLegMap,
-  leftArmOverlayMap,
-  leftLegOverlayMap,
+  headMap, bodyMap, armMap, legMap,
+  headOverlayMap, bodyOverlayMap, armOverlayMap, legOverlayMap,
+  leftArmMap, leftLegMap, leftArmOverlayMap, leftLegOverlayMap,
 } from './skin-maps';
 
-interface ThreePreviewProps {
+type Props = {
   texture: string | null;
-  pose?: Pose;
-  showOverlay?: boolean;
-  bottomOffset?: number;
-  style?: React.CSSProperties;
-}
+  pose: Pose;
+  showOverlay: boolean;
 
-export default function ThreePreview({
-  texture,
-  pose = 'default',
-  showOverlay = true,
-  bottomOffset = 0,
-  style,
-}: ThreePreviewProps): JSX.Element {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer>();
-  const cameraRef = useRef<THREE.PerspectiveCamera>();
-  const rotationRef = useRef<number>(0);
-  const [containerHeight, setContainerHeight] = useState<number>(0);
+  onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
+};
 
-  const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const legLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const legRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+// Clamp DPR to avoid frying GPUs on HiDPI
+const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
 
-  const armLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const armROLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const legLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const legROLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+export default function ThreePreview({ texture, pose, showOverlay, onCanvasReady }: Props): React.JSX.Element {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const textureRef = useRef<THREE.Texture | null>(null);
 
-  const headOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
-  const bodyOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
+  // Body parts
+  const headRef = useRef<THREE.Object3D | null>(null);
+  const bodyRef = useRef<THREE.Object3D | null>(null);
+  const armLRef = useRef<THREE.Object3D | null>(null);
+  const armRRef = useRef<THREE.Object3D | null>(null);
+  const legLRef = useRef<THREE.Object3D | null>(null);
+  const legRRef = useRef<THREE.Object3D | null>(null);
 
-  const overlayRefs = [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef] as const;
+  // Overlays
+  const headOLRef = useRef<THREE.Object3D | null>(null);
+  const bodyOLRef = useRef<THREE.Object3D | null>(null);
+  const armLOLRef = useRef<THREE.Object3D | null>(null);
+  const armROLRef = useRef<THREE.Object3D | null>(null);
+  const legLOLRef = useRef<THREE.Object3D | null>(null);
+  const legROLRef = useRef<THREE.Object3D | null>(null);
 
+  const overlayRefs = [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef];
+
+  const initScene = useCallback(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    // Scene & Camera
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+    camera.position.set(0, 10, 42);
+    camera.lookAt(0, 10, 0);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+    renderer.setPixelRatio(getClampedDPR());
+    renderer.setSize(container.clientWidth, container.clientHeight, false);
+
+    container.innerHTML = '';
+      if (typeof onCanvasReady === 'function') onCanvasReady(null); // clear
+    container.appendChild(renderer.domElement);
+    if (typeof onCanvasReady === 'function') onCanvasReady(renderer.domElement);
+
+    // Simple light
+    const light = new THREE.DirectionalLight(0xffffff, 0.9);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+
+    sceneRef.current = scene;
+    cameraRef.current = camera;
+    rendererRef.current = renderer;
+
+    // Resize handling
+    let ro: ResizeObserver | null = null;
+    const handleResize = () => {
+      if (!rendererRef.current || !cameraRef.current || !containerRef.current) return;
+      const w = containerRef.current.clientWidth || 1;
+      const h = containerRef.current.clientHeight || 1;
+      rendererRef.current.setPixelRatio(getClampedDPR());
+      rendererRef.current.setSize(w, h, false);
+      cameraRef.current.aspect = w / h;
+      cameraRef.current.updateProjectionMatrix();
+    };
+    if ('ResizeObserver' in window) {
+      ro = new ResizeObserver(handleResize);
+      ro.observe(container);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+    handleResize();
+
+    // Animation loop
+    renderer.setAnimationLoop(() => {
+      if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+      rendererRef.current.render(sceneRef.current, cameraRef.current);
+    });
+
+    // Cleanup
+    return () => {
+      renderer.setAnimationLoop(null);
+      if (ro) ro.disconnect(); else window.removeEventListener('resize', handleResize);
+      // dispose textures
+      textureRef.current?.dispose();
+      // dispose scene
+      scene.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean) as THREE.Material[];
+        mats.forEach((m) => m.dispose?.());
+      });
+      renderer.dispose();
+      container.innerHTML = '';
+      if (typeof onCanvasReady === 'function') onCanvasReady(null);
+      sceneRef.current = null;
+      cameraRef.current = null;
+      rendererRef.current = null;
+      textureRef.current = null;
+      headRef.current = bodyRef.current = armLRef.current = armRRef.current = legLRef.current = legRRef.current = null;
+      headOLRef.current = bodyOLRef.current = armLOLRef.current = armROLRef.current = legLOLRef.current = legROLRef.current = null;
+    };
+  }, []);
+
+  // Build character boxes when texture is ready
+  const buildCharacter = useCallback((tex: THREE.Texture) => {
+    if (!sceneRef.current) return;
+
+    const transparentMat = (opacity: number) => new THREE.MeshBasicMaterial({ map: tex, transparent: opacity < 1, opacity, side: THREE.FrontSide });
+
+    // Base parts
+    const head = createBox(0, 16, 0, headMap, tex, { expand: 0.0 });
+    const body = createBox(0, 8, 0, bodyMap, tex, { expand: 0.0 });
+    const armR = createBox(-6, 8, 0, armMap, tex, { expand: 0.0 });
+    const armL = createBox(6, 8, 0, leftArmMap, tex, { expand: 0.0 });
+    const legR = createBox(-2, 0, 0, legMap, tex, { expand: 0.0 });
+    const legL = createBox(2, 0, 0, leftLegMap, tex, { expand: 0.0 });
+
+    headRef.current = head;
+    bodyRef.current = body;
+    armRRef.current = armR;
+    armLRef.current = armL;
+    legRRef.current = legR;
+    legLRef.current = legL;
+
+    // Overlays (slightly expanded)
+    const headOL = createBox(0, 16, 0, headOverlayMap, tex, { expand: 0.05, transparent: true });
+    const bodyOL = createBox(0, 8, 0, bodyOverlayMap, tex, { expand: 0.05, transparent: true });
+    const armROL = createBox(-6, 8, 0, armOverlayMap, tex, { expand: 0.05, transparent: true });
+    const armLOL = createBox(6, 8, 0, leftArmOverlayMap, tex, { expand: 0.05, transparent: true });
+    const legROL = createBox(-2, 0, 0, legOverlayMap, tex, { expand: 0.05, transparent: true });
+    const legLOL = createBox(2, 0, 0, leftLegOverlayMap, tex, { expand: 0.05, transparent: true });
+
+    headOLRef.current = headOL;
+    bodyOLRef.current = bodyOL;
+    armROLRef.current = armROL;
+    armLOLRef.current = armLOL;
+    legROLRef.current = legROL;
+    legLOLRef.current = legLOL;
+
+    // Group them a bit for easier transforms (optional)
+
+    // Add to scene
+    sceneRef.current.add(head, body, armR, armL, legR, legL, headOL, bodyOL, armROL, armLOL, legROL, legLOL);
+  }, []);
+
+  // Init once
+  useEffect(() => initScene(), [initScene]);
+
+  // Load texture when prop changes
   const applyPoseLocal = useCallback((p: Pose) => {
     applyPose(p, {
-      armL: armLRef.current,
-      armR: armRRef.current,
-      legL: legLRef.current,
-      legR: legRRef.current,
-      armLOL: armLOLRef.current,
-      armROL: armROLRef.current,
-      legLOL: legLOLRef.current,
-      legROL: legROLRef.current,
+      armL: armLRef.current, armR: armRRef.current,
+      legL: legLRef.current, legR: legRRef.current,
+      armLOL: armLOLRef.current, armROL: armROLRef.current,
+      legLOL: legLOLRef.current, legROL: legROLRef.current,
     });
   }, []);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Set initial sizes
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setClearColor(0x000000, 0);
-    renderer.setSize(width, height);
-    container.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
-
-    // Camera
-    const camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
-    camera.position.z = 40;
-    cameraRef.current = camera;
-
-    // Scene
-    const scene = new THREE.Scene();
-
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 10, 10);
-    scene.add(light);
-
-    const group = new THREE.Group();
-    group.position.y = -10;
-    group.rotation.y = rotationRef.current;
-    scene.add(group);
-
+    if (!texture) {
+      // hide meshes if no texture
+      return;
+    }
     const loader = new THREE.TextureLoader();
-    const src = texture ?? '/textures/steve.png';
-
-    loader.load(src, (tex) => {
-      tex.magFilter = THREE.NearestFilter;
+    const tex = loader.load(texture, () => {
       tex.minFilter = THREE.NearestFilter;
-
-      const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
-      const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
-
-      const armL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmMap);
-      const armR = createBox(tex, 4, 12, 4, 6, 12, 0, armMap);
-      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap);
-      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap);
-
-      armLRef.current = armL;
-      armRRef.current = armR;
-      legLRef.current = legL;
-      legRRef.current = legR;
-
-      const headOL = createBox(tex, 8, 8, 8, 0, 22, 0, headOverlayMap, {
-        transparent: true,
-        expand: 0.5,
-      });
-      const bodyOL = createBox(tex, 8, 12, 4, 0, 12, 0, bodyOverlayMap, {
-        transparent: true,
-        expand: 0.5,
-      });
-      const armLOL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmOverlayMap, {
-        transparent: true,
-        expand: 0.5,
-      });
-      const armROL = createBox(tex, 4, 12, 4, 6, 12, 0, armOverlayMap, {
-        transparent: true,
-        expand: 0.5,
-      });
-      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegOverlayMap, {
-        transparent: true,
-        expand: 0.5,
-      });
-      const legROL = createBox(tex, 4, 12, 4, 2, 0, 0, legOverlayMap, {
-        transparent: true,
-        expand: 0.5,
-      });
-
-      headOLRef.current = headOL;
-      bodyOLRef.current = bodyOL;
-      armLOLRef.current = armLOL;
-      armROLRef.current = armROL;
-      legLOLRef.current = legLOL;
-      legROLRef.current = legROL;
-
-      group.add(head, body, armL, armR, legL, legR, headOL, bodyOL, armLOL, armROL, legLOL, legROL);
-
-      overlayRefs.forEach((ref) => {
-        if (ref.current) ref.current.visible = showOverlay;
-      });
-
+      tex.magFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      textureRef.current?.dispose();
+      textureRef.current = tex;
+      // Rebuild character for new texture
+      if (sceneRef.current) {
+        // Clear previous character meshes
+        const toRemove: THREE.Object3D[] = [];
+        sceneRef.current.traverse((o) => {
+          // Heuristic: only remove Mesh with map === old texture or name 'character'
+          if ((o as any).isMesh) {
+            toRemove.push(o);
+          }
+        });
+        toRemove.forEach((o) => {
+          sceneRef.current!.remove(o);
+          // dispose safely
+          const mesh = o as THREE.Mesh;
+          mesh.geometry?.dispose?.();
+          const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean) as THREE.Material[];
+          mats.forEach((m) => m.dispose?.());
+        });
+      }
+      buildCharacter(tex);
       applyPoseLocal(pose);
     });
-
-    let animationFrameId: number;
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      group.rotation.y += 0.01;
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    // Resize handler
-    const handleResize = () => {
-      if (container && rendererRef.current && cameraRef.current) {
-        const newWidth = container.clientWidth;
-        const newHeight = container.clientHeight;
-        rendererRef.current.setSize(newWidth, newHeight);
-        cameraRef.current.aspect = newWidth / newHeight;
-        cameraRef.current.updateProjectionMatrix();
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(container);
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial sizing
-
     return () => {
-      window.removeEventListener('resize', handleResize);
-      resizeObserver.disconnect();
-      cancelAnimationFrame(animationFrameId);
-      rotationRef.current = group.rotation.y;
-      renderer.dispose();
-      if (renderer.domElement.parentNode) {
-        renderer.domElement.parentNode.removeChild(renderer.domElement);
-      }
-      container.innerHTML = '';
+      // loader-managed, texture will be disposed on next replacement/cleanup
     };
-  }, [texture, applyPoseLocal]);
+  }, [texture, buildCharacter, applyPoseLocal, pose]);
 
+  // React on pose changes
   useEffect(() => {
     applyPoseLocal(pose);
   }, [pose, applyPoseLocal]);
 
+  // Toggle overlays visibility
   useEffect(() => {
     overlayRefs.forEach((ref) => {
       if (ref.current) ref.current.visible = showOverlay;
     });
   }, [showOverlay]);
 
-  useEffect(() => {
-    const updateHeight = () => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        const viewportHeight = document.documentElement.clientHeight;
-        const height = viewportHeight - rect.top - bottomOffset;
-        setContainerHeight(height > 0 ? height : 0);
-      }
-    };
-
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, [bottomOffset]);
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        width: '100%',
-        minHeight: '200px',
-        height: containerHeight ? `${containerHeight}px` : '100%',
-        position: 'relative',
-        ...(style ?? {}),
-      }}
-    />
-  );
+  return <div ref={containerRef} className="w-full min-h-[200px] h-80 md:h-full relative" />;
 }

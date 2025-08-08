@@ -93,14 +93,20 @@ const App: React.FC = () => {
   }, [race, hat]);
 
   return (
-    <div className="max-w-full min-h-dvh md:h-screen overflow-x-visible overflow-y-auto flex flex-col">
+    <div className="flex flex-col md:min-h-screen">
       <NBar />
 
-      <div className="flex-1 flex flex-col md:flex-row">
-        <div className="flex-1 w-full md:w-1/2">
-          <PreviewArea texture={combinedTexture} footerHeight={footerHeight} />
-        </div>
-        <div className="flex-1 w-full md:w-1/2">
+      {/* Zmieniono main na flex-grow flex, aby rozciągał się i był kontenerem flex dla swoich dzieci */}
+      <main className="flex-grow flex">
+        {/* Dodano h-full do kontenera siatki, aby wypełniał dostępną wysokość main */}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 w-full h-full">
+          {/* WAŻNE: Upewnij się, że komponent PreviewArea (i jego główny element) ma klasę h-full,
+              aby mógł wypełnić dostępną wysokość. Jeśli PreviewArea.tsx nie przyjmuje propa className,
+              będziesz musiał dodać h-full bezpośrednio w pliku PreviewArea.tsx do jego głównego elementu. */}
+          <div className="h-full">
+            <PreviewArea texture={combinedTexture} />
+          </div>
+
           <Wardrobe
             skinColors={skinColors}
             selectedSkinColor={skinColor}
@@ -111,9 +117,9 @@ const App: React.FC = () => {
             onHatChange={handleHatChange}
           />
         </div>
-      </div>
+      </main>
 
-      <MyFooter ref={footerRef} />
+      <MyFooter />
     </div>
   );
 };
