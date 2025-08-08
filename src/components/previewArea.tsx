@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { JSX } from 'react';
 import ThreePreview from './three/three-preview';
 import { useToast } from '../components/ui/toast';
@@ -16,9 +16,6 @@ export default function PreviewArea({ texture, loading = false }: PreviewAreaPro
   const buttonsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const handleCanvasReady = (c: HTMLCanvasElement | null) => { canvasRef.current = c; };
-
-
-  const downloadPreviewPng = (): void => {
   const downloadSkinTexture = async (): Promise<void> => {
     if (!texture) return;
     try {
@@ -35,8 +32,13 @@ export default function PreviewArea({ texture, loading = false }: PreviewAreaPro
       push({ type: 'error', message: 'Failed to download texture.' });
     }
   };
+
+  const downloadPreviewPng = (): void => {
     const c = canvasRef.current;
-    if (!c) { push({ type: 'error', message: 'Preview is not ready yet.' }); return; }
+    if (!c) {
+      push({ type: 'error', message: 'Preview is not ready yet.' });
+      return;
+    }
     const url = c.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
@@ -50,14 +52,6 @@ export default function PreviewArea({ texture, loading = false }: PreviewAreaPro
 
   const toggleOverlay = (): void => {
     setShowOverlay((v) => !v);
-  };
-
-  const downloadSkin = (): void => {
-    if (!texture) return;
-    const link = document.createElement('a');
-    link.href = texture;
-    link.download = 'skin.png';
-    link.click();
   };
 
   return (
@@ -97,8 +91,9 @@ export default function PreviewArea({ texture, loading = false }: PreviewAreaPro
           <i className="fas fa-image mr-2" />
           Export Preview PNG
         </button>
-              <button type="button"
-          className="pixel-button bg-gray-200 hover:bg-gray-300 ...pixel-border transition-colors flex items-center justify-center"
+        <button
+          type="button"
+          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
           aria-label="Download texture PNG"
           onClick={downloadSkinTexture}
         >
