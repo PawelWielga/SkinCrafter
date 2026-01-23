@@ -25,6 +25,8 @@ interface ThreePreviewProps {
   style?: React.CSSProperties;
 }
 
+const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
+
 export default function ThreePreview({
   texture,
   pose = 'default',
@@ -33,16 +35,21 @@ export default function ThreePreview({
   style,
 }: ThreePreviewProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
+
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const sceneRef = useRef<THREE.Scene>();
   const rotationRef = useRef<number>(0);
+
   const [containerHeight, setContainerHeight] = useState<number>(0);
 
+  // Body parts
   const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const legLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const legRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
 
+  // Overlays
   const armLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armROLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const legLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
@@ -70,95 +77,116 @@ export default function ThreePreview({
     const container = containerRef.current;
     if (!container) return;
 
-    // Set initial sizes
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    // Initial size
+    const width = container.clientWidth || 1;
+    const height = container.clientHeight || 1;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Renderer — antialias off, bo skin ma NearestFilter (pixel-art)
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(getClampedDPR());
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Camera
     const camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
-    camera.position.z = 40;
+    camera.position.set(0, 10, 40);
+    camera.lookAt(0, 10, 0);
     cameraRef.current = camera;
 
     // Scene
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
 
+    // Light (przy MeshBasic nie wpływa, ale zostaje na przyszłość)
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(10, 10, 10);
     scene.add(light);
 
+    // Group (pivot całej postaci)
     const group = new THREE.Group();
     group.position.y = -10;
     group.rotation.y = rotationRef.current;
     scene.add(group);
 
+    // Texture
     const loader = new THREE.TextureLoader();
     const src = texture ?? '/textures/steve.png';
 
-    loader.load(src, (tex) => {
+    const onTextureLoad = (tex: THREE.Texture) => {
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
 
+      // GŁOWA I KORPUS
       const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
 
-      const armL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmMap);
-      const armR = createBox(tex, 4, 12, 4, 6, 12, 0, armMap);
-      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap);
-      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap);
+      // KOŃCZYNY — prawa/lewa POPRAWNIE
+      const armR = createBox(tex, 4, 12, 4, -6, 12, 0, armMap);
+      const armL = createBox(tex, 4, 12, 4, 6, 12, 0, leftArmMap);
+      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap); // prawa noga po prawej (x=+2)
+      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap); // lewa noga po lewej (x=-2)
 
-      armLRef.current = armL;
       armRRef.current = armR;
-      legLRef.current = legL;
+      armLRef.current = armL;
       legRRef.current = legR;
+      legLRef.current = legL;
 
+      // OVERLAY — mały expand, żeby nie było z-fightingu
+      const expand = 0.05;
       const headOL = createBox(tex, 8, 8, 8, 0, 22, 0, headOverlayMap, {
         transparent: true,
-        expand: 0.5,
+        expand,
       });
       const bodyOL = createBox(tex, 8, 12, 4, 0, 12, 0, bodyOverlayMap, {
         transparent: true,
-        expand: 0.5,
+        expand,
       });
-      const armLOL = createBox(tex, 4, 12, 4, -6, 12, 0, leftArmOverlayMap, {
+      const armROL = createBox(tex, 4, 12, 4, -6, 12, 0, armOverlayMap, {
         transparent: true,
-        expand: 0.5,
+        expand,
       });
-      const armROL = createBox(tex, 4, 12, 4, 6, 12, 0, armOverlayMap, {
+      const armLOL = createBox(tex, 4, 12, 4, 6, 12, 0, leftArmOverlayMap, {
         transparent: true,
-        expand: 0.5,
-      });
-      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegOverlayMap, {
-        transparent: true,
-        expand: 0.5,
+        expand,
       });
       const legROL = createBox(tex, 4, 12, 4, 2, 0, 0, legOverlayMap, {
         transparent: true,
-        expand: 0.5,
+        expand,
+      });
+      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegOverlayMap, {
+        transparent: true,
+        expand,
       });
 
       headOLRef.current = headOL;
       bodyOLRef.current = bodyOL;
-      armLOLRef.current = armLOL;
       armROLRef.current = armROL;
-      legLOLRef.current = legLOL;
+      armLOLRef.current = armLOL;
       legROLRef.current = legROL;
+      legLOLRef.current = legLOL;
 
-      group.add(head, body, armL, armR, legL, legR, headOL, bodyOL, armLOL, armROL, legLOL, legROL);
+      // Dodaj do sceny
+      group.add(head, body, armR, armL, legR, legL, headOL, bodyOL, armROL, armLOL, legROL, legLOL);
 
+      // Overlay visibility
       overlayRefs.forEach((ref) => {
         if (ref.current) ref.current.visible = showOverlay;
       });
 
+      // Zastosuj pozę
       applyPoseLocal(pose);
-    });
+    };
 
+    const tex = loader.load(src, onTextureLoad, undefined, (err) =>
+      console.error('Texture load failed', err)
+    );
+
+    // Animacja
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -167,56 +195,73 @@ export default function ThreePreview({
     };
     animate();
 
-    // Resize handler
+    // Resize
     const handleResize = () => {
-      if (container && rendererRef.current && cameraRef.current) {
-        const newWidth = container.clientWidth;
-        const newHeight = container.clientHeight;
-        rendererRef.current.setSize(newWidth, newHeight);
-        cameraRef.current.aspect = newWidth / newHeight;
-        cameraRef.current.updateProjectionMatrix();
-      }
+      if (!container || !rendererRef.current || !cameraRef.current) return;
+      const newWidth = container.clientWidth || 1;
+      const newHeight = container.clientHeight || 1;
+      rendererRef.current.setPixelRatio(getClampedDPR());
+      rendererRef.current.setSize(newWidth, newHeight);
+      cameraRef.current.aspect = newWidth / newHeight;
+      cameraRef.current.updateProjectionMatrix();
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
-
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial sizing
+    handleResize();
 
+    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
+
       rotationRef.current = group.rotation.y;
+
+      // Dispose scene geometries/materials
+      if (sceneRef.current) {
+        sceneRef.current.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (m.geometry) m.geometry.dispose();
+          const mats = (Array.isArray(m.material) ? m.material : [m.material]).filter(
+            Boolean
+          ) as THREE.Material[];
+          mats.forEach((mat) => mat.dispose?.());
+        });
+      }
+
+      tex?.dispose?.();
+
       renderer.dispose();
       if (renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
       container.innerHTML = '';
     };
-  }, [texture, applyPoseLocal]);
+  }, [texture, applyPoseLocal, pose, showOverlay]);
 
+  // Reaguj na zmianę pozy
   useEffect(() => {
     applyPoseLocal(pose);
   }, [pose, applyPoseLocal]);
 
+  // Reaguj na widoczność overlayów
   useEffect(() => {
     overlayRefs.forEach((ref) => {
       if (ref.current) ref.current.visible = showOverlay;
     });
   }, [showOverlay]);
 
+  // Automatyczne dopasowanie wysokości do dolnego marginesu (viewport - top - offset)
   useEffect(() => {
     const updateHeight = () => {
       const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        const viewportHeight = document.documentElement.clientHeight;
-        const height = viewportHeight - rect.top - bottomOffset;
-        setContainerHeight(height > 0 ? height : 0);
-      }
+      if (!rect) return;
+      const viewportHeight = document.documentElement.clientHeight;
+      const height = viewportHeight - rect.top - bottomOffset;
+      setContainerHeight(height > 0 ? height : 0);
     };
-
     updateHeight();
     window.addEventListener('resize', updateHeight);
     return () => window.removeEventListener('resize', updateHeight);
@@ -227,7 +272,7 @@ export default function ThreePreview({
       ref={containerRef}
       style={{
         width: '100%',
-        minHeight: '200px',
+        minHeight: 200,
         height: containerHeight ? `${containerHeight}px` : '100%',
         position: 'relative',
         ...(style ?? {}),
