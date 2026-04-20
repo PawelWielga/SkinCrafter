@@ -13,6 +13,11 @@ export interface References {
   legROL: THREE.Object3D | null;
 }
 
+export interface PoseOptions {
+  leftArmX?: number;
+  rightArmX?: number;
+}
+
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
 const RIGHT_ARM_TPOSE_X = -10;
@@ -21,8 +26,13 @@ const ARM_TPOSE_Y = 16;
 const RIGHT_LEG_X = -2;
 const LEFT_LEG_X = 2;
 
-export default function applyPose(p: Pose, refs: References): void {
+export default function applyPose(p: Pose, refs: References, options: PoseOptions = {}): void {
   const { armL, armR, legL, legR, armLOL, armROL, legLOL, legROL } = refs;
+  const leftArmX = options.leftArmX ?? LEFT_ARM_X;
+  const rightArmX = options.rightArmX ?? RIGHT_ARM_X;
+  const leftArmTposeX = options.leftArmX !== undefined ? options.leftArmX + 4 : LEFT_ARM_TPOSE_X;
+  const rightArmTposeX =
+    options.rightArmX !== undefined ? options.rightArmX - 4 : RIGHT_ARM_TPOSE_X;
 
   if (!armL || !armR || !legL || !legR) return;
 
@@ -30,25 +40,25 @@ export default function applyPose(p: Pose, refs: References): void {
     part?.rotation.set(0, 0, 0)
   );
 
-  armL.position.set(LEFT_ARM_X, 12, 0);
-  armR.position.set(RIGHT_ARM_X, 12, 0);
+  armL.position.set(leftArmX, 12, 0);
+  armR.position.set(rightArmX, 12, 0);
   legL.position.set(LEFT_LEG_X, 0, 0);
   legR.position.set(RIGHT_LEG_X, 0, 0);
 
-  armLOL?.position.set(LEFT_ARM_X, 12, 0);
-  armROL?.position.set(RIGHT_ARM_X, 12, 0);
+  armLOL?.position.set(leftArmX, 12, 0);
+  armROL?.position.set(rightArmX, 12, 0);
   legLOL?.position.set(LEFT_LEG_X, 0, 0);
   legROL?.position.set(RIGHT_LEG_X, 0, 0);
 
   if (p === 'tpose') {
     const z = Math.PI / 2;
-    armL.position.set(LEFT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
-    armR.position.set(RIGHT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
+    armL.position.set(leftArmTposeX, ARM_TPOSE_Y, 0);
+    armR.position.set(rightArmTposeX, ARM_TPOSE_Y, 0);
     armL.rotation.z = z;
     armR.rotation.z = -z;
 
-    armLOL?.position.set(LEFT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
-    armROL?.position.set(RIGHT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
+    armLOL?.position.set(leftArmTposeX, ARM_TPOSE_Y, 0);
+    armROL?.position.set(rightArmTposeX, ARM_TPOSE_Y, 0);
     armLOL?.rotation.set(0, 0, z);
     armROL?.rotation.set(0, 0, -z);
   } else if (p === 'walking') {

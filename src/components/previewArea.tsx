@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PanelSection from './panelSection';
 import PixelButton from './pixelButton';
-import ThreePreview from './three/three-preview';
+import ThreePreview, { type SkinModel } from './three/three-preview';
 import type { Pose } from './three/pose-utils';
 import { defaultLanguage, translate, type TranslationKey } from '../i18n/translations';
 
 interface PreviewAreaProps {
   texture: string | null;
+  model?: SkinModel;
   footerHeight?: number;
   t?: (key: TranslationKey) => string;
 }
@@ -15,11 +16,13 @@ const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, ke
 
 export default function PreviewArea({
   texture,
+  model = 'classic',
   footerHeight = 0,
   t = fallbackT,
 }: PreviewAreaProps): React.JSX.Element {
   const [pose, setPose] = useState<Pose>('default');
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
+  const [autoRotate, setAutoRotate] = useState<boolean>(true);
   const [offset, setOffset] = useState<number>(0);
   const buttonsRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +32,10 @@ export default function PreviewArea({
 
   const toggleOverlay = (): void => {
     setShowOverlay((v) => !v);
+  };
+
+  const toggleAutoRotate = (): void => {
+    setAutoRotate((v) => !v);
   };
 
   const downloadSkin = (): void => {
@@ -56,7 +63,9 @@ export default function PreviewArea({
           <ThreePreview
             texture={texture}
             pose={pose}
+            model={model}
             showOverlay={showOverlay}
+            autoRotate={autoRotate}
             bottomOffset={offset}
           />
         </div>
@@ -78,6 +87,14 @@ export default function PreviewArea({
           onClick={toggleOverlay}
         >
           {showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
+        </PixelButton>
+        <PixelButton
+          className="bg-gray-200 hover:bg-gray-300"
+          icon={autoRotate ? 'fa-pause' : 'fa-play'}
+          aria-label={autoRotate ? t('action.disableAutoRotate') : t('action.enableAutoRotate')}
+          onClick={toggleAutoRotate}
+        >
+          {autoRotate ? t('action.disableAutoRotate') : t('action.enableAutoRotate')}
         </PixelButton>
         <PixelButton
           className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"

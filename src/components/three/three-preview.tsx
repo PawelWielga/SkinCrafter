@@ -10,17 +10,25 @@ import {
   headOverlayMap,
   bodyOverlayMap,
   armOverlayMap,
+  slimArmMap,
+  slimArmOverlayMap,
   legOverlayMap,
   leftArmMap,
+  slimLeftArmMap,
   leftLegMap,
   leftArmOverlayMap,
+  slimLeftArmOverlayMap,
   leftLegOverlayMap,
 } from './skin-maps';
+
+export type SkinModel = 'classic' | 'slim';
 
 interface ThreePreviewProps {
   texture: string | null;
   pose?: Pose;
+  model?: SkinModel;
   showOverlay?: boolean;
+  autoRotate?: boolean;
   bottomOffset?: number;
   style?: React.CSSProperties;
 }
@@ -34,13 +42,17 @@ const WHEEL_ZOOM_SPEED = 0.04;
 const OVERLAY_EXPAND = 0.5;
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
+const SLIM_RIGHT_ARM_X = -5.5;
+const SLIM_LEFT_ARM_X = 5.5;
 const RIGHT_LEG_X = -2;
 const LEFT_LEG_X = 2;
 
 export default function ThreePreview({
   texture,
   pose = 'default',
+  model = 'classic',
   showOverlay = true,
+  autoRotate = true,
   bottomOffset = 0,
   style,
 }: ThreePreviewProps): JSX.Element {
@@ -50,6 +62,7 @@ export default function ThreePreview({
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const sceneRef = useRef<THREE.Scene>();
   const rotationRef = useRef<number>(0);
+  const autoRotateRef = useRef<boolean>(autoRotate);
   const cameraDistanceRef = useRef<number>(CHARACTER_CAMERA_DISTANCE);
 
   const [containerHeight, setContainerHeight] = useState<number>(0);
@@ -75,17 +88,26 @@ export default function ThreePreview({
   );
 
   const applyPoseLocal = useCallback((p: Pose) => {
-    applyPose(p, {
-      armL: armLRef.current,
-      armR: armRRef.current,
-      legL: legLRef.current,
-      legR: legRRef.current,
-      armLOL: armLOLRef.current,
-      armROL: armROLRef.current,
-      legLOL: legLOLRef.current,
-      legROL: legROLRef.current,
-    });
-  }, []);
+    const isSlim = model === 'slim';
+
+    applyPose(
+      p,
+      {
+        armL: armLRef.current,
+        armR: armRRef.current,
+        legL: legLRef.current,
+        legR: legRRef.current,
+        armLOL: armLOLRef.current,
+        armROL: armROLRef.current,
+        legLOL: legLOLRef.current,
+        legROL: legROLRef.current,
+      },
+      {
+        leftArmX: isSlim ? SLIM_LEFT_ARM_X : LEFT_ARM_X,
+        rightArmX: isSlim ? SLIM_RIGHT_ARM_X : RIGHT_ARM_X,
+      }
+    );
+  }, [model]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -140,8 +162,17 @@ export default function ThreePreview({
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
 
       // Limbs.
-      const armR = createBox(tex, 4, 12, 4, RIGHT_ARM_X, 12, 0, armMap);
-      const armL = createBox(tex, 4, 12, 4, LEFT_ARM_X, 12, 0, leftArmMap);
+      const isSlim = model === 'slim';
+      const armWidth = isSlim ? 3 : 4;
+      const rightArmX = isSlim ? SLIM_RIGHT_ARM_X : RIGHT_ARM_X;
+      const leftArmX = isSlim ? SLIM_LEFT_ARM_X : LEFT_ARM_X;
+      const rightArmMap = isSlim ? slimArmMap : armMap;
+      const leftArmTextureMap = isSlim ? slimLeftArmMap : leftArmMap;
+      const rightArmOverlayTextureMap = isSlim ? slimArmOverlayMap : armOverlayMap;
+      const leftArmOverlayTextureMap = isSlim ? slimLeftArmOverlayMap : leftArmOverlayMap;
+
+      const armR = createBox(tex, armWidth, 12, 4, rightArmX, 12, 0, rightArmMap);
+      const armL = createBox(tex, armWidth, 12, 4, leftArmX, 12, 0, leftArmTextureMap);
       const legR = createBox(tex, 4, 12, 4, RIGHT_LEG_X, 0, 0, legMap);
       const legL = createBox(tex, 4, 12, 4, LEFT_LEG_X, 0, 0, leftLegMap);
 
@@ -160,11 +191,11 @@ export default function ThreePreview({
         transparent: true,
         expand,
       });
-      const armROL = createBox(tex, 4, 12, 4, RIGHT_ARM_X, 12, 0, armOverlayMap, {
+      const armROL = createBox(tex, armWidth, 12, 4, rightArmX, 12, 0, rightArmOverlayTextureMap, {
         transparent: true,
         expand,
       });
-      const armLOL = createBox(tex, 4, 12, 4, LEFT_ARM_X, 12, 0, leftArmOverlayMap, {
+      const armLOL = createBox(tex, armWidth, 12, 4, leftArmX, 12, 0, leftArmOverlayTextureMap, {
         transparent: true,
         expand,
       });
@@ -204,7 +235,9 @@ export default function ThreePreview({
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      group.rotation.y += 0.01;
+      if (autoRotateRef.current) {
+        group.rotation.y += 0.01;
+      }
       renderer.render(scene, camera);
     };
     animate();
@@ -271,7 +304,11 @@ export default function ThreePreview({
       }
       container.innerHTML = '';
     };
-  }, [texture, applyPoseLocal, pose, showOverlay, overlayRefs]);
+  }, [texture, applyPoseLocal, pose, showOverlay, overlayRefs, model]);
+
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   // React to pose changes.
   useEffect(() => {

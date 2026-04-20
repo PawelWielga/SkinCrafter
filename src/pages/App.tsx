@@ -72,7 +72,12 @@ const WardrobeEditor: React.FC = () => {
       {({ footerHeight, t }) => (
         <TwoPanelLayout
           left={
-            <PreviewArea texture={combinedTexture} footerHeight={footerHeight} t={t} />
+            <PreviewArea
+              texture={combinedTexture}
+              model={appearance.sex === 'Female' ? 'slim' : 'classic'}
+              footerHeight={footerHeight}
+              t={t}
+            />
           }
           right={
             <Wardrobe

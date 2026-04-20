@@ -34,6 +34,15 @@ export const armMap: RectMap = {
   back: [52, 20, 56, 32],
 };
 
+export const slimArmMap: RectMap = {
+  left: [40, 20, 44, 32],
+  right: [47, 20, 51, 32],
+  top: [44, 16, 47, 20],
+  bottom: [47, 16, 50, 20],
+  front: [44, 20, 47, 32],
+  back: [51, 20, 54, 32],
+};
+
 export const legMap: RectMap = {
   left: [0, 20, 4, 32],
   right: [8, 20, 12, 32],
@@ -70,6 +79,15 @@ export const armOverlayMap: RectMap = {
   back: [52, 36, 56, 48],
 };
 
+export const slimArmOverlayMap: RectMap = {
+  left: [40, 36, 44, 48],
+  right: [47, 36, 51, 48],
+  top: [44, 32, 47, 36],
+  bottom: [47, 32, 50, 36],
+  front: [44, 36, 47, 48],
+  back: [51, 36, 54, 48],
+};
+
 export const legOverlayMap: RectMap = {
   left: [0, 36, 4, 48],
   right: [8, 36, 12, 48],
@@ -88,6 +106,15 @@ export const leftArmMap: RectMap = {
   back: [44, 52, 48, 64],
 };
 
+export const slimLeftArmMap: RectMap = {
+  left: [32, 52, 36, 64],
+  right: [39, 52, 43, 64],
+  top: [36, 48, 39, 52],
+  bottom: [39, 48, 42, 52],
+  front: [36, 52, 39, 64],
+  back: [43, 52, 46, 64],
+};
+
 export const leftLegMap: RectMap = {
   left: [16, 52, 20, 64],
   right: [24, 52, 28, 64],
@@ -104,6 +131,15 @@ export const leftArmOverlayMap: RectMap = {
   bottom: [56, 48, 60, 52],
   front: [52, 52, 56, 64],
   back: [60, 52, 64, 64],
+};
+
+export const slimLeftArmOverlayMap: RectMap = {
+  left: [48, 52, 52, 64],
+  right: [55, 52, 59, 64],
+  top: [52, 48, 55, 52],
+  bottom: [55, 48, 58, 52],
+  front: [52, 52, 55, 64],
+  back: [59, 52, 62, 64],
 };
 
 export const leftLegOverlayMap: RectMap = {

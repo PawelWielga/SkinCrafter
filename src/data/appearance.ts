@@ -1,5 +1,6 @@
 import races from './races';
-import raceTextureMap from './raceTextureMap';
+import { getAvailableSexes, getRaceTextureUrl, type Sex } from './raceTextureMap';
+import type { Race } from './races';
 import skinColorMap from './skinColorMap';
 import hatTextureMap, { hats } from './hatTextureMap';
 import type { TextureInput } from '../utils/combineTextures';
@@ -53,7 +54,7 @@ export const appearanceCategories: AppearanceCategory[] = [
 
 export const defaultAppearance: AppearanceState = {
   race: 'Human',
-  sex: 'None',
+  sex: 'Male',
   skinColor: skinColorMap.Human[0],
   eyes: 'None',
   eyesColor: '#2F5D9B',
@@ -84,13 +85,30 @@ const noneOption: AppearanceOption = {
   texture: null,
 };
 
+const maleOption: AppearanceOption = {
+  id: 'Male',
+  labelKey: 'option.sex.Male',
+  texture: null,
+};
+
+const femaleOption: AppearanceOption = {
+  id: 'Female',
+  labelKey: 'option.sex.Female',
+  texture: null,
+};
+
+const sexOptions: Record<Sex, AppearanceOption> = {
+  Male: maleOption,
+  Female: femaleOption,
+  None: noneOption,
+};
+
 const staticOptions: Partial<Record<AppearanceCategoryId, AppearanceOption[]>> = {
   race: races.map((race) => ({
     id: race,
     labelKey: `option.race.${race}`,
-    texture: raceTextureMap[race],
+    texture: getRaceTextureUrl(race, 'Male'),
   })),
-  sex: [noneOption],
   eyes: [noneOption],
   eyesColor: [
     { id: '#2F5D9B', labelKey: 'option.color.blue', color: '#2F5D9B' },
@@ -118,6 +136,11 @@ export function getOptions(
   categoryId: AppearanceCategoryId,
   appearance: AppearanceState
 ): AppearanceOption[] {
+  if (categoryId === 'sex') {
+    const race = appearance.race as Race;
+    return getAvailableSexes(race).map((sex) => sexOptions[sex]);
+  }
+
   if (categoryId === 'skinColor') {
     const race = appearance.race as keyof typeof skinColorMap;
     return skinColorMap[race].map((color) => ({
@@ -155,8 +178,10 @@ export function normalizeAppearance(value: Partial<AppearanceState> | null): App
 export function buildTextureInputs(appearance: AppearanceState): TextureInput[] {
   return appearanceLayerOrder.map((layer) => {
     if (layer === 'race') {
+      const race = appearance.race as Race;
+
       return {
-        url: raceTextureMap[appearance.race as keyof typeof raceTextureMap],
+        url: getRaceTextureUrl(race, appearance.sex),
         tint: appearance.skinColor,
         blendMode: 'multiply',
       };
