@@ -13,6 +13,11 @@ export interface References {
   legROL: THREE.Object3D | null;
 }
 
+const RIGHT_ARM_X = -6;
+const LEFT_ARM_X = 6;
+const RIGHT_LEG_X = -2;
+const LEFT_LEG_X = 2;
+
 export default function applyPose(p: Pose, refs: References): void {
   const { armL, armR, legL, legR, armLOL, armROL, legLOL, legROL } = refs;
 
@@ -22,22 +27,22 @@ export default function applyPose(p: Pose, refs: References): void {
     part?.rotation.set(0, 0, 0)
   );
 
-  armL.position.set(-6, 12, 0);
-  armR.position.set(6, 12, 0);
-  legL.position.set(-2, 0, 0);
-  legR.position.set(2, 0, 0);
+  armL.position.set(LEFT_ARM_X, 12, 0);
+  armR.position.set(RIGHT_ARM_X, 12, 0);
+  legL.position.set(LEFT_LEG_X, 0, 0);
+  legR.position.set(RIGHT_LEG_X, 0, 0);
 
-  armLOL?.position.set(-6, 12, 0);
-  armROL?.position.set(6, 12, 0);
-  legLOL?.position.set(-2, 0, 0);
-  legROL?.position.set(2, 0, 0);
+  armLOL?.position.set(LEFT_ARM_X, 12, 0);
+  armROL?.position.set(RIGHT_ARM_X, 12, 0);
+  legLOL?.position.set(LEFT_LEG_X, 0, 0);
+  legROL?.position.set(RIGHT_LEG_X, 0, 0);
 
   if (p === 'tpose') {
     const z = Math.PI / 2;
-    armL.rotation.z = z;
-    armR.rotation.z = -z;
-    armLOL?.rotation.set(0, 0, z);
-    armROL?.rotation.set(0, 0, -z);
+    armL.rotation.z = -z;
+    armR.rotation.z = z;
+    armLOL?.rotation.set(0, 0, -z);
+    armROL?.rotation.set(0, 0, z);
   } else if (p === 'walking') {
     const forward = -Math.PI / 4;
     const backward = Math.PI / 4;

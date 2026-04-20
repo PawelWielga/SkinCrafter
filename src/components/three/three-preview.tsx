@@ -28,6 +28,10 @@ interface ThreePreviewProps {
 const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
 const CHARACTER_CENTER_Y = 0;
 const CHARACTER_CAMERA_DISTANCE = 40;
+const RIGHT_ARM_X = -6;
+const LEFT_ARM_X = 6;
+const RIGHT_LEG_X = -2;
+const LEFT_LEG_X = 2;
 
 export default function ThreePreview({
   texture,
@@ -131,10 +135,10 @@ export default function ThreePreview({
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
 
       // Limbs.
-      const armR = createBox(tex, 4, 12, 4, -6, 12, 0, armMap);
-      const armL = createBox(tex, 4, 12, 4, 6, 12, 0, leftArmMap);
-      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap);
-      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap);
+      const armR = createBox(tex, 4, 12, 4, RIGHT_ARM_X, 12, 0, armMap);
+      const armL = createBox(tex, 4, 12, 4, LEFT_ARM_X, 12, 0, leftArmMap);
+      const legR = createBox(tex, 4, 12, 4, RIGHT_LEG_X, 0, 0, legMap);
+      const legL = createBox(tex, 4, 12, 4, LEFT_LEG_X, 0, 0, leftLegMap);
 
       armRRef.current = armR;
       armLRef.current = armL;
@@ -151,19 +155,19 @@ export default function ThreePreview({
         transparent: true,
         expand,
       });
-      const armROL = createBox(tex, 4, 12, 4, -6, 12, 0, armOverlayMap, {
+      const armROL = createBox(tex, 4, 12, 4, RIGHT_ARM_X, 12, 0, armOverlayMap, {
         transparent: true,
         expand,
       });
-      const armLOL = createBox(tex, 4, 12, 4, 6, 12, 0, leftArmOverlayMap, {
+      const armLOL = createBox(tex, 4, 12, 4, LEFT_ARM_X, 12, 0, leftArmOverlayMap, {
         transparent: true,
         expand,
       });
-      const legROL = createBox(tex, 4, 12, 4, 2, 0, 0, legOverlayMap, {
+      const legROL = createBox(tex, 4, 12, 4, RIGHT_LEG_X, 0, 0, legOverlayMap, {
         transparent: true,
         expand,
       });
-      const legLOL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegOverlayMap, {
+      const legLOL = createBox(tex, 4, 12, 4, LEFT_LEG_X, 0, 0, leftLegOverlayMap, {
         transparent: true,
         expand,
       });

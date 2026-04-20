@@ -21,6 +21,8 @@ export interface RgbaPixel {
 
 export type TextureInput = string | null | TextureLayerInput;
 
+const MINECRAFT_SKIN_SIZE = 64;
+
 const normalizeLayer = (layer: TextureInput): TextureLayer | null => {
   if (!layer) return null;
   if (typeof layer === 'string') {
@@ -65,28 +67,30 @@ const drawLayer = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   tint: string | undefined,
-  blendMode: TextureBlendMode
+  blendMode: TextureBlendMode,
+  width: number,
+  height: number
 ): void => {
   if (!tint) {
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, width, height);
     return;
   }
 
   const layerCanvas = document.createElement('canvas');
-  layerCanvas.width = img.width;
-  layerCanvas.height = img.height;
+  layerCanvas.width = width;
+  layerCanvas.height = height;
   const layerCtx = layerCanvas.getContext('2d');
   if (!layerCtx) {
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, width, height);
     return;
   }
 
-  layerCtx.drawImage(img, 0, 0);
+  layerCtx.drawImage(img, 0, 0, width, height);
   layerCtx.globalCompositeOperation = blendMode;
   layerCtx.fillStyle = tint;
   layerCtx.fillRect(0, 0, layerCanvas.width, layerCanvas.height);
   layerCtx.globalCompositeOperation = 'destination-in';
-  layerCtx.drawImage(img, 0, 0);
+  layerCtx.drawImage(img, 0, 0, width, height);
   ctx.drawImage(layerCanvas, 0, 0);
 };
 
@@ -109,14 +113,14 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
   );
 
   const canvas = document.createElement('canvas');
-  canvas.width = images[0].width;
-  canvas.height = images[0].height;
+  canvas.width = MINECRAFT_SKIN_SIZE;
+  canvas.height = MINECRAFT_SKIN_SIZE;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
   images.forEach((img, index) => {
     const layer = layers[index];
-    drawLayer(ctx, img, layer.tint, layer.blendMode);
+    drawLayer(ctx, img, layer.tint, layer.blendMode, canvas.width, canvas.height);
   });
 
   return canvas.toDataURL('image/png');

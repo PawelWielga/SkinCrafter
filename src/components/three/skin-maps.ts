@@ -4,6 +4,9 @@ export type Direction = 'left' | 'right' | 'top' | 'bottom' | 'front' | 'back';
 
 export type RectMap = Record<Direction, UVRect>;
 
+// The keys match Three.js BoxGeometry material slots:
+// right = +X face, left = -X face. For a character facing the camera, +X is
+// the character's left side, so the texture rectangles look intentionally swapped.
 export const headMap: RectMap = {
   left: [0, 8, 8, 16],
   right: [16, 8, 24, 16],
@@ -27,8 +30,8 @@ export const armMap: RectMap = {
   right: [48, 20, 52, 32],
   top: [44, 16, 48, 20],
   bottom: [48, 16, 52, 20],
-  front: [48, 20, 44, 32],
-  back: [56, 20, 52, 32],
+  front: [44, 20, 48, 32],
+  back: [52, 20, 56, 32],
 };
 
 export const legMap: RectMap = {
@@ -36,8 +39,8 @@ export const legMap: RectMap = {
   right: [8, 20, 12, 32],
   top: [4, 16, 8, 20],
   bottom: [8, 16, 12, 20],
-  front: [8, 20, 4, 32],
-  back: [16, 20, 12, 32],
+  front: [4, 20, 8, 32],
+  back: [12, 20, 16, 32],
 };
 
 export const headOverlayMap: RectMap = {
@@ -63,8 +66,8 @@ export const armOverlayMap: RectMap = {
   right: [48, 36, 52, 48],
   top: [44, 32, 48, 36],
   bottom: [48, 32, 52, 36],
-  front: [48, 36, 44, 48],
-  back: [56, 36, 52, 48],
+  front: [44, 36, 48, 48],
+  back: [52, 36, 56, 48],
 };
 
 export const legOverlayMap: RectMap = {
@@ -72,11 +75,42 @@ export const legOverlayMap: RectMap = {
   right: [8, 36, 12, 48],
   top: [4, 32, 8, 36],
   bottom: [8, 32, 12, 36],
-  front: [8, 36, 4, 48],
-  back: [16, 36, 12, 48],
+  front: [4, 36, 8, 48],
+  back: [12, 36, 16, 48],
 };
 
-export const leftArmMap: RectMap = { ...armMap };
-export const leftLegMap: RectMap = { ...legMap };
-export const leftArmOverlayMap: RectMap = { ...armOverlayMap };
-export const leftLegOverlayMap: RectMap = { ...legOverlayMap };
+export const leftArmMap: RectMap = {
+  left: [32, 52, 36, 64],
+  right: [40, 52, 44, 64],
+  top: [36, 48, 40, 52],
+  bottom: [40, 48, 44, 52],
+  front: [36, 52, 40, 64],
+  back: [44, 52, 48, 64],
+};
+
+export const leftLegMap: RectMap = {
+  left: [16, 52, 20, 64],
+  right: [24, 52, 28, 64],
+  top: [20, 48, 24, 52],
+  bottom: [24, 48, 28, 52],
+  front: [20, 52, 24, 64],
+  back: [28, 52, 32, 64],
+};
+
+export const leftArmOverlayMap: RectMap = {
+  left: [48, 52, 52, 64],
+  right: [56, 52, 60, 64],
+  top: [52, 48, 56, 52],
+  bottom: [56, 48, 60, 52],
+  front: [52, 52, 56, 64],
+  back: [60, 52, 64, 64],
+};
+
+export const leftLegOverlayMap: RectMap = {
+  left: [0, 52, 4, 64],
+  right: [8, 52, 12, 64],
+  top: [4, 48, 8, 52],
+  bottom: [8, 48, 12, 52],
+  front: [4, 52, 8, 64],
+  back: [12, 52, 16, 64],
+};
