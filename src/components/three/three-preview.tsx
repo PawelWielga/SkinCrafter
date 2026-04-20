@@ -28,6 +28,9 @@ interface ThreePreviewProps {
 const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
 const CHARACTER_CENTER_Y = 0;
 const CHARACTER_CAMERA_DISTANCE = 40;
+const MIN_CAMERA_DISTANCE = 24;
+const MAX_CAMERA_DISTANCE = 72;
+const WHEEL_ZOOM_SPEED = 0.04;
 const OVERLAY_EXPAND = 0.5;
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
@@ -47,6 +50,7 @@ export default function ThreePreview({
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const sceneRef = useRef<THREE.Scene>();
   const rotationRef = useRef<number>(0);
+  const cameraDistanceRef = useRef<number>(CHARACTER_CAMERA_DISTANCE);
 
   const [containerHeight, setContainerHeight] = useState<number>(0);
 
@@ -101,7 +105,7 @@ export default function ThreePreview({
 
     // Camera.
     const camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
-    camera.position.set(0, CHARACTER_CENTER_Y, CHARACTER_CAMERA_DISTANCE);
+    camera.position.set(0, CHARACTER_CENTER_Y, cameraDistanceRef.current);
     camera.lookAt(0, CHARACTER_CENTER_Y, 0);
     cameraRef.current = camera;
 
@@ -221,8 +225,26 @@ export default function ThreePreview({
     window.addEventListener('resize', handleResize);
     handleResize();
 
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+
+      const nextDistance = THREE.MathUtils.clamp(
+        cameraDistanceRef.current + event.deltaY * WHEEL_ZOOM_SPEED,
+        MIN_CAMERA_DISTANCE,
+        MAX_CAMERA_DISTANCE
+      );
+
+      cameraDistanceRef.current = nextDistance;
+      camera.position.z = nextDistance;
+      camera.lookAt(0, CHARACTER_CENTER_Y, 0);
+      camera.updateProjectionMatrix();
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
     // Cleanup.
     return () => {
+      container.removeEventListener('wheel', handleWheel);
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
@@ -285,6 +307,7 @@ export default function ThreePreview({
         minHeight: 200,
         height: containerHeight ? `${containerHeight}px` : '100%',
         position: 'relative',
+        touchAction: 'none',
         ...(style ?? {}),
       }}
     />
