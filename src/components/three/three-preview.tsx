@@ -26,6 +26,8 @@ interface ThreePreviewProps {
 }
 
 const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
+const CHARACTER_CENTER_Y = 0;
+const CHARACTER_CAMERA_DISTANCE = 40;
 
 export default function ThreePreview({
   texture,
@@ -94,8 +96,8 @@ export default function ThreePreview({
 
     // Camera.
     const camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
-    camera.position.set(0, 10, 40);
-    camera.lookAt(0, 10, 0);
+    camera.position.set(0, CHARACTER_CENTER_Y, CHARACTER_CAMERA_DISTANCE);
+    camera.lookAt(0, CHARACTER_CENTER_Y, 0);
     cameraRef.current = camera;
 
     // Scene.
