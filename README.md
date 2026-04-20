@@ -1,19 +1,17 @@
 # SkinCrafter
 
-SkinCrafter is a small React + TypeScript application for previewing Minecraft skins. The preview uses Three.js and React Router to display the model in 3D across multiple pages.
+SkinCrafter is a React + TypeScript wardrobe editor for composing a Minecraft-style character skin. The main screen combines texture layers for race, skin color, and hats, then renders the result in a rotating Three.js preview.
 
 ## Running locally
 
-Install dependencies and start the development server (React 18, Node 20 recommended):
+Install dependencies and start the development server. Node 20 is the minimum supported runtime for local development and CI.
 
 ```bash
 npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173` by default.
-Navigate to `/` for the wardrobe interface or `/mcskinview` to view skins from the Mojang API.
-The wardrobe remembers your last selected race, skin color and hat using `localStorage`.
+The app will be available at `http://localhost:5173` by default. Navigate to `/` for the wardrobe editor or `/mcskinview` to load a skin from Mojang APIs. The wardrobe remembers your last selected race, skin color, and hat using `localStorage`.
 
 ## Loading a Minecraft skin
 
@@ -23,17 +21,26 @@ If the user cannot be found or the profile is missing a skin, an error message w
 
 ## Build
 
-To create a production build run:
+To run TypeScript checks and create a production build:
 
 ```bash
 npm run build
 ```
 
-## Sitemap
-
-Generate `public/sitemap.xml` whenever new routes are added so search engines can
-index the site correctly:
+## Quality Commands
 
 ```bash
-npm run sitemap
+npm run typecheck
+npm run lint
+npm test
 ```
+
+## Architecture
+
+- `src/pages/App.tsx` defines the application routes and the main wardrobe editor.
+- `src/pages/McSkinView.tsx` loads skins by Minecraft username through Mojang APIs.
+- `src/components/previewArea.tsx` contains preview controls and passes texture/pose state to Three.js.
+- `src/components/three/*` owns the Three.js scene, Minecraft body meshes, UV maps, and poses.
+- `src/components/wardrobe.tsx` and `src/components/wardrobe-sections/*` render active customization controls.
+- `src/data/*` is the source of truth for races, skin colors, hats, layer order, and texture URLs.
+- `src/utils/combineTextures.ts` composes visible texture layers into the final preview/download image.

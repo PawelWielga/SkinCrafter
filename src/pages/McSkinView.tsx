@@ -62,7 +62,7 @@ const McSkinView: React.FC = () => {
             disabled={loading}
             className="px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? 'Loading…' : 'Load Skin'}
+            {loading ? 'Loading...' : 'Load Skin'}
           </button>
         </form>
 

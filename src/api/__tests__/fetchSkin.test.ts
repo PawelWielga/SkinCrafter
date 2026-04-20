@@ -1,22 +1,25 @@
 import fetchSkin from '../fetchSkin';
 
 describe('fetchSkin', () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
-    global.fetch = jest.fn();
-    if (!global.atob) {
-      global.atob = (str) => Buffer.from(str, 'base64').toString('binary');
+    mockFetch = vi.fn();
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+    if (!globalThis.atob) {
+      globalThis.atob = (str: string) => Buffer.from(str, 'base64').toString('binary');
     }
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   it('resolves to skin url on success', async () => {
     const username = 'Steve';
     const skinUrl = 'https://example.com/skin.png';
 
-    global.fetch
+    mockFetch
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'uuid123' }),
@@ -38,13 +41,13 @@ describe('fetchSkin', () => {
   });
 
   it('throws when user not found', async () => {
-    global.fetch.mockResolvedValueOnce({ ok: false });
+    mockFetch.mockResolvedValueOnce({ ok: false });
 
     await expect(fetchSkin('unknown')).rejects.toThrow('User not found');
   });
 
   it('throws when session fetch fails', async () => {
-    global.fetch
+    mockFetch
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'uuid123' }),
@@ -55,7 +58,7 @@ describe('fetchSkin', () => {
   });
 
   it('throws when texture missing', async () => {
-    global.fetch
+    mockFetch
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'uuid123' }),

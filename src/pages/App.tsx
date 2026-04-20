@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Route, Routes } from 'react-router-dom';
 
 import races, { Race } from '../data/races';
 import NBar from '../components/nbar';
@@ -10,14 +11,16 @@ import defaultLayerOrder from '../data/layerOrder';
 import skinColorMap from '../data/skinColorMap';
 import raceTextureMap from '../data/raceTextureMap';
 import hatTextureMap, { Hat, hats } from '../data/hatTextureMap';
-import combineTextures from '../utils/combineTextures';
+import combineTextures, { TextureInput } from '../utils/combineTextures';
 import MyFooter from '../components/myFooter';
+import McSkinView from './McSkinView';
 
-const App: React.FC = () => {
+const layerOrder: LayerOrder = defaultLayerOrder;
+
+const WardrobeEditor: React.FC = () => {
   const [race, setRace] = useState<Race>('Human');
   const [skinColor, setSkinColor] = useState<string>(skinColorMap.Human[0]);
   const [hat, setHat] = useState<Hat>('None');
-  const layerOrder: LayerOrder = defaultLayerOrder;
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
   const footerRef = useRef<HTMLElement>(null);
   const [footerHeight, setFooterHeight] = useState<number>(0);
@@ -80,17 +83,17 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const textures: (string | null)[] = [];
+    const textures: TextureInput[] = [];
     layerOrder.forEach((layer) => {
       if (layer === 'race') {
-        textures.push(raceTextureMap[race]);
+        textures.push({ url: raceTextureMap[race], tint: skinColor });
       } else if (layer === 'hat') {
         textures.push(hatTextureMap[hat]);
       }
     });
 
     combineTextures(textures).then((tex) => setCombinedTexture(tex));
-  }, [race, hat]);
+  }, [race, skinColor, hat]);
 
   return (
     <div className="max-w-full min-h-dvh md:h-screen overflow-x-visible overflow-y-auto flex flex-col">
@@ -117,5 +120,12 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+const App: React.FC = () => (
+  <Routes>
+    <Route path="/" element={<WardrobeEditor />} />
+    <Route path="/mcskinview" element={<McSkinView />} />
+  </Routes>
+);
 
 export default App;

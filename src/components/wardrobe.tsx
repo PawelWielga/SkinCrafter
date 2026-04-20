@@ -2,8 +2,6 @@ import React from 'react';
 import WardrobeRace from './wardrobe-sections/WardrobeRace';
 import WardrobeSkinColor from './wardrobe-sections/WardrobeSkinColor';
 import WardrobeHat from './wardrobe-sections/WardrobeHat';
-import WardrobeEyes from './wardrobe-sections/WardrobeEyes';
-import WardrobeEyesColor from './wardrobe-sections/WardrobeEyesColor';
 import type { Race } from '../data/races';
 import type { Hat } from '../data/hatTextureMap';
 
@@ -68,17 +66,6 @@ export default function Wardrobe({
             hideLabel
             className="mt-4"
           />
-        </div>
-
-        {/* Placeholder sections */}
-        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
-          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
-            <i className="fas fa-eye mr-2 text-amber-600" /> Eyes
-          </h3>
-          <div className="mt-4">
-            <WardrobeEyes />
-            <WardrobeEyesColor />
-          </div>
         </div>
       </div>
     </section>

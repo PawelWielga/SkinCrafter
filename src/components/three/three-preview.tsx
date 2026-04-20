@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import applyPose, { Pose } from './pose-utils';
 import createBox from './create-box';
@@ -58,7 +58,10 @@ export default function ThreePreview({
   const headOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const bodyOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
 
-  const overlayRefs = [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef] as const;
+  const overlayRefs = useMemo(
+    () => [headOLRef, bodyOLRef, armLOLRef, armROLRef, legLOLRef, legROLRef] as const,
+    []
+  );
 
   const applyPoseLocal = useCallback((p: Pose) => {
     applyPose(p, {
@@ -239,7 +242,7 @@ export default function ThreePreview({
       }
       container.innerHTML = '';
     };
-  }, [texture, applyPoseLocal, pose, showOverlay]);
+  }, [texture, applyPoseLocal, pose, showOverlay, overlayRefs]);
 
   // Reaguj na zmianę pozy
   useEffect(() => {
@@ -251,7 +254,7 @@ export default function ThreePreview({
     overlayRefs.forEach((ref) => {
       if (ref.current) ref.current.visible = showOverlay;
     });
-  }, [showOverlay]);
+  }, [showOverlay, overlayRefs]);
 
   // Automatyczne dopasowanie wysokości do dolnego marginesu (viewport - top - offset)
   useEffect(() => {

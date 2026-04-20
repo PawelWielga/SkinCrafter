@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 
 interface NBarProps {
   logoSrc?: string;
@@ -10,17 +11,33 @@ const NBar: React.FC<NBarProps> = ({ logoSrc = '/logo.png', logoAlt = 'Logo apli
     <nav className="bg-green-800 text-white px-4 py-3 shadow-md">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-amber-500 flex items-center justify-center pixel-border">
-            <i className="fas fa-cube text-sm"></i>
+          <div className="w-8 h-8 bg-amber-500 flex items-center justify-center pixel-border overflow-hidden">
+            <img src={logoSrc} alt={logoAlt} className="h-full w-full object-cover" />
           </div>
           <h1 className="text-xl font-bold tracking-tight">SkinCrafter</h1>
         </div>
-        <button className="pixel-button bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded pixel-border transition-colors hidden">
-          <i className="fas fa-user mr-1"></i> My Skins
-        </button>
-        <button className="pixel-button bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded pixel-border transition-colors">
-          Under Construction
-        </button>
+        <div className="flex items-center gap-2">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `pixel-button px-3 py-1 rounded pixel-border transition-colors ${
+                isActive ? 'bg-amber-600 text-white' : 'bg-green-700 hover:bg-green-600 text-white'
+              }`
+            }
+          >
+            Wardrobe
+          </NavLink>
+          <NavLink
+            to="/mcskinview"
+            className={({ isActive }) =>
+              `pixel-button px-3 py-1 rounded pixel-border transition-colors ${
+                isActive ? 'bg-amber-600 text-white' : 'bg-green-700 hover:bg-green-600 text-white'
+              }`
+            }
+          >
+            Skin View
+          </NavLink>
+        </div>
       </div>
     </nav>
   );

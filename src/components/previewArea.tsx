@@ -4,10 +4,10 @@ import type { Pose } from './three/pose-utils';
 
 interface PreviewAreaProps {
   texture: string | null;
-  footerHeight: number;
+  footerHeight?: number;
 }
 
-export default function PreviewArea({ texture, footerHeight }: PreviewAreaProps): React.JSX.Element {
+export default function PreviewArea({ texture, footerHeight = 0 }: PreviewAreaProps): React.JSX.Element {
   const [pose, setPose] = useState<Pose>('default');
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
   const [offset, setOffset] = useState<number>(0);

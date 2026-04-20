@@ -15,8 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "typeRoots": ["src", "node_modules/@types"],
-    "types": ["vite/client"]
+    "types": ["vite/client", "vitest/globals", "node"]
   },
   "include": ["src", "src/env.d.ts"],
   "exclude": ["node_modules"]
