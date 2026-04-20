@@ -15,6 +15,9 @@ export interface References {
 
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
+const RIGHT_ARM_TPOSE_X = -10;
+const LEFT_ARM_TPOSE_X = 10;
+const ARM_TPOSE_Y = 16;
 const RIGHT_LEG_X = -2;
 const LEFT_LEG_X = 2;
 
@@ -39,10 +42,15 @@ export default function applyPose(p: Pose, refs: References): void {
 
   if (p === 'tpose') {
     const z = Math.PI / 2;
-    armL.rotation.z = -z;
-    armR.rotation.z = z;
-    armLOL?.rotation.set(0, 0, -z);
-    armROL?.rotation.set(0, 0, z);
+    armL.position.set(LEFT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
+    armR.position.set(RIGHT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
+    armL.rotation.z = z;
+    armR.rotation.z = -z;
+
+    armLOL?.position.set(LEFT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
+    armROL?.position.set(RIGHT_ARM_TPOSE_X, ARM_TPOSE_Y, 0);
+    armLOL?.rotation.set(0, 0, z);
+    armROL?.rotation.set(0, 0, -z);
   } else if (p === 'walking') {
     const forward = -Math.PI / 4;
     const backward = Math.PI / 4;
