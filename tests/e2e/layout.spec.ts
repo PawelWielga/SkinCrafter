@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('wardrobe layout fits desktop viewport and renders the preview', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'SkinCrafter' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'SkinCrafter logo' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /preview/i })).toBeVisible();
 
   const canvas = page.locator('canvas').first();
@@ -30,7 +30,7 @@ test('wardrobe layout fits desktop viewport and renders the preview', async ({ p
 test('skin view uses the same two-panel desktop layout', async ({ page }) => {
   await page.goto('/mcskinview');
 
-  await expect(page.getByRole('heading', { name: 'SkinCrafter' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'SkinCrafter logo' })).toBeVisible();
   await expect(page.getByLabel('Language')).toBeVisible();
   await expect(page.getByRole('heading', { name: /preview/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /load minecraft skin/i })).toBeVisible();

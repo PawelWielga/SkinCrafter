@@ -28,11 +28,15 @@ const NBar: React.FC<NBarProps> = ({
   return (
     <nav className="bg-green-800 text-white px-4 py-3 shadow-md">
       <div className="container mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-amber-500 flex items-center justify-center pixel-border overflow-hidden">
-            <img src={logoSrc} alt={logoAlt} className="h-full w-full object-cover" />
+        <div className="flex items-center">
+          <div className="h-8 w-36 flex items-center">
+            <img
+              src={logoSrc}
+              alt={logoAlt}
+              className="h-auto max-h-8 w-full object-contain"
+              style={{ imageRendering: 'pixelated' }}
+            />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">{t('app.title')}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <NavLink
