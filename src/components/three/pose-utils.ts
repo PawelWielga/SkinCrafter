@@ -54,11 +54,12 @@ export default function applyPose(p: Pose, refs: References): void {
   } else if (p === 'walking') {
     const forward = -Math.PI / 4;
     const backward = Math.PI / 4;
+    const raisedArmY = 13;
 
     armL.rotation.x = forward;
-    armL.position.z = 3;
+    armL.position.set(armL.position.x, raisedArmY, 3);
     armR.rotation.x = backward;
-    armR.position.z = -3;
+    armR.position.set(armR.position.x, raisedArmY, -3);
 
     legL.rotation.x = backward;
     legL.position.set(legL.position.x, 1, -4);
@@ -67,11 +68,11 @@ export default function applyPose(p: Pose, refs: References): void {
 
     if (armLOL) {
       armLOL.rotation.x = forward;
-      armLOL.position.z = 3;
+      armLOL.position.set(armLOL.position.x, raisedArmY, 3);
     }
     if (armROL) {
       armROL.rotation.x = backward;
-      armROL.position.z = -3;
+      armROL.position.set(armROL.position.x, raisedArmY, -3);
     }
     if (legLOL) {
       legLOL.rotation.x = backward;
