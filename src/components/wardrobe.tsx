@@ -30,9 +30,9 @@ export default function Wardrobe({
           return (
             <div
               key={category.id}
-              className="option-card bg-white shadow p-4 pixel-border relative"
+              className="option-card bg-white shadow p-4 pt-5 pixel-border relative"
             >
-              <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
+              <h3 className="font-medium text-gray-800 mb-2 flex items-center absolute -top-3 left-4 px-2 bg-white z-10">
                 <i className={`fas ${category.icon} mr-2 text-amber-600`} />{' '}
                 {t(category.labelKey as TranslationKey)}
               </h3>

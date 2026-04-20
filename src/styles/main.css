@@ -81,9 +81,26 @@
 }
 
 .option-card {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   transition: all 0.3s ease;
   animation: pixelFadeIn 0.4s ease-out;
+}
+
+.preview-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.preview-action-button {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 0;
+  overflow-wrap: normal;
+  text-align: center;
+  word-break: normal;
 }
 
 .minecraft-scroll::-webkit-scrollbar {

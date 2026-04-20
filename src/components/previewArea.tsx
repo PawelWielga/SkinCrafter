@@ -64,9 +64,9 @@ export default function PreviewArea({
         </div>
       </div>
 
-      <div ref={buttonsRef} className="mt-4 grid grid-cols-3 gap-2">
+      <div ref={buttonsRef} className="mt-4 preview-actions">
         <button
-          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
+          className="pixel-button preview-action-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors"
           aria-label={t('action.changePose')}
           onClick={cyclePose}
         >
@@ -74,7 +74,7 @@ export default function PreviewArea({
           {t('action.changePose')}
         </button>
         <button
-          className="pixel-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors flex items-center justify-center"
+          className="pixel-button preview-action-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors"
           aria-label={showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
           onClick={toggleOverlay}
         >
@@ -82,7 +82,7 @@ export default function PreviewArea({
           {showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
         </button>
         <button
-          className="pixel-button bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed p-2 pixel-border transition-colors flex items-center justify-center"
+          className="pixel-button preview-action-button bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed p-2 pixel-border transition-colors"
           aria-label={t('action.downloadSkin')}
           onClick={downloadSkin}
           disabled={!texture}
