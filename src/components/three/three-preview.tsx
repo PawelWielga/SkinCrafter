@@ -43,13 +43,13 @@ export default function ThreePreview({
 
   const [containerHeight, setContainerHeight] = useState<number>(0);
 
-  // Body parts
+  // Body parts.
   const armLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const legLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const legRRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
 
-  // Overlays
+  // Overlays.
   const armLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const armROLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
   const legLOLRef = useRef<THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null>(null);
@@ -80,11 +80,11 @@ export default function ThreePreview({
     const container = containerRef.current;
     if (!container) return;
 
-    // Initial size
+    // Initial size.
     const width = container.clientWidth || 1;
     const height = container.clientHeight || 1;
 
-    // Renderer — antialias off, bo skin ma NearestFilter (pixel-art)
+    // Keep antialiasing off so Minecraft textures stay crisp.
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(getClampedDPR());
@@ -92,28 +92,28 @@ export default function ThreePreview({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Camera
+    // Camera.
     const camera = new THREE.PerspectiveCamera(52, width / height, 0.1, 1000);
     camera.position.set(0, 10, 40);
     camera.lookAt(0, 10, 0);
     cameraRef.current = camera;
 
-    // Scene
+    // Scene.
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Light (przy MeshBasic nie wpływa, ale zostaje na przyszłość)
+    // Light is harmless with MeshBasicMaterial and keeps the scene ready for future material changes.
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(10, 10, 10);
     scene.add(light);
 
-    // Group (pivot całej postaci)
+    // Character pivot group.
     const group = new THREE.Group();
     group.position.y = -10;
     group.rotation.y = rotationRef.current;
     scene.add(group);
 
-    // Texture
+    // Texture.
     const loader = new THREE.TextureLoader();
     const src = texture ?? '/textures/steve.png';
 
@@ -124,22 +124,22 @@ export default function ThreePreview({
       tex.wrapS = THREE.ClampToEdgeWrapping;
       tex.wrapT = THREE.ClampToEdgeWrapping;
 
-      // GŁOWA I KORPUS
+      // Head and torso.
       const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
 
-      // KOŃCZYNY — prawa/lewa POPRAWNIE
+      // Limbs.
       const armR = createBox(tex, 4, 12, 4, -6, 12, 0, armMap);
       const armL = createBox(tex, 4, 12, 4, 6, 12, 0, leftArmMap);
-      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap); // prawa noga po prawej (x=+2)
-      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap); // lewa noga po lewej (x=-2)
+      const legR = createBox(tex, 4, 12, 4, 2, 0, 0, legMap);
+      const legL = createBox(tex, 4, 12, 4, -2, 0, 0, leftLegMap);
 
       armRRef.current = armR;
       armLRef.current = armL;
       legRRef.current = legR;
       legLRef.current = legL;
 
-      // OVERLAY — mały expand, żeby nie było z-fightingu
+      // Slightly expand overlays to avoid z-fighting.
       const expand = 0.05;
       const headOL = createBox(tex, 8, 8, 8, 0, 22, 0, headOverlayMap, {
         transparent: true,
@@ -173,15 +173,15 @@ export default function ThreePreview({
       legROLRef.current = legROL;
       legLOLRef.current = legLOL;
 
-      // Dodaj do sceny
+      // Add meshes to the scene.
       group.add(head, body, armR, armL, legR, legL, headOL, bodyOL, armROL, armLOL, legROL, legLOL);
 
-      // Overlay visibility
+      // Overlay visibility.
       overlayRefs.forEach((ref) => {
         if (ref.current) ref.current.visible = showOverlay;
       });
 
-      // Zastosuj pozę
+      // Apply the current pose.
       applyPoseLocal(pose);
     };
 
@@ -189,7 +189,7 @@ export default function ThreePreview({
       console.error('Texture load failed', err)
     );
 
-    // Animacja
+    // Animation.
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -198,7 +198,7 @@ export default function ThreePreview({
     };
     animate();
 
-    // Resize
+    // Resize.
     const handleResize = () => {
       if (!container || !rendererRef.current || !cameraRef.current) return;
       const newWidth = container.clientWidth || 1;
@@ -214,7 +214,7 @@ export default function ThreePreview({
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // Cleanup
+    // Cleanup.
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
@@ -222,7 +222,7 @@ export default function ThreePreview({
 
       rotationRef.current = group.rotation.y;
 
-      // Dispose scene geometries/materials
+      // Dispose scene geometries and materials.
       if (sceneRef.current) {
         sceneRef.current.traverse((o) => {
           const m = o as THREE.Mesh;
@@ -244,19 +244,19 @@ export default function ThreePreview({
     };
   }, [texture, applyPoseLocal, pose, showOverlay, overlayRefs]);
 
-  // Reaguj na zmianę pozy
+  // React to pose changes.
   useEffect(() => {
     applyPoseLocal(pose);
   }, [pose, applyPoseLocal]);
 
-  // Reaguj na widoczność overlayów
+  // React to overlay visibility changes.
   useEffect(() => {
     overlayRefs.forEach((ref) => {
       if (ref.current) ref.current.visible = showOverlay;
     });
   }, [showOverlay, overlayRefs]);
 
-  // Automatyczne dopasowanie wysokości do dolnego marginesu (viewport - top - offset)
+  // Fit preview height to the available viewport space.
   useEffect(() => {
     const updateHeight = () => {
       const rect = containerRef.current?.getBoundingClientRect();

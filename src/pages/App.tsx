@@ -1,77 +1,85 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
-import races, { Race } from '../data/races';
 import NBar from '../components/nbar';
 import PreviewArea from '../components/previewArea';
 import Wardrobe from '../components/wardrobe';
-import type { LayerOrder } from '../data/layerOrder';
-import defaultLayerOrder from '../data/layerOrder';
-
-import skinColorMap from '../data/skinColorMap';
-import raceTextureMap from '../data/raceTextureMap';
-import hatTextureMap, { Hat, hats } from '../data/hatTextureMap';
-import combineTextures, { TextureInput } from '../utils/combineTextures';
 import MyFooter from '../components/myFooter';
 import McSkinView from './McSkinView';
+import {
+  buildTextureInputs,
+  defaultAppearance,
+  normalizeAppearance,
+  type AppearanceCategoryId,
+  type AppearanceState,
+} from '../data/appearance';
+import combineTextures from '../utils/combineTextures';
+import {
+  defaultLanguage,
+  isLanguage,
+  translate,
+  type Language,
+  type TranslationKey,
+} from '../i18n/translations';
 
-const layerOrder: LayerOrder = defaultLayerOrder;
+const APPEARANCE_STORAGE_KEY = 'wardrobeAppearance';
+const LANGUAGE_STORAGE_KEY = 'skincrafterLanguage';
+
+const readStoredAppearance = (): AppearanceState => {
+  const stored = localStorage.getItem(APPEARANCE_STORAGE_KEY);
+  if (stored) {
+    try {
+      return normalizeAppearance(JSON.parse(stored) as Partial<AppearanceState>);
+    } catch {
+      return normalizeAppearance(null);
+    }
+  }
+
+  return normalizeAppearance({
+    race: localStorage.getItem('wardrobeRace') ?? defaultAppearance.race,
+    skinColor: localStorage.getItem('wardrobeSkinColor') ?? defaultAppearance.skinColor,
+    hat: localStorage.getItem('wardrobeHat') ?? defaultAppearance.hat,
+  });
+};
+
+const readStoredLanguage = (): Language => {
+  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return isLanguage(stored) ? stored : defaultLanguage;
+};
 
 const WardrobeEditor: React.FC = () => {
-  const [race, setRace] = useState<Race>('Human');
-  const [skinColor, setSkinColor] = useState<string>(skinColorMap.Human[0]);
-  const [hat, setHat] = useState<Hat>('None');
+  const [appearance, setAppearance] = useState<AppearanceState>(() => readStoredAppearance());
+  const [language, setLanguage] = useState<Language>(() => readStoredLanguage());
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
   const footerRef = useRef<HTMLElement>(null);
   const [footerHeight, setFooterHeight] = useState<number>(0);
 
-  useEffect(() => {
-    const storedRace = localStorage.getItem('wardrobeRace');
-    let raceToSet: Race = 'Human';
-    if (storedRace && races.includes(storedRace as Race)) {
-      raceToSet = storedRace as Race;
-      setRace(raceToSet);
-    }
+  const t = useCallback(
+    (key: TranslationKey) => translate(language, key),
+    [language]
+  );
 
-    const storedColor = localStorage.getItem('wardrobeSkinColor');
-    if (storedColor && skinColorMap[raceToSet].includes(storedColor)) {
-      setSkinColor(storedColor);
-    } else {
-      setSkinColor(skinColorMap[raceToSet][0]);
-    }
+  const handleAppearanceChange = useCallback(
+    (category: AppearanceCategoryId, value: string) => {
+      setAppearance((current) => {
+        const next = normalizeAppearance({ ...current, [category]: value });
+        return next;
+      });
+    },
+    []
+  );
 
-    const storedHat = localStorage.getItem('wardrobeHat');
-    if (storedHat && hats.includes(storedHat as Hat)) {
-      setHat(storedHat as Hat);
-    }
-  }, []);
-
-  const skinColors = useMemo(() => skinColorMap[race], [race]);
-
-  const handleRaceChange = useCallback((newRace: Race) => {
-    setRace(newRace);
-    setSkinColor(skinColorMap[newRace][0]);
-  }, []);
-
-  const handleSkinColorChange = useCallback((color: string) => {
-    setSkinColor(color);
-  }, []);
-
-  const handleHatChange = useCallback((newHat: Hat) => {
-    setHat(newHat);
+  const handleLanguageChange = useCallback((nextLanguage: Language) => {
+    setLanguage(nextLanguage);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('wardrobeRace', race);
-  }, [race]);
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(appearance));
+  }, [appearance]);
 
   useEffect(() => {
-    localStorage.setItem('wardrobeSkinColor', skinColor);
-  }, [skinColor]);
-
-  useEffect(() => {
-    localStorage.setItem('wardrobeHat', hat);
-  }, [hat]);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
 
   useEffect(() => {
     const measure = () => {
@@ -82,36 +90,38 @@ const WardrobeEditor: React.FC = () => {
     return () => window.removeEventListener('resize', measure);
   }, []);
 
+  const textureInputs = useMemo(() => buildTextureInputs(appearance), [appearance]);
+
   useEffect(() => {
-    const textures: TextureInput[] = [];
-    layerOrder.forEach((layer) => {
-      if (layer === 'race') {
-        textures.push({ url: raceTextureMap[race], tint: skinColor });
-      } else if (layer === 'hat') {
-        textures.push(hatTextureMap[hat]);
+    let isCurrent = true;
+    combineTextures(textureInputs).then((tex) => {
+      if (isCurrent) {
+        setCombinedTexture(tex);
       }
     });
 
-    combineTextures(textures).then((tex) => setCombinedTexture(tex));
-  }, [race, skinColor, hat]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [textureInputs]);
 
   return (
     <div className="max-w-full min-h-dvh md:h-screen overflow-x-visible overflow-y-auto flex flex-col">
-      <NBar />
+      <NBar
+        language={language}
+        onLanguageChange={handleLanguageChange}
+        t={t}
+      />
 
       <div className="flex-1 flex flex-col md:flex-row">
         <div className="flex-1 w-full md:w-1/2">
-          <PreviewArea texture={combinedTexture} footerHeight={footerHeight} />
+          <PreviewArea texture={combinedTexture} footerHeight={footerHeight} t={t} />
         </div>
         <div className="flex-1 w-full md:w-1/2">
           <Wardrobe
-            skinColors={skinColors}
-            selectedSkinColor={skinColor}
-            selectedRace={race}
-            selectedHat={hat}
-            onRaceChange={handleRaceChange}
-            onSkinColorChange={handleSkinColorChange}
-            onHatChange={handleHatChange}
+            appearance={appearance}
+            onAppearanceChange={handleAppearanceChange}
+            t={t}
           />
         </div>
       </div>

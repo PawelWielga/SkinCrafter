@@ -1,25 +1,71 @@
+export type TextureBlendMode = 'source-over' | 'multiply';
+
 export interface TextureLayerInput {
   url: string | null;
   tint?: string;
+  blendMode?: TextureBlendMode;
 }
 
 export interface TextureLayer {
   url: string;
   tint?: string;
+  blendMode: TextureBlendMode;
+}
+
+export interface RgbaPixel {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 
 export type TextureInput = string | null | TextureLayerInput;
 
 const normalizeLayer = (layer: TextureInput): TextureLayer | null => {
   if (!layer) return null;
-  if (typeof layer === 'string') return { url: layer };
-  return layer.url ? { url: layer.url, tint: layer.tint } : null;
+  if (typeof layer === 'string') {
+    return { url: layer, blendMode: 'source-over' };
+  }
+  return layer.url
+    ? {
+        url: layer.url,
+        tint: layer.tint,
+        blendMode: layer.blendMode ?? 'source-over',
+      }
+    : null;
 };
+
+export function hexToPixel(hex: string): RgbaPixel {
+  const clean = hex.replace('#', '');
+  const value = clean.length === 3
+    ? clean
+        .split('')
+        .map((part) => `${part}${part}`)
+        .join('')
+    : clean;
+
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16),
+    a: 255,
+  };
+}
+
+export function multiplyPixel(base: RgbaPixel, tint: RgbaPixel): RgbaPixel {
+  return {
+    r: Math.round((base.r * tint.r) / 255),
+    g: Math.round((base.g * tint.g) / 255),
+    b: Math.round((base.b * tint.b) / 255),
+    a: base.a,
+  };
+}
 
 const drawLayer = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
-  tint: string | undefined
+  tint: string | undefined,
+  blendMode: TextureBlendMode
 ): void => {
   if (!tint) {
     ctx.drawImage(img, 0, 0);
@@ -36,7 +82,7 @@ const drawLayer = (
   }
 
   layerCtx.drawImage(img, 0, 0);
-  layerCtx.globalCompositeOperation = 'multiply';
+  layerCtx.globalCompositeOperation = blendMode;
   layerCtx.fillStyle = tint;
   layerCtx.fillRect(0, 0, layerCanvas.width, layerCanvas.height);
   layerCtx.globalCompositeOperation = 'destination-in';
@@ -69,8 +115,9 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
   if (!ctx) return '';
 
   images.forEach((img, index) => {
-    drawLayer(ctx, img, layers[index].tint);
+    const layer = layers[index];
+    drawLayer(ctx, img, layer.tint, layer.blendMode);
   });
 
-  return canvas.toDataURL();
+  return canvas.toDataURL('image/png');
 }

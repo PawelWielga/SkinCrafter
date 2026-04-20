@@ -1,72 +1,89 @@
 import React from 'react';
-import WardrobeRace from './wardrobe-sections/WardrobeRace';
-import WardrobeSkinColor from './wardrobe-sections/WardrobeSkinColor';
-import WardrobeHat from './wardrobe-sections/WardrobeHat';
-import type { Race } from '../data/races';
-import type { Hat } from '../data/hatTextureMap';
+import {
+  appearanceCategories,
+  getOptions,
+  type AppearanceCategoryId,
+  type AppearanceState,
+} from '../data/appearance';
+import type { TranslationKey } from '../i18n/translations';
 
 interface WardrobeProps {
-  skinColors: string[];
-  selectedSkinColor: string | null;
-  selectedRace: Race;
-  selectedHat: Hat;
-  onRaceChange?: (race: Race) => void;
-  onSkinColorChange?: (color: string) => void;
-  onHatChange?: (hat: Hat) => void;
+  appearance: AppearanceState;
+  onAppearanceChange: (category: AppearanceCategoryId, value: string) => void;
+  t: (key: TranslationKey) => string;
 }
 
 export default function Wardrobe({
-  skinColors,
-  selectedSkinColor,
-  selectedRace,
-  selectedHat,
-  onRaceChange,
-  onSkinColorChange,
-  onHatChange,
+  appearance,
+  onAppearanceChange,
+  t,
 }: WardrobeProps): React.JSX.Element {
   return (
     <section className="overflow-visible md:overflow-y-scroll mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4 customization-panel">
       <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
-        <i className="fas fa-sliders mr-2 text-green-700" /> Customization
+        <i className="fas fa-sliders mr-2 text-green-700" /> {t('panel.customization')}
       </h2>
 
       <div className="space-y-2 options-container">
-        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
-          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
-            <i className="fas fa-user-tag mr-2 text-amber-600" /> Character Race
-          </h3>
-          <WardrobeRace
-            selectedRace={selectedRace}
-            onChange={onRaceChange}
-            hideLabel
-            className="mt-4"
-          />
-        </div>
+        {appearanceCategories.map((category) => {
+          const options = getOptions(category.id, appearance);
+          return (
+            <div
+              key={category.id}
+              className="option-card bg-white shadow p-4 pixel-border relative"
+            >
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
+                <i className={`fas ${category.icon} mr-2 text-amber-600`} />{' '}
+                {t(category.labelKey as TranslationKey)}
+              </h3>
 
-        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
-          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
-            <i className="fas fa-palette mr-2 text-amber-600" /> Skin Color
-          </h3>
-          <WardrobeSkinColor
-            colors={skinColors}
-            selectedColor={selectedSkinColor}
-            onChange={onSkinColorChange}
-            hideLabel
-            className="mt-4"
-          />
-        </div>
+              <div
+                className={
+                  category.control === 'color'
+                    ? 'mt-4 flex flex-wrap gap-2'
+                    : 'mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2'
+                }
+                role="group"
+                aria-label={t(category.labelKey as TranslationKey)}
+              >
+                {options.map((option) => {
+                  const isSelected = appearance[category.id] === option.id;
+                  if (category.control === 'color') {
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`w-9 h-9 border pixel-border transition-transform hover:scale-105 ${
+                          isSelected ? 'ring-2 ring-green-700' : ''
+                        }`}
+                        style={{ backgroundColor: option.color ?? option.id }}
+                        aria-label={t(option.labelKey as TranslationKey)}
+                        aria-pressed={isSelected}
+                        onClick={() => onAppearanceChange(category.id, option.id)}
+                      />
+                    );
+                  }
 
-        <div className="option-card bg-white rounded-lg shadow p-4 pixel-border relative">
-          <h3 className="font-medium text-gray-700 mb-2 flex items-center absolute -top-3 left-4 px-2 [text-shadow:_1px_1px_0_white,_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white]">
-            <i className="fas fa-tshirt mr-2 text-amber-600" /> Hat
-          </h3>
-          <WardrobeHat
-            selectedHat={selectedHat}
-            onChange={onHatChange}
-            hideLabel
-            className="mt-4"
-          />
-        </div>
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`pixel-button min-h-10 px-2 py-2 border text-sm transition-colors ${
+                        isSelected
+                          ? 'bg-green-700 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                      }`}
+                      aria-pressed={isSelected}
+                      onClick={() => onAppearanceChange(category.id, option.id)}
+                    >
+                      {t(option.labelKey as TranslationKey)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
