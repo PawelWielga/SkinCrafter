@@ -1,44 +1,58 @@
-interface MojangProfile {
-  id: string;
-  name: string;
-}
-
-interface SessionProfileProperty {
+interface PlayerDbProperty {
   name: string;
   value: string;
 }
 
-interface MojangSessionProfile {
-  properties: SessionProfileProperty[];
+interface PlayerDbResponse {
+  success: boolean;
+  data?: {
+    player?: {
+      skin_texture?: string;
+      properties?: PlayerDbProperty[];
+    };
+  };
 }
 
 interface DecodedTextures {
   textures: {
-    SKIN: {
+    SKIN?: {
       url: string;
     };
   };
 }
 
+const normalizeTextureUrl = (url: string): string => url.replace(/^http:\/\//, 'https://');
+
 export default async function fetchSkin(username: string): Promise<string> {
   const profileRes = await fetch(
-    `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(username)}`
+    `https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`
   );
+
   if (!profileRes.ok) {
     throw new Error('User not found');
   }
-  const profile: MojangProfile = await profileRes.json();
-  const sessionRes = await fetch(
-    `https://sessionserver.mojang.com/session/minecraft/profile/${profile.id}`
-  );
-  if (!sessionRes.ok) {
-    throw new Error('Failed to fetch profile');
+
+  const profile: PlayerDbResponse = await profileRes.json();
+  const player = profile.data?.player;
+
+  if (!profile.success || !player) {
+    throw new Error('User not found');
   }
-  const sessionProfile: MojangSessionProfile = await sessionRes.json();
-  const texturesProp = sessionProfile.properties.find((p) => p.name === 'textures');
+
+  if (player.skin_texture) {
+    return normalizeTextureUrl(player.skin_texture);
+  }
+
+  const texturesProp = player.properties?.find((p) => p.name === 'textures');
   if (!texturesProp) {
     throw new Error('Skin texture not found');
   }
+
   const decoded: DecodedTextures = JSON.parse(atob(texturesProp.value));
-  return decoded.textures.SKIN.url;
+  const textureUrl = decoded.textures.SKIN?.url;
+  if (!textureUrl) {
+    throw new Error('Skin texture not found');
+  }
+
+  return normalizeTextureUrl(textureUrl);
 }

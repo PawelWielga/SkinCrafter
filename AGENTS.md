@@ -15,7 +15,7 @@ The visual language should stay simple, blocky, and game-adjacent so it fits Min
 
 From an implementation perspective, the current app is a Vite + React + TypeScript project. The main flow is a wardrobe editor that combines texture layers and renders the result in a rotating 3D preview built with Three.js.
 
-The repository also contains a separate `McSkinView` page for loading skins from Mojang APIs, but it is currently not wired into any route from the app entry point.
+The repository also contains a `McSkinView` route for loading existing Minecraft skins by username. Browser requests do not go directly to Mojang profile APIs because of CORS; `src/api/fetchSkin.ts` uses PlayerDB for the profile lookup and returns a `textures.minecraft.net` skin URL for the preview.
 
 ## Tech Stack
 
@@ -33,40 +33,50 @@ Run these from the repository root:
 ```bash
 npm install
 npm run dev
+npm test
+npm run test:e2e
 npm run build
 npm run preview
 ```
 
 ## Validation Expectations
 
-The only reliable built-in validation command today is:
+Use these commands from the repository root when relevant:
 
 ```bash
+npm test
+npm run test:e2e
 npm run build
 ```
 
 Known gaps in the current repo:
 
 - `README.md` mentions `npm run sitemap`, but `package.json` does not define that script.
-- GitHub Actions includes `.github/workflows/test.yml` with `npm test`, but `package.json` does not define a `test` script.
-- `jest.config.js` and `src/api/__tests__/fetchSkin.test.ts` exist, but the test toolchain is not fully represented in `package.json`. Do not claim tests passed unless you first add the missing script/dependencies and run them.
+- GitHub Actions includes `.github/workflows/test.yml` targeting `master`; treat the branch trigger as stale unless workflow configuration is updated.
 
 When making code changes, prefer to report validation as:
 
+- `unit tests passed` if `npm test` succeeds
+- `e2e passed` if `npm run test:e2e` succeeds
 - `build passed` if `npm run build` succeeds
 - `not run` if dependencies are missing or the task does not justify a full install/build
-- `blocked by repo configuration` for the current test/sitemap mismatch
+- `blocked by repo configuration` for known script/workflow mismatches such as the missing sitemap script
 
 ## Repository Map
 
 ### App Entry
 
 - `src/main.tsx`: mounts the React app and wraps it in `BrowserRouter`
-- `src/pages/App.tsx`: current main screen; owns wardrobe state, texture composition, and page layout
-- `src/pages/McSkinView.tsx`: alternate page for fetching a player skin from Mojang APIs; currently not mounted from the entry app
+- `src/pages/App.tsx`: defines routes for `/` and `/mcskinview`; the wardrobe route owns wardrobe state and texture composition
+- `src/pages/McSkinView.tsx`: route for fetching a player skin by username and showing it in the same two-panel preview layout as the creator
 
 ### UI Components
 
+- `src/components/appShell.tsx`: reusable page shell with `NBar`, `MyFooter`, language state/persistence, and footer height measurement for preview sizing
+- `src/components/twoPanelLayout.tsx`: reusable responsive two-panel page layout; use this when a page should match the creator/Skin View split screen
+- `src/components/panelSection.tsx`: reusable section wrapper with the standard panel heading/icon spacing
+- `src/components/optionCard.tsx`: reusable pixel-styled card for option groups, forms, and panel messages; pass `heading` and `icon` when the card needs a floating label
+- `src/components/pixelButton.tsx`: reusable pixel-styled button with optional Font Awesome icon; use for action buttons before hand-writing the same class list
 - `src/components/previewArea.tsx`: preview panel, pose controls, overlay toggle, download button
 - `src/components/wardrobe.tsx`: customization sidebar
 - `src/components/wardrobe-sections/*`: section-level controls for race, skin color, hat, and placeholder eye options
@@ -127,19 +137,32 @@ When modifying the 3D viewer:
 
 The wardrobe currently persists selections in `localStorage` under:
 
+- `wardrobeAppearance`
 - `wardrobeRace`
 - `wardrobeSkinColor`
 - `wardrobeHat`
 
 If you rename or extend persisted settings, update both read and write paths in `src/pages/App.tsx`.
 
+The app language persists in `localStorage` under:
+
+- `skincrafterLanguage`
+
+Language state is owned by `src/components/appShell.tsx` so all routes using `AppShell` share the same navbar language selector and translation helper.
+
 ### Routing
 
-`BrowserRouter` is present, but the app does not currently define route objects or `<Routes>`. Do not assume multi-page navigation is already wired up. If a task requires true routing, implement it explicitly.
+`BrowserRouter` is present in `src/main.tsx`, and `src/pages/App.tsx` defines `<Routes>` for:
+
+- `/`: wardrobe creator
+- `/mcskinview`: Minecraft username skin loader
+
+If a task requires a new page, add it explicitly to `src/pages/App.tsx` and prefer wrapping the page body in `AppShell`.
 
 ### Styling
 
 - Prefer existing Tailwind utility usage and the established Minecraft/pixel UI look.
+- Before adding repeated layout/card/button class lists, check the reusable UI components above.
 - Put reusable project-specific styles in `src/styles/main.css` instead of scattering large custom CSS blocks across components.
 - Font Awesome icons are loaded from `index.html`; if an icon change fails, verify the CDN dependency before changing component code.
 

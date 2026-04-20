@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import PanelSection from './panelSection';
+import PixelButton from './pixelButton';
 import ThreePreview from './three/three-preview';
 import type { Pose } from './three/pose-utils';
 import { defaultLanguage, translate, type TranslationKey } from '../i18n/translations';
@@ -48,13 +50,9 @@ export default function PreviewArea({
   }, [footerHeight]);
 
   return (
-    <section className="mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4">
-      <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
-        <i className="fas fa-eye mr-2 text-green-700" /> {t('panel.preview')}
-      </h2>
-
-      <div className="bg-gray-800 shadow-lg overflow-hidden pixel-border flex-grow h-full max-h-[70dvh] md:max-h-full">
-        <div className="flex justify-center items-center model-placeholder">
+    <PanelSection title={t('panel.preview')} icon="fa-eye">
+      <div className="bg-gray-800 shadow-lg overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full">
+        <div className="flex justify-center items-center model-placeholder md:h-full">
           <ThreePreview
             texture={texture}
             pose={pose}
@@ -65,32 +63,32 @@ export default function PreviewArea({
       </div>
 
       <div ref={buttonsRef} className="mt-4 preview-actions">
-        <button
-          className="pixel-button preview-action-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors"
+        <PixelButton
+          className="bg-gray-200 hover:bg-gray-300"
+          icon="fa-arrows-rotate"
           aria-label={t('action.changePose')}
           onClick={cyclePose}
         >
-          <i className="fas fa-arrows-rotate mr-2" />
           {t('action.changePose')}
-        </button>
-        <button
-          className="pixel-button preview-action-button bg-gray-200 hover:bg-gray-300 p-2 pixel-border transition-colors"
+        </PixelButton>
+        <PixelButton
+          className="bg-gray-200 hover:bg-gray-300"
+          icon="fa-layer-group"
           aria-label={showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
           onClick={toggleOverlay}
         >
-          <i className="fas fa-layer-group mr-2" />
           {showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
-        </button>
-        <button
-          className="pixel-button preview-action-button bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed p-2 pixel-border transition-colors"
+        </PixelButton>
+        <PixelButton
+          className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          icon="fa-download"
           aria-label={t('action.downloadSkin')}
           onClick={downloadSkin}
           disabled={!texture}
         >
-          <i className="fas fa-download mr-2" />
           {t('action.download')}
-        </button>
+        </PixelButton>
       </div>
-    </section>
+    </PanelSection>
   );
 }

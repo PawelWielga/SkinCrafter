@@ -28,6 +28,7 @@ interface ThreePreviewProps {
 const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
 const CHARACTER_CENTER_Y = 0;
 const CHARACTER_CAMERA_DISTANCE = 40;
+const OVERLAY_EXPAND = 0.5;
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
 const RIGHT_LEG_X = -2;
@@ -145,8 +146,8 @@ export default function ThreePreview({
       legRRef.current = legR;
       legLRef.current = legL;
 
-      // Slightly expand overlays to avoid z-fighting.
-      const expand = 0.05;
+      // Expand overlays so the second skin layer reads clearly above the base model.
+      const expand = OVERLAY_EXPAND;
       const headOL = createBox(tex, 8, 8, 8, 0, 22, 0, headOverlayMap, {
         transparent: true,
         expand,

@@ -17,56 +17,77 @@ describe('fetchSkin', () => {
 
   it('resolves to skin url on success', async () => {
     const username = 'Steve';
-    const skinUrl = 'https://example.com/skin.png';
+    const skinUrl = 'https://textures.minecraft.net/texture/skin123';
 
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ id: 'uuid123' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            properties: [
-              {
-                name: 'textures',
-                value: btoa(JSON.stringify({ textures: { SKIN: { url: skinUrl } } })),
-              },
-            ],
-          }),
-      });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            player: {
+              skin_texture: skinUrl,
+            },
+          },
+        }),
+    });
 
     await expect(fetchSkin(username)).resolves.toBe(skinUrl);
+    expect(mockFetch).toHaveBeenCalledWith('https://playerdb.co/api/player/minecraft/Steve');
   });
 
   it('throws when user not found', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ success: false }),
+    });
 
     await expect(fetchSkin('unknown')).rejects.toThrow('User not found');
   });
 
-  it('throws when session fetch fails', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ id: 'uuid123' }),
-      })
-      .mockResolvedValueOnce({ ok: false });
+  it('throws when profile fetch fails', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false });
 
-    await expect(fetchSkin('Steve')).rejects.toThrow('Failed to fetch profile');
+    await expect(fetchSkin('Steve')).rejects.toThrow('User not found');
+  });
+
+  it('falls back to decoded texture properties', async () => {
+    const skinUrl = 'http://textures.minecraft.net/texture/skin123';
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            player: {
+              properties: [
+                {
+                  name: 'textures',
+                  value: btoa(JSON.stringify({ textures: { SKIN: { url: skinUrl } } })),
+                },
+              ],
+            },
+          },
+        }),
+    });
+
+    await expect(fetchSkin('Steve')).resolves.toBe('https://textures.minecraft.net/texture/skin123');
   });
 
   it('throws when texture missing', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ id: 'uuid123' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ properties: [] }),
-      });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            player: {
+              properties: [],
+            },
+          },
+        }),
+    });
 
     await expect(fetchSkin('Steve')).rejects.toThrow('Skin texture not found');
   });

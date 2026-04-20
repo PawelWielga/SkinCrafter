@@ -1,4 +1,6 @@
 import React from 'react';
+import OptionCard from './optionCard';
+import PanelSection from './panelSection';
 import {
   appearanceCategories,
   getOptions,
@@ -19,24 +21,20 @@ export default function Wardrobe({
   t,
 }: WardrobeProps): React.JSX.Element {
   return (
-    <section className="overflow-visible md:overflow-y-scroll mb-4 md:mb-0 md:flex md:flex-col md:h-full p-4 customization-panel">
-      <h2 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
-        <i className="fas fa-sliders mr-2 text-green-700" /> {t('panel.customization')}
-      </h2>
-
-      <div className="space-y-2 options-container">
+    <PanelSection
+      title={t('panel.customization')}
+      icon="fa-sliders"
+      className="overflow-visible md:overflow-hidden customization-panel"
+    >
+      <div className="space-y-2 options-container md:flex-1 md:min-h-0">
         {appearanceCategories.map((category) => {
           const options = getOptions(category.id, appearance);
           return (
-            <div
+            <OptionCard
               key={category.id}
-              className="option-card bg-white shadow p-4 pt-5 pixel-border relative"
+              heading={t(category.labelKey as TranslationKey)}
+              icon={category.icon}
             >
-              <h3 className="font-medium text-gray-800 mb-2 flex items-center absolute -top-3 left-4 px-2 bg-white z-10">
-                <i className={`fas ${category.icon} mr-2 text-amber-600`} />{' '}
-                {t(category.labelKey as TranslationKey)}
-              </h3>
-
               <div
                 className={
                   category.control === 'color'
@@ -81,10 +79,10 @@ export default function Wardrobe({
                   );
                 })}
               </div>
-            </div>
+            </OptionCard>
           );
         })}
       </div>
-    </section>
+    </PanelSection>
   );
 }
