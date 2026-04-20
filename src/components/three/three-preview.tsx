@@ -27,7 +27,7 @@ interface ThreePreviewProps {
 
 const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 2);
 const CHARACTER_CENTER_Y = 0;
-const CHARACTER_CAMERA_DISTANCE = 40;
+const CHARACTER_CAMERA_DISTANCE = 44;
 const MIN_CAMERA_DISTANCE = 24;
 const MAX_CAMERA_DISTANCE = 72;
 const WHEEL_ZOOM_SPEED = 0.04;
