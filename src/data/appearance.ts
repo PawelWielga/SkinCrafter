@@ -63,7 +63,7 @@ export const defaultAppearance: AppearanceState = {
   race: 'Human',
   sex: 'Male',
   skinColor: skinColorMap.Human[0],
-  eyes: 'None',
+  eyes: 'Classic',
   eyesColor: '#2F5D9B',
   hair: 'None',
   hairColor: '#4A2F20',
@@ -124,7 +124,11 @@ const staticOptions: Partial<Record<AppearanceCategoryId, AppearanceOption[]>> =
     labelKey: `option.race.${race}`,
     texture: getRaceTextureUrl(race, 'Male'),
   })),
-  eyes: [noneOption],
+  eyes: [
+    { id: 'Classic', labelKey: 'option.eyes.Classic', texture: '/textures/eyes/clasic.png' },
+    { id: 'Small', labelKey: 'option.eyes.Small', texture: '/textures/eyes/small.png' },
+    { id: 'Big', labelKey: 'option.eyes.Big', texture: '/textures/eyes/big.png' },
+  ],
   eyesColor: [
     { id: '#2F5D9B', labelKey: 'option.color.blue', color: '#2F5D9B' },
     { id: '#2F8F4E', labelKey: 'option.color.green', color: '#2F8F4E' },
@@ -257,6 +261,18 @@ export function buildTextureInputs(
     if (layer === 'pants') {
       const url = pantsTextureMap[appearance.pants as keyof typeof pantsTextureMap];
       return url ? { url, blendMode: 'source-over' } : null;
+    }
+
+    if (layer === 'eyes') {
+      const option = getOptions('eyes', appearance).find((item) => item.id === appearance.eyes);
+      return option?.texture
+        ? {
+            url: option.texture,
+            tint: appearance.eyesColor,
+            blendMode: 'source-over',
+            tintTarget: 'nonWhite',
+          }
+        : null;
     }
 
     const option = getOptions(layer, appearance).find((item) => item.id === appearance[layer]);

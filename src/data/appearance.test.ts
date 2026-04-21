@@ -45,7 +45,16 @@ describe('appearance model', () => {
   });
 
   it('uses race and sex for the base texture input', () => {
-    const inputs = buildTextureInputs(defaultAppearance);
+    const inputs = buildTextureInputs({
+      ...defaultAppearance,
+      eyes: 'None',
+      hair: 'None',
+      hat: 'None',
+      shirt: 'None',
+      pants: 'None',
+      shoes: 'None',
+      accessory: 'None',
+    });
 
     expect(inputs[0]).toEqual(
       expect.objectContaining({
@@ -56,6 +65,21 @@ describe('appearance model', () => {
     );
     expect(inputs.slice(1).filter((input) => input && typeof input === 'object' && 'tint' in input))
       .toHaveLength(0);
+  });
+
+  it('tints selected eyes without recoloring white pixels', () => {
+    const inputs = buildTextureInputs({
+      ...defaultAppearance,
+      eyes: 'Classic',
+      eyesColor: '#2F8F4E',
+    });
+
+    expect(inputs[2]).toEqual({
+      url: '/textures/eyes/clasic.png',
+      tint: '#2F8F4E',
+      blendMode: 'source-over',
+      tintTarget: 'nonWhite',
+    });
   });
 
   it('normalizes texture layer order', () => {
