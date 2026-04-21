@@ -21,6 +21,11 @@ export type AppearanceCategoryId =
   | 'shoes'
   | 'accessory';
 
+export type TextureLayerCategoryId = Extract<
+  AppearanceCategoryId,
+  'hat' | 'shirt' | 'pants' | 'shoes' | 'accessory'
+>;
+
 export type AppearanceState = Record<AppearanceCategoryId, string>;
 
 export type AppearanceControl = 'choice' | 'color';
@@ -74,6 +79,14 @@ export const appearanceLayerOrder: AppearanceCategoryId[] = [
   'sex',
   'eyes',
   'hair',
+  'hat',
+  'shirt',
+  'pants',
+  'shoes',
+  'accessory',
+];
+
+export const textureLayerCategories: TextureLayerCategoryId[] = [
   'hat',
   'shirt',
   'pants',
@@ -185,8 +198,43 @@ export function normalizeAppearance(value: Partial<AppearanceState> | null): App
   return next;
 }
 
-export function buildTextureInputs(appearance: AppearanceState): TextureInput[] {
-  return appearanceLayerOrder.map((layer) => {
+export function normalizeTextureLayerOrder(
+  value: readonly string[] | null | undefined
+): TextureLayerCategoryId[] {
+  const validLayers = new Set<TextureLayerCategoryId>(textureLayerCategories);
+  const next: TextureLayerCategoryId[] = [];
+
+  (value ?? []).forEach((layer) => {
+    if (validLayers.has(layer as TextureLayerCategoryId)) {
+      const validLayer = layer as TextureLayerCategoryId;
+      if (!next.includes(validLayer)) {
+        next.push(validLayer);
+      }
+    }
+  });
+
+  textureLayerCategories.forEach((layer) => {
+    if (!next.includes(layer)) {
+      next.push(layer);
+    }
+  });
+
+  return next;
+}
+
+export function buildTextureInputs(
+  appearance: AppearanceState,
+  textureLayerOrder: readonly string[] = textureLayerCategories
+): TextureInput[] {
+  const layerOrder: AppearanceCategoryId[] = [
+    'race',
+    'sex',
+    'eyes',
+    'hair',
+    ...normalizeTextureLayerOrder(textureLayerOrder),
+  ];
+
+  return layerOrder.map((layer) => {
     if (layer === 'race') {
       const race = appearance.race as Race;
 

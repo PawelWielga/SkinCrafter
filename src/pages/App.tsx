@@ -10,12 +10,15 @@ import {
   buildTextureInputs,
   defaultAppearance,
   normalizeAppearance,
+  normalizeTextureLayerOrder,
   type AppearanceCategoryId,
   type AppearanceState,
+  type TextureLayerCategoryId,
 } from '../data/appearance';
 import combineTextures from '../utils/combineTextures';
 
 const APPEARANCE_STORAGE_KEY = 'wardrobeAppearance';
+const LAYER_ORDER_STORAGE_KEY = 'wardrobeLayerOrder';
 
 const readStoredAppearance = (): AppearanceState => {
   const stored = localStorage.getItem(APPEARANCE_STORAGE_KEY);
@@ -34,8 +37,24 @@ const readStoredAppearance = (): AppearanceState => {
   });
 };
 
+const readStoredLayerOrder = (): TextureLayerCategoryId[] => {
+  const stored = localStorage.getItem(LAYER_ORDER_STORAGE_KEY);
+  if (!stored) {
+    return normalizeTextureLayerOrder(null);
+  }
+
+  try {
+    return normalizeTextureLayerOrder(JSON.parse(stored) as string[]);
+  } catch {
+    return normalizeTextureLayerOrder(null);
+  }
+};
+
 const WardrobeEditor: React.FC = () => {
   const [appearance, setAppearance] = useState<AppearanceState>(() => readStoredAppearance());
+  const [textureLayerOrder, setTextureLayerOrder] = useState<TextureLayerCategoryId[]>(() =>
+    readStoredLayerOrder()
+  );
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
 
   const handleAppearanceChange = useCallback(
@@ -48,11 +67,22 @@ const WardrobeEditor: React.FC = () => {
     []
   );
 
+  const handleLayerOrderChange = useCallback((nextOrder: TextureLayerCategoryId[]) => {
+    setTextureLayerOrder(normalizeTextureLayerOrder(nextOrder));
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(appearance));
   }, [appearance]);
 
-  const textureInputs = useMemo(() => buildTextureInputs(appearance), [appearance]);
+  useEffect(() => {
+    localStorage.setItem(LAYER_ORDER_STORAGE_KEY, JSON.stringify(textureLayerOrder));
+  }, [textureLayerOrder]);
+
+  const textureInputs = useMemo(
+    () => buildTextureInputs(appearance, textureLayerOrder),
+    [appearance, textureLayerOrder]
+  );
 
   useEffect(() => {
     let isCurrent = true;
@@ -82,7 +112,9 @@ const WardrobeEditor: React.FC = () => {
           right={
             <Wardrobe
               appearance={appearance}
+              textureLayerOrder={textureLayerOrder}
               onAppearanceChange={handleAppearanceChange}
+              onLayerOrderChange={handleLayerOrderChange}
               t={t}
             />
           }

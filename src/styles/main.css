@@ -105,6 +105,86 @@
   margin-right: 0.35rem;
 }
 
+.layer-order-card {
+  padding-left: 2.4rem;
+}
+
+.layer-order-card.is-dragging,
+.layer-order-card.gu-transit {
+  opacity: 0.48 !important;
+  visibility: visible !important;
+}
+
+.gu-mirror.layer-order-card {
+  animation: none !important;
+  cursor: grabbing;
+  opacity: 0.82 !important;
+  pointer-events: none;
+  transition: none !important;
+}
+
+.gu-mirror.layer-order-card,
+.layer-order-card.gu-transit {
+  transform: none !important;
+}
+
+.layer-order-card h3 {
+  left: 2.45rem;
+  max-width: calc(100% - 2.9rem);
+}
+
+.layer-order-controls {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  left: 0.45rem;
+  position: absolute;
+  top: 0.55rem;
+  width: 1.45rem;
+  z-index: 20;
+}
+
+.layer-order-handle,
+.layer-order-nudge {
+  align-items: center;
+  background: #f3f4f6;
+  border: 1px solid #9ca3af;
+  color: #374151;
+  display: inline-flex;
+  height: 1.25rem;
+  justify-content: center;
+  line-height: 1;
+  width: 1.25rem;
+}
+
+.layer-order-handle {
+  cursor: grab;
+}
+
+.layer-order-handle:active {
+  cursor: grabbing;
+}
+
+.layer-order-handle:hover,
+.layer-order-nudge:not(:disabled):hover {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.layer-order-nudge:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.layer-order-handle .fas {
+  font-size: 0.75rem;
+}
+
+.layer-order-nudge .fas {
+  font-size: 0.55rem;
+}
+
 .color-option-swatch {
   align-items: center;
   display: inline-flex;

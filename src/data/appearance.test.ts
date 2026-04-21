@@ -5,6 +5,8 @@ import {
   defaultAppearance,
   getOptions,
   normalizeAppearance,
+  normalizeTextureLayerOrder,
+  textureLayerCategories,
 } from './appearance';
 
 describe('appearance model', () => {
@@ -54,6 +56,28 @@ describe('appearance model', () => {
     );
     expect(inputs.slice(1).filter((input) => input && typeof input === 'object' && 'tint' in input))
       .toHaveLength(0);
+  });
+
+  it('normalizes texture layer order', () => {
+    expect(normalizeTextureLayerOrder(['pants', 'hat', 'unknown', 'hat'])).toEqual([
+      'pants',
+      'hat',
+      'shirt',
+      'shoes',
+      'accessory',
+    ]);
+    expect(normalizeTextureLayerOrder(null)).toEqual(textureLayerCategories);
+  });
+
+  it('uses the selected texture layer order after the base layers', () => {
+    const inputs = buildTextureInputs(
+      { ...defaultAppearance, hat: 'Duck', shirt: 'Hoodie', pants: 'Pants' },
+      ['pants', 'shirt', 'hat', 'shoes', 'accessory']
+    );
+
+    expect(inputs[4]).toEqual({ url: '/textures/bottom/pants.png', blendMode: 'source-over' });
+    expect(inputs[5]).toEqual({ url: '/textures/top/male/hoodie.png', blendMode: 'source-over' });
+    expect(inputs[6]).toBe('/textures/hat/duck.png');
   });
 
   it('switches the base texture when sex changes', () => {
