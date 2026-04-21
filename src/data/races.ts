@@ -1,6 +1,8 @@
 const isDev = import.meta.env.DEV;
 export const races = [
   'Human',
+  'Bear',
+  'Orc',
   'Zombie',
   ...(isDev ? ['Template'] : []),
   //   'Elf',

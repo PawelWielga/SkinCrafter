@@ -86,6 +86,50 @@
   animation: pixelFadeIn 0.4s ease-out;
 }
 
+.wardrobe-option-card {
+  margin-top: 0.45rem;
+}
+
+.wardrobe-option-card h3 {
+  font-size: 0.78rem;
+  left: 0.55rem;
+  line-height: 1rem;
+  margin-bottom: 0.25rem;
+  max-width: calc(100% - 1rem);
+  min-height: 1rem;
+  top: 0.45rem;
+}
+
+.wardrobe-option-card h3 .fas {
+  font-size: 0.72rem;
+  margin-right: 0.35rem;
+}
+
+.color-option-swatch {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  position: relative;
+}
+
+.color-option-swatch.is-selected {
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px #15803d,
+    3px 3px 0 rgba(0, 0, 0, 0.16);
+}
+
+.color-option-swatch .fas {
+  color: #ffffff;
+  font-size: 0.75rem;
+  line-height: 1;
+  text-shadow:
+    -1px -1px 0 #111827,
+    1px -1px 0 #111827,
+    -1px 1px 0 #111827,
+    1px 1px 0 #111827;
+}
+
 .preview-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));

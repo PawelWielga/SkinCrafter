@@ -79,11 +79,12 @@ const drawLayer = (
   const layerCanvas = document.createElement('canvas');
   layerCanvas.width = width;
   layerCanvas.height = height;
-  const layerCtx = layerCanvas.getContext('2d');
+  const layerCtx = layerCanvas.getContext('2d', { willReadFrequently: true });
   if (!layerCtx) {
     ctx.drawImage(img, 0, 0, width, height);
     return;
   }
+  layerCtx.imageSmoothingEnabled = false;
 
   layerCtx.drawImage(img, 0, 0, width, height);
   layerCtx.globalCompositeOperation = blendMode;
@@ -115,8 +116,9 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
   const canvas = document.createElement('canvas');
   canvas.width = MINECRAFT_SKIN_SIZE;
   canvas.height = MINECRAFT_SKIN_SIZE;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return '';
+  ctx.imageSmoothingEnabled = false;
 
   images.forEach((img, index) => {
     const layer = layers[index];

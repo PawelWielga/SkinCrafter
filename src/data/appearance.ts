@@ -3,6 +3,8 @@ import { getAvailableSexes, getRaceTextureUrl, type Sex } from './raceTextureMap
 import type { Race } from './races';
 import skinColorMap from './skinColorMap';
 import hatTextureMap, { hats } from './hatTextureMap';
+import shirtTextureMap, { shirts } from './shirtTextureMap';
+import pantsTextureMap, { pants } from './pantsTextureMap';
 import type { TextureInput } from '../utils/combineTextures';
 
 export type AppearanceCategoryId =
@@ -126,8 +128,16 @@ const staticOptions: Partial<Record<AppearanceCategoryId, AppearanceOption[]>> =
     labelKey: hat === 'None' ? 'option.none' : `option.hat.${hat}`,
     texture: hatTextureMap[hat],
   })),
-  shirt: [noneOption],
-  pants: [noneOption],
+  shirt: shirts.map((shirt) => ({
+    id: shirt,
+    labelKey: shirt === 'None' ? 'option.none' : `option.shirt.${shirt}`,
+    texture: shirtTextureMap[shirt],
+  })),
+  pants: pants.map((pants) => ({
+    id: pants,
+    labelKey: pants === 'None' ? 'option.none' : `option.pants.${pants}`,
+    texture: pantsTextureMap[pants],
+  })),
   shoes: [noneOption],
   accessory: [noneOption],
 };
@@ -189,6 +199,16 @@ export function buildTextureInputs(appearance: AppearanceState): TextureInput[] 
 
     if (layer === 'hat') {
       return hatTextureMap[appearance.hat as keyof typeof hatTextureMap];
+    }
+
+    if (layer === 'shirt') {
+      const url = shirtTextureMap[appearance.shirt as keyof typeof shirtTextureMap];
+      return url ? { url, blendMode: 'source-over' } : null;
+    }
+
+    if (layer === 'pants') {
+      const url = pantsTextureMap[appearance.pants as keyof typeof pantsTextureMap];
+      return url ? { url, blendMode: 'source-over' } : null;
     }
 
     const option = getOptions(layer, appearance).find((item) => item.id === appearance[layer]);

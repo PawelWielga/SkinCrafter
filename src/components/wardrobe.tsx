@@ -24,9 +24,9 @@ export default function Wardrobe({
     <PanelSection
       title={t('panel.customization')}
       icon="fa-sliders"
-      className="overflow-visible md:overflow-hidden customization-panel"
+      className="overflow-visible md:overflow-hidden customization-panel p-3"
     >
-      <div className="space-y-2 options-container md:flex-1 md:min-h-0">
+      <div className="space-y-1.5 options-container md:flex-1 md:min-h-0">
         {appearanceCategories.map((category) => {
           const options = getOptions(category.id, appearance);
           return (
@@ -34,12 +34,13 @@ export default function Wardrobe({
               key={category.id}
               heading={t(category.labelKey as TranslationKey)}
               icon={category.icon}
+              className="wardrobe-option-card p-2.5 pt-6"
             >
               <div
                 className={
                   category.control === 'color'
-                    ? 'mt-4 flex flex-wrap gap-2'
-                    : 'mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2'
+                    ? 'mt-2 flex flex-wrap gap-1.5'
+                    : 'mt-2 grid grid-cols-2 lg:grid-cols-3 gap-1.5'
                 }
                 role="group"
                 aria-label={t(category.labelKey as TranslationKey)}
@@ -51,14 +52,16 @@ export default function Wardrobe({
                       <button
                         key={option.id}
                         type="button"
-                        className={`w-9 h-9 border pixel-border transition-transform hover:scale-105 ${
-                          isSelected ? 'ring-2 ring-green-700' : ''
+                        className={`color-option-swatch h-7 w-7 border pixel-border transition-transform hover:scale-105 ${
+                          isSelected ? 'is-selected' : ''
                         }`}
                         style={{ backgroundColor: option.color ?? option.id }}
                         aria-label={t(option.labelKey as TranslationKey)}
                         aria-pressed={isSelected}
                         onClick={() => onAppearanceChange(category.id, option.id)}
-                      />
+                      >
+                        {isSelected && <i className="fas fa-check" aria-hidden="true" />}
+                      </button>
                     );
                   }
 
@@ -66,7 +69,7 @@ export default function Wardrobe({
                     <button
                       key={option.id}
                       type="button"
-                      className={`pixel-button min-h-10 px-2 py-2 border text-sm transition-colors ${
+                      className={`pixel-button min-h-8 px-2 py-1 border text-xs leading-tight transition-colors ${
                         isSelected
                           ? 'bg-green-700 text-white'
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-800'

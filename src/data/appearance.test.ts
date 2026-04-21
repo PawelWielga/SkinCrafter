@@ -26,9 +26,12 @@ describe('appearance model', () => {
   });
 
   it('uses None as the no-texture option for optional categories', () => {
-    expect(getOptions('shirt', defaultAppearance)).toEqual([
-      expect.objectContaining({ id: 'None', texture: null }),
-    ]);
+    expect(getOptions('shirt', defaultAppearance)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'None', texture: null })])
+    );
+    expect(getOptions('pants', defaultAppearance)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'None', texture: null })])
+    );
   });
 
   it('defaults sex to Male', () => {

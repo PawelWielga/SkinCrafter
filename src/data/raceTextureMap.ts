@@ -7,26 +7,15 @@ const raceTextureMap: Record<Race, Partial<Record<Sex, string>>> = {
     Male: '/textures/race/human/male.png',
     Female: '/textures/race/human/female.png',
   },
-  // Elf: {
-  //   Male: '/textures/race/elf/male.png',
-  //   Female: '/textures/race/elf/female.png',
-  // },
-  // Dwarf: {
-  //   Male: '/textures/race/dwarf/male.png',
-  //   Female: '/textures/race/dwarf/female.png',
-  // },
-  // Orc: {
-  //   Male: '/textures/race/orc/male.png',
-  // },
+  Bear: {
+    Male: '/textures/race/bear/male.png',
+  },
+  Orc: {
+    Male: '/textures/race/orc/male.png',
+  },
   Zombie: {
     Male: '/textures/race/zombie/male.png',
   },
-  // Skeleton: {
-  //   None: '/textures/race/skeleton/none.png',
-  // },
-  // Enderman: {
-  //   None: '/textures/race/enderman/none.png',
-  // },
   Template: {
     None: '/textures/race/template/none.png',
   },

@@ -120,6 +120,8 @@ export default function ThreePreview({
     // Keep antialiasing off so Minecraft textures stay crisp.
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
     renderer.setPixelRatio(getClampedDPR());
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
@@ -154,11 +156,14 @@ export default function ThreePreview({
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.generateMipmaps = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = THREE.ClampToEdgeWrapping;
       tex.wrapT = THREE.ClampToEdgeWrapping;
 
       // Head and torso.
-      const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap);
+      const head = createBox(tex, 8, 8, 8, 0, 22, 0, headMap, {
+        rotate180Faces: ['bottom'],
+      });
       const body = createBox(tex, 8, 12, 4, 0, 12, 0, bodyMap);
 
       // Limbs.
@@ -186,6 +191,7 @@ export default function ThreePreview({
       const headOL = createBox(tex, 8, 8, 8, 0, 22, 0, headOverlayMap, {
         transparent: true,
         expand,
+        rotate180Faces: ['bottom'],
       });
       const bodyOL = createBox(tex, 8, 12, 4, 0, 12, 0, bodyOverlayMap, {
         transparent: true,

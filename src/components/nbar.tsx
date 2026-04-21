@@ -28,7 +28,7 @@ const NBar: React.FC<NBarProps> = ({
   return (
     <nav className="bg-green-800 text-white px-4 py-3 shadow-md">
       <div className="container mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="h-8 w-36 flex items-center">
             <img
               src={logoSrc}
@@ -37,6 +37,13 @@ const NBar: React.FC<NBarProps> = ({
               style={{ imageRendering: 'pixelated' }}
             />
           </div>
+          <span
+            className="pixel-border bg-amber-500 px-2 py-0.5 text-xs font-bold uppercase tracking-normal text-green-950 shadow-sm"
+            title={t('nav.workInProgress')}
+            aria-label={t('nav.workInProgress')}
+          >
+            WIP
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <NavLink
