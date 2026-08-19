@@ -13,12 +13,27 @@ import {
 import { defaultLanguage, translate, type TranslationKey } from './i18n/translations';
 import type {
   SkinCrafterEditorProps,
+  SkinCrafterError,
+  SkinCrafterGenerationStatus,
   SkinCrafterInitialSkin,
+  SkinCrafterSkinOutput,
   SkinCrafterState,
   SkinCrafterTheme,
 } from './publicTypes';
 import { createSkinOutput } from './skinOutput';
-import combineTextures from './utils/combineTextures';
+import combineTextures, { TextureLoadError } from './utils/combineTextures';
+
+interface GeneratedSkinResult {
+  key: string;
+  texture: string;
+  output: SkinCrafterSkinOutput;
+}
+
+interface GenerationState {
+  key: string | null;
+  status: SkinCrafterGenerationStatus;
+  error: SkinCrafterError | null;
+}
 
 function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null): SkinCrafterState {
   return {
@@ -39,6 +54,38 @@ function themeStyle(theme?: SkinCrafterTheme): React.CSSProperties {
   } as React.CSSProperties;
 }
 
+function generationErrorFrom(cause: unknown): SkinCrafterError {
+  if (cause instanceof TextureLoadError) {
+    return {
+      code: 'asset_load_failed',
+      category: 'asset',
+      message: `Failed to load skin texture asset: ${cause.assetUrl}`,
+      assetUrl: cause.assetUrl,
+      cause: cause.cause,
+    };
+  }
+
+  return {
+    code: 'generation_failed',
+    category: 'generation',
+    message: 'Failed to generate the current skin.',
+    cause,
+  };
+}
+
+function notifyHost<TArgs extends unknown[]>(
+  callback: ((...args: TArgs) => void) | undefined,
+  ...args: TArgs
+): void {
+  if (!callback) return;
+
+  try {
+    callback(...args);
+  } catch (cause) {
+    console.error('SkinCrafter host callback failed', cause);
+  }
+}
+
 export default function SkinCrafterEditor({
   locale = defaultLanguage,
   value,
@@ -48,6 +95,8 @@ export default function SkinCrafterEditor({
   onStateChange,
   onSkinChange,
   onSave,
+  onStatusChange,
+  onError,
   className = '',
   style,
   theme,
@@ -58,9 +107,15 @@ export default function SkinCrafterEditor({
     if (initialSkin) return normalizeState(initialSkin);
     return normalizeState(persistence?.load() ?? null);
   });
-  const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
-  const [skinOutput, setSkinOutput] = useState<ReturnType<typeof createSkinOutput> | null>(null);
+  const [generatedSkin, setGeneratedSkin] = useState<GeneratedSkinResult | null>(null);
+  const [generationState, setGenerationState] = useState<GenerationState>({
+    key: null,
+    status: 'idle',
+    error: null,
+  });
   const onSkinChangeRef = useRef(onSkinChange);
+  const onStatusChangeRef = useRef(onStatusChange);
+  const onErrorRef = useRef(onError);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
@@ -87,6 +142,14 @@ export default function SkinCrafterEditor({
   }, [onSkinChange]);
 
   useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
     if (!value) persistence?.save(state);
   }, [persistence, state, value]);
 
@@ -106,6 +169,27 @@ export default function SkinCrafterEditor({
   } = state.appearance;
   const layerOrderKey = JSON.stringify(state.layerOrder);
   const canonicalAssetBaseUrl = assetBaseUrl?.replace(/\/+$/, '') || undefined;
+  const generationKey = JSON.stringify([
+    race,
+    sex,
+    skinColor,
+    eyes,
+    eyesColor,
+    hair,
+    hairColor,
+    hat,
+    shirt,
+    pants,
+    shoes,
+    accessory,
+    layerOrderKey,
+    canonicalAssetBaseUrl ?? null,
+  ]);
+  const currentGeneratedSkin = generatedSkin?.key === generationKey ? generatedSkin : null;
+  const generationStatus: SkinCrafterGenerationStatus = generationState.key === generationKey
+    ? generationState.status
+    : 'idle';
+  const generationError = generationState.key === generationKey ? generationState.error : null;
 
   useEffect(() => {
     let current = true;
@@ -124,19 +208,43 @@ export default function SkinCrafterEditor({
       accessory,
     };
     const layerOrderSnapshot = JSON.parse(layerOrderKey) as TextureLayerCategoryId[];
-    const textureInputs = buildTextureInputs(
-      appearanceSnapshot,
-      layerOrderSnapshot,
-      canonicalAssetBaseUrl
-    );
 
-    void combineTextures(textureInputs).then((dataUrl) => {
-      if (!current || !dataUrl) return;
-      const output = createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot);
-      setCombinedTexture(dataUrl);
-      setSkinOutput(output);
-      onSkinChangeRef.current?.(output);
-    });
+    setGenerationState({ key: generationKey, status: 'generating', error: null });
+    notifyHost(onStatusChangeRef.current, 'generating');
+
+    const generate = async (): Promise<void> => {
+      let result: { dataUrl: string; output: SkinCrafterSkinOutput };
+
+      try {
+        const textureInputs = buildTextureInputs(
+          appearanceSnapshot,
+          layerOrderSnapshot,
+          canonicalAssetBaseUrl
+        );
+        const dataUrl = await combineTextures(textureInputs);
+        result = {
+          dataUrl,
+          output: createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot),
+        };
+      } catch (cause) {
+        if (!current) return;
+
+        const error = generationErrorFrom(cause);
+        setGenerationState({ key: generationKey, status: 'error', error });
+        notifyHost(onStatusChangeRef.current, 'error');
+        notifyHost(onErrorRef.current, error);
+        return;
+      }
+
+      if (!current) return;
+
+      setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
+      setGenerationState({ key: generationKey, status: 'ready', error: null });
+      notifyHost(onSkinChangeRef.current, result.output);
+      notifyHost(onStatusChangeRef.current, 'ready');
+    };
+
+    void generate();
 
     return () => {
       current = false;
@@ -146,6 +254,7 @@ export default function SkinCrafterEditor({
     canonicalAssetBaseUrl,
     eyes,
     eyesColor,
+    generationKey,
     hair,
     hairColor,
     hat,
@@ -158,7 +267,13 @@ export default function SkinCrafterEditor({
     skinColor,
   ]);
 
-  const handleSave = onSave && skinOutput ? () => onSave(skinOutput) : undefined;
+  const skinOutput = currentGeneratedSkin?.output ?? null;
+  const combinedTexture = currentGeneratedSkin?.texture ?? null;
+  const canSave = generationStatus === 'ready' && skinOutput !== null;
+  const handleSave = onSave && canSave && skinOutput ? () => onSave(skinOutput) : undefined;
+  const handlePreviewError = useCallback((error: SkinCrafterError): void => {
+    notifyHost(onErrorRef.current, error);
+  }, []);
 
   return (
     <div
@@ -166,6 +281,7 @@ export default function SkinCrafterEditor({
       style={{ ...themeStyle(theme), ...style }}
       data-testid="skincrafter-editor"
       data-skincrafter-locale={locale}
+      data-skincrafter-generation-status={generationStatus}
     >
       <TwoPanelLayout
         left={
@@ -175,6 +291,10 @@ export default function SkinCrafterEditor({
             footerHeight={previewBottomOffset}
             t={t}
             onSave={handleSave}
+            canSave={canSave}
+            generationStatus={generationStatus}
+            generationError={generationError}
+            onError={handlePreviewError}
           />
         }
         right={

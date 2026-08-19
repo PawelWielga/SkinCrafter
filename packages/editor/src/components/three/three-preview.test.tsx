@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ThreePreview from './three-preview';
+import type { ThreePreviewRuntimeError } from './three-preview-runtime';
 
 const { createRuntimeMock, runtimeMock } = vi.hoisted(() => ({
   createRuntimeMock: vi.fn(),
@@ -60,5 +61,40 @@ describe('ThreePreview React lifecycle', () => {
 
     unmount();
     expect(runtimeMock.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps runtime texture failures to the public preview error contract', () => {
+    const onError = vi.fn();
+    render(<ThreePreview texture="skin-a.png" onError={onError} />);
+
+    const options = createRuntimeMock.mock.calls[0][1] as {
+      onError?: (error: ThreePreviewRuntimeError) => void;
+    };
+    const cause = new Error('missing preview texture');
+    options.onError?.({ code: 'texture_load_failed', textureUrl: 'skin-a.png', cause });
+
+    expect(onError).toHaveBeenCalledWith({
+      code: 'preview_texture_load_failed',
+      category: 'preview',
+      message: 'Failed to load preview texture: skin-a.png',
+      assetUrl: 'skin-a.png',
+      cause,
+    });
+  });
+
+  it('surfaces WebGL initialization failures instead of throwing from the effect', () => {
+    const cause = new Error('WebGL unavailable');
+    const onError = vi.fn();
+    createRuntimeMock.mockImplementationOnce(() => {
+      throw cause;
+    });
+
+    expect(() => render(<ThreePreview texture="skin-a.png" onError={onError} />)).not.toThrow();
+    expect(onError).toHaveBeenCalledWith({
+      code: 'preview_webgl_initialization_failed',
+      category: 'preview',
+      message: 'Failed to initialize the WebGL skin preview.',
+      cause,
+    });
   });
 });

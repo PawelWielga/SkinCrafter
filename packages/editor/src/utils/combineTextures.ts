@@ -24,6 +24,18 @@ export interface RgbaPixel {
 
 export type TextureInput = string | null | TextureLayerInput;
 
+export class TextureLoadError extends Error {
+  readonly assetUrl: string;
+  readonly cause?: unknown;
+
+  constructor(assetUrl: string, cause?: unknown) {
+    super(`Failed to load texture asset: ${assetUrl}`);
+    this.name = 'TextureLoadError';
+    this.assetUrl = assetUrl;
+    this.cause = cause;
+  }
+}
+
 const MINECRAFT_SKIN_SIZE = 64;
 
 const normalizeLayer = (layer: TextureInput): TextureLayer | null => {
@@ -165,7 +177,9 @@ const drawLayer = (
 export default async function combineTextures(inputs: TextureInput[]): Promise<string> {
   const layers = inputs.map(normalizeLayer).filter((layer): layer is TextureLayer => !!layer);
   const valid = layers.map((layer) => layer.url);
-  if (valid.length === 0) return '';
+  if (valid.length === 0) {
+    throw new Error('No texture assets were available for skin composition.');
+  }
 
   const images = await Promise.all(
     valid.map(
@@ -174,7 +188,7 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
           const img = new Image();
           img.crossOrigin = 'anonymous';
           img.onload = () => resolve(img);
-          img.onerror = reject;
+          img.onerror = (cause) => reject(new TextureLoadError(src, cause));
           img.src = src;
         })
     )
@@ -184,7 +198,9 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
   canvas.width = MINECRAFT_SKIN_SIZE;
   canvas.height = MINECRAFT_SKIN_SIZE;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return '';
+  if (!ctx) {
+    throw new Error('Could not create a 2D canvas context for skin composition.');
+  }
   ctx.imageSmoothingEnabled = false;
 
   images.forEach((img, index) => {

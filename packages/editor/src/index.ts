@@ -21,6 +21,10 @@ export { defaultLanguage, isLanguage, languages, translate } from './i18n/transl
 export type { Language, TranslationKey } from './i18n/translations';
 export type {
   SkinCrafterEditorProps,
+  SkinCrafterError,
+  SkinCrafterErrorCategory,
+  SkinCrafterErrorCode,
+  SkinCrafterGenerationStatus,
   SkinCrafterInitialSkin,
   SkinCrafterPersistenceAdapter,
   SkinCrafterSkinMetadata,

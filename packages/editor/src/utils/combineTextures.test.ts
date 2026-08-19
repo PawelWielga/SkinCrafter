@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { hexToPixel, isWhitePixel, multiplyPixel, tintNonWhitePixel } from './combineTextures';
+import { describe, expect, it, vi } from 'vitest';
+import combineTextures, {
+  TextureLoadError,
+  hexToPixel,
+  isWhitePixel,
+  multiplyPixel,
+  tintNonWhitePixel,
+} from './combineTextures';
 
 describe('combineTextures tint helpers', () => {
   it('multiplies pixel color by tint color', () => {
@@ -43,5 +49,36 @@ describe('combineTextures tint helpers', () => {
       b: 155,
       a: 255,
     });
+  });
+
+  it('rejects a missing texture with the exact failing asset URL', async () => {
+    const cause = new Event('error');
+
+    class FailingImage {
+      crossOrigin = '';
+      onload: (() => void) | null = null;
+      onerror: ((error: unknown) => void) | null = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onerror?.(cause));
+      }
+    }
+
+    vi.stubGlobal('Image', FailingImage);
+
+    try {
+      await expect(combineTextures(['/missing-texture.png'])).rejects.toEqual(
+        expect.objectContaining({
+          name: 'TextureLoadError',
+          assetUrl: '/missing-texture.png',
+          cause,
+        })
+      );
+      await expect(Promise.reject(new TextureLoadError('/other.png'))).rejects.toBeInstanceOf(
+        TextureLoadError
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

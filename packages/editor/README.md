@@ -15,6 +15,8 @@ Import the component and its packaged stylesheet:
 ```tsx
 import {
   SkinCrafterEditor,
+  type SkinCrafterError,
+  type SkinCrafterGenerationStatus,
   type SkinCrafterSkinOutput,
 } from '@pawelwielga/skincrafter-editor';
 import '@pawelwielga/skincrafter-editor/styles.css';
@@ -26,11 +28,21 @@ function CharacterEditor() {
     // The host decides where/how to upload. The editor never calls VanillaOdyssey APIs.
   };
 
+  const handleStatus = (status: SkinCrafterGenerationStatus) => {
+    console.log('Skin generation:', status);
+  };
+
+  const handleError = (error: SkinCrafterError) => {
+    console.error(error.code, error.assetUrl, error.cause);
+  };
+
   return (
     <SkinCrafterEditor
       locale="pl"
       initialSkin={{ appearance: { race: 'Human', sex: 'Male' } }}
       onSkinChange={(skin) => console.log(skin.metadata)}
+      onStatusChange={handleStatus}
+      onError={handleError}
       onSave={handleSave}
     />
   );
@@ -45,13 +57,45 @@ function CharacterEditor() {
 - `initialSkin`: initial appearance/layer-order input for uncontrolled use.
 - `value` + `onStateChange`: fully host-controlled editor state.
 - `persistence`: optional adapter with `load()` and `save()`. The package never reads or writes `localStorage` directly.
-- `onSkinChange`: receives the current generated PNG as `Blob`, `File`, data URL and metadata.
-- `onSave`: called from the editor save/download action with the same upload-ready output.
+- `onSkinChange`: receives the current generated PNG as `Blob`, `File`, data URL and metadata after the current semantic state has generated successfully.
+- `onSave`: called from the editor save/download action with the same upload-ready output. The action is unavailable while the current state is not `ready`.
+- `onStatusChange`: reports generation transitions such as `generating`, `ready` and `error`.
+- `onError`: reports structured generation, asset and preview failures without exposing DOM, canvas or Three.js objects as public API.
 - `assetBaseUrl`: optional host asset prefix for deployments that provide their own SkinCrafter asset set.
 - `className`, `style`, `theme`: host-shell integration without forking package CSS.
 - `previewBottomOffset`: lets a host reserve vertical space for its own shell/footer.
 
-The package also exports `SkinPreview` for the standalone `/mcskinview` route and other read-only preview use cases. Consumers should import only from the package root, never from `dist` or repository-internal paths.
+The package also exports `SkinPreview` for the standalone `/mcskinview` route and other read-only preview use cases. `SkinPreview` accepts the same `onError` callback for preview texture/WebGL failures. Consumers should import only from the package root, never from `dist` or repository-internal paths.
+
+## Generation status and errors
+
+`SkinCrafterGenerationStatus` is:
+
+```ts
+type SkinCrafterGenerationStatus = 'idle' | 'generating' | 'ready' | 'error';
+```
+
+A successful output is valid only for the exact semantic editor state that produced it. As soon as appearance, layer order or the asset base changes, the previous output becomes stale and cannot be saved until the new state reaches `ready`. If generation fails, the previous state's file is never reused for save/upload.
+
+`SkinCrafterError` has a stable category/code plus optional asset and cause context:
+
+```ts
+interface SkinCrafterError {
+  code:
+    | 'generation_failed'
+    | 'asset_load_failed'
+    | 'preview_texture_load_failed'
+    | 'preview_webgl_initialization_failed';
+  category: 'generation' | 'asset' | 'preview';
+  message: string;
+  assetUrl?: string;
+  cause?: unknown;
+}
+```
+
+Generation and asset failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. The editor displays a localized default error message for both generation and preview failures; hosts may additionally use `onError` for telemetry or their own shell-level UI.
+
+Late async completions are ignored when they belong to an obsolete editor state. Hosts should therefore treat `onSkinChange` as the authoritative notification that the current state has produced a new upload-ready skin rather than caching and reusing a previous result after subsequent edits.
 
 ## Skin output
 

@@ -37,12 +37,19 @@ interface ModelParts {
   bodyOL: BoxMesh | null;
 }
 
+export interface ThreePreviewRuntimeError {
+  code: 'texture_load_failed';
+  textureUrl: string;
+  cause?: unknown;
+}
+
 export interface ThreePreviewRuntimeOptions {
   textureUrl: string;
   pose: Pose;
   model: SkinModel;
   showOverlay: boolean;
   autoRotate: boolean;
+  onError?: (error: ThreePreviewRuntimeError) => void;
 }
 
 export interface ThreePreviewRuntimeDependencies {
@@ -111,6 +118,7 @@ export class ThreePreviewRuntime {
   private readonly group: THREE.Group;
   private readonly textureLoader: THREE.TextureLoader;
   private readonly resizeObserver: ResizeObserver;
+  private readonly onError?: (error: ThreePreviewRuntimeError) => void;
   private readonly disposedTextures = new WeakSet<THREE.Texture>();
   private readonly pendingTextures = new Map<number, THREE.Texture>();
 
@@ -138,6 +146,7 @@ export class ThreePreviewRuntime {
     this.model = options.model;
     this.showOverlay = options.showOverlay;
     this.autoRotate = options.autoRotate;
+    this.onError = options.onError;
 
     const width = container.clientWidth || 1;
     const height = container.clientHeight || 1;
@@ -198,7 +207,7 @@ export class ThreePreviewRuntime {
           this.pendingTextures.delete(requestVersion);
         }
         if (!this.disposed && requestVersion === this.textureLoadVersion) {
-          console.error('Texture load failed', error);
+          this.onError?.({ code: 'texture_load_failed', textureUrl, cause: error });
         }
       }
     );
