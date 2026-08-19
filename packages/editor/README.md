@@ -138,7 +138,7 @@ The editor locale is a prop. An embedding application owns the locale and can co
 
 ## Styling and theme hooks
 
-Import `@pawelwielga/skincrafter-editor/styles.css`. Package Tailwind preflight is disabled so importing editor styles does not reset the host application.
+Import `@pawelwielga/skincrafter-editor/styles.css`. Package Tailwind preflight is disabled, and generated utilities plus package-owned selectors are scoped below `.skincrafter-editor`. Importing the stylesheet therefore does not redefine common host classes such as `flex`, `grid`, `container` or `border` outside the editor boundary. Package keyframes use the `skincrafter-` prefix.
 
 The editor root is `.skincrafter-editor`. `className` and `style` are applied to that root. `theme` maps to these CSS variables:
 
@@ -149,7 +149,7 @@ The editor root is `.skincrafter-editor`. `className` and `style` are applied to
 - `--skincrafter-muted`
 - `--skincrafter-border`
 
-The standalone site still loads Font Awesome for its current icon set. Hosts may load Font Awesome as well; missing icons do not affect editor behavior or skin generation.
+Editor icons are bundled package-owned inline SVGs. An embedding host does not need Font Awesome or another global icon stylesheet. Layer ordering uses browser-native drag-and-drop inside the editor plus ordinary focusable up/down buttons for keyboard operation; the package does not install compatibility globals on `window`.
 
 ## Assets and non-root routes
 

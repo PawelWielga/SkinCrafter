@@ -1,16 +1,37 @@
 @import './variables.css';
-@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+.skincrafter-editor {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
 .skincrafter-editor,
-.skincrafter-editor * {
+.skincrafter-editor *,
+.skincrafter-editor *::before,
+.skincrafter-editor *::after {
   box-sizing: border-box;
 }
 
-@keyframes pixelFadeIn {
+@keyframes skincrafter-pixel-fade-in {
   0% { opacity: 0; transform: translateY(5px); }
   100% { opacity: 1; transform: translateY(0); }
+}
+
+.skincrafter-editor .skincrafter-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+  width: 1em;
+}
+
+.skincrafter-editor .skincrafter-heading-icon,
+.skincrafter-editor .skincrafter-button-icon {
+  margin-right: .5rem;
 }
 
 .skincrafter-editor .pixel-border {
@@ -34,16 +55,12 @@
   transition: all .7s ease;
 }
 .skincrafter-editor .pixel-button:hover:after { opacity: 1; left: 100%; }
-.skincrafter-editor .option-card { margin-top: .75rem; transition: all .3s ease; animation: pixelFadeIn .4s ease-out; }
+.skincrafter-editor .option-card { margin-top: .75rem; transition: all .3s ease; animation: skincrafter-pixel-fade-in .4s ease-out; }
 .skincrafter-editor .wardrobe-option-card { margin-top: .45rem; }
 .skincrafter-editor .wardrobe-option-card h3 { font-size: .78rem; left: .55rem; line-height: 1rem; margin-bottom: .25rem; max-width: calc(100% - 1rem); min-height: 1rem; top: .45rem; }
-.skincrafter-editor .wardrobe-option-card h3 .fas { font-size: .72rem; margin-right: .35rem; }
+.skincrafter-editor .wardrobe-option-card h3 .skincrafter-icon { font-size: .72rem; margin-right: .35rem; }
 .skincrafter-editor .layer-order-card { padding-left: 2.4rem; }
-.skincrafter-editor .layer-order-card.is-dragging,
-.skincrafter-editor .layer-order-card.gu-transit { opacity: .48 !important; visibility: visible !important; }
-.skincrafter-editor .gu-mirror.layer-order-card { animation: none !important; cursor: grabbing; opacity: .82 !important; pointer-events: none; transition: none !important; }
-.skincrafter-editor .gu-mirror.layer-order-card,
-.skincrafter-editor .layer-order-card.gu-transit { transform: none !important; }
+.skincrafter-editor .layer-order-card.is-dragging { opacity: .48; }
 .skincrafter-editor .layer-order-card h3 { left: 2.45rem; max-width: calc(100% - 2.9rem); }
 .skincrafter-editor .layer-order-controls { align-items: center; display: flex; flex-direction: column; gap: .18rem; left: .45rem; position: absolute; top: .55rem; width: 1.45rem; z-index: 20; }
 .skincrafter-editor .layer-order-handle,
@@ -51,13 +68,14 @@
 .skincrafter-editor .layer-order-handle { cursor: grab; }
 .skincrafter-editor .layer-order-handle:active { cursor: grabbing; }
 .skincrafter-editor .layer-order-handle:hover,
-.skincrafter-editor .layer-order-nudge:not(:disabled):hover { background: #dcfce7; color: var(--skincrafter-accent-strong); }
+.skincrafter-editor .layer-order-nudge:not(:disabled):hover { filter: brightness(.96); color: var(--skincrafter-accent-strong); }
 .skincrafter-editor .layer-order-nudge:disabled { cursor: not-allowed; opacity: .38; }
-.skincrafter-editor .layer-order-handle .fas { font-size: .75rem; }
-.skincrafter-editor .layer-order-nudge .fas { font-size: .55rem; }
-.skincrafter-editor .color-option-swatch { align-items: center; display: inline-flex; justify-content: center; position: relative; }
+.skincrafter-editor .layer-order-handle .skincrafter-icon { font-size: .75rem; }
+.skincrafter-editor .layer-order-nudge .skincrafter-icon { font-size: .55rem; }
+.skincrafter-editor .color-option-swatch { align-items: center; display: inline-flex; justify-content: center; position: relative; transition: transform .15s ease; }
+.skincrafter-editor .color-option-swatch:hover { transform: scale(1.05); }
 .skincrafter-editor .color-option-swatch.is-selected { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--skincrafter-accent), 3px 3px 0 rgba(0,0,0,.16); }
-.skincrafter-editor .color-option-swatch .fas { color: #fff; font-size: .75rem; line-height: 1; text-shadow: -1px -1px 0 #111827,1px -1px 0 #111827,-1px 1px 0 #111827,1px 1px 0 #111827; }
+.skincrafter-editor .color-option-swatch .skincrafter-icon { color: #fff; font-size: .75rem; line-height: 1; filter: drop-shadow(1px 0 #111827) drop-shadow(-1px 0 #111827) drop-shadow(0 1px #111827) drop-shadow(0 -1px #111827); }
 .skincrafter-editor .preview-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .5rem; }
 .skincrafter-editor .preview-action-button { align-items: center; display: flex; justify-content: center; min-height: 44px; min-width: 0; overflow-wrap: normal; text-align: center; word-break: normal; }
 .skincrafter-editor .model-placeholder { min-height: 300px; }

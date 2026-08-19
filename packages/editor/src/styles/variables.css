@@ -12,9 +12,18 @@
   color: var(--skincrafter-accent);
 }
 
+.skincrafter-editor .skincrafter-category-icon {
+  color: #d97706;
+}
+
+.skincrafter-editor .skincrafter-heading {
+  color: var(--skincrafter-text);
+}
+
 .skincrafter-editor .skincrafter-option-selected,
 .skincrafter-editor .skincrafter-primary-action {
   background: var(--skincrafter-accent);
+  border-color: var(--skincrafter-accent-strong);
   color: #fff;
 }
 
@@ -26,4 +35,23 @@
 .skincrafter-editor .option-card,
 .skincrafter-editor .skincrafter-surface {
   background: var(--skincrafter-surface);
+  color: var(--skincrafter-text);
+}
+
+.skincrafter-editor .skincrafter-secondary-action {
+  background: var(--skincrafter-muted);
+  border-color: var(--skincrafter-border);
+  color: var(--skincrafter-text);
+}
+
+.skincrafter-editor .skincrafter-secondary-action:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.skincrafter-editor .skincrafter-preview-surface {
+  background: #1f2937;
+}
+
+.skincrafter-editor .skincrafter-error-text {
+  color: #b91c1c;
 }

@@ -105,7 +105,7 @@ export default function PreviewArea({
 
   return (
     <PanelSection title={t('panel.preview')} icon="fa-eye">
-      <div className="bg-gray-800 shadow-lg overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full">
+      <div className="skincrafter-preview-surface overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full">
         <div className="flex justify-center items-center model-placeholder md:h-full">
           <ThreePreview
             texture={texture}
@@ -120,14 +120,14 @@ export default function PreviewArea({
       </div>
 
       {activeError && (
-        <p className="mt-3 text-sm font-semibold text-red-700" role="alert">
+        <p className="mt-3 text-sm font-semibold skincrafter-error-text" role="alert">
           {t(errorTranslationKey(activeError))}
         </p>
       )}
 
       <div ref={buttonsRef} className="mt-4 preview-actions">
         <PixelButton
-          className="bg-gray-200 hover:bg-gray-300"
+          className="skincrafter-secondary-action"
           icon="fa-arrows-rotate"
           aria-label={t('action.changePose')}
           onClick={cyclePose}
@@ -135,7 +135,7 @@ export default function PreviewArea({
           {t('action.changePose')}
         </PixelButton>
         <PixelButton
-          className="bg-gray-200 hover:bg-gray-300"
+          className="skincrafter-secondary-action"
           icon="fa-layer-group"
           aria-label={showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
           onClick={toggleOverlay}
@@ -143,7 +143,7 @@ export default function PreviewArea({
           {showOverlay ? t('action.hideOverlay') : t('action.showOverlay')}
         </PixelButton>
         <PixelButton
-          className="bg-gray-200 hover:bg-gray-300"
+          className="skincrafter-secondary-action"
           icon={autoRotate ? 'fa-pause' : 'fa-play'}
           aria-label={autoRotate ? t('action.disableAutoRotate') : t('action.enableAutoRotate')}
           onClick={toggleAutoRotate}
@@ -151,7 +151,7 @@ export default function PreviewArea({
           {autoRotate ? t('action.disableAutoRotate') : t('action.enableAutoRotate')}
         </PixelButton>
         <PixelButton
-          className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="skincrafter-secondary-action disabled:opacity-50 disabled:cursor-not-allowed"
           icon="fa-download"
           aria-label={t('action.downloadSkin')}
           onClick={handleSave}

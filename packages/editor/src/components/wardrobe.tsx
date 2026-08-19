@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
+import SkinCrafterIcon from './icon';
 import OptionCard from './optionCard';
 import PanelSection from './panelSection';
 import {
@@ -32,7 +33,7 @@ export default function Wardrobe({
   t,
   assetBaseUrl,
 }: WardrobeProps): React.JSX.Element {
-  const layerContainerRef = useRef<HTMLDivElement | null>(null);
+  const [draggingLayer, setDraggingLayer] = useState<TextureLayerCategoryId | null>(null);
 
   const { fixedCategories, layerCategories } = useMemo(() => {
     const categoriesById = new Map<AppearanceCategoryId, AppearanceCategory>(
@@ -61,65 +62,47 @@ export default function Wardrobe({
     onLayerOrderChange(next);
   };
 
-  useEffect(() => {
-    const container = layerContainerRef.current;
-    if (!container) {
-      return undefined;
-    }
+  const startLayerDrag = (
+    event: React.DragEvent<HTMLButtonElement>,
+    layer: TextureLayerCategoryId
+  ): void => {
+    setDraggingLayer(layer);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', layer);
+  };
 
-    let isDisposed = false;
-    let destroyDragula: (() => void) | null = null;
+  const finishLayerDrag = (): void => {
+    setDraggingLayer(null);
+  };
 
-    const readLayerOrder = (): TextureLayerCategoryId[] =>
-      Array.from(container.querySelectorAll<HTMLElement>('[data-layer-id]')).reduce<
-        TextureLayerCategoryId[]
-      >((next, element) => {
-        const layer = element.dataset.layerId;
-        if (isTextureLayerCategory(layer as AppearanceCategoryId)) {
-          next.push(layer as TextureLayerCategoryId);
-        }
+  const allowLayerDrop = (
+    event: React.DragEvent<HTMLDivElement>,
+    targetLayer: TextureLayerCategoryId
+  ): void => {
+    if (!draggingLayer || draggingLayer === targetLayer) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  };
 
-        return next;
-      }, []);
+  const dropLayer = (
+    event: React.DragEvent<HTMLDivElement>,
+    targetLayer: TextureLayerCategoryId
+  ): void => {
+    event.preventDefault();
+    const rawLayer = draggingLayer ?? event.dataTransfer.getData('text/plain');
+    setDraggingLayer(null);
 
-    const setupDragula = async (): Promise<void> => {
-      const browserWindow = window as Window & typeof globalThis & { global?: typeof globalThis };
-      browserWindow.global ??= window;
+    if (!isTextureLayerCategory(rawLayer as AppearanceCategoryId)) return;
+    const sourceLayer = rawLayer as TextureLayerCategoryId;
+    if (sourceLayer === targetLayer) return;
 
-      const dragulaModule = await import('dragula');
-      if (isDisposed) {
-        return;
-      }
+    const next = textureLayerOrder.filter((layer) => layer !== sourceLayer);
+    const targetIndex = next.indexOf(targetLayer);
+    if (targetIndex < 0) return;
 
-      const drake = dragulaModule.default([container], {
-        accepts: (_el, target) => target === container,
-        direction: 'vertical',
-        moves: (_el, _container, handle) => Boolean(handle?.closest('.layer-order-handle')),
-        revertOnSpill: true,
-      });
-
-      drake.on('drag', (element) => {
-        element.classList.add('is-dragging');
-      });
-
-      drake.on('dragend', (element) => {
-        element.classList.remove('is-dragging');
-      });
-
-      drake.on('drop', () => {
-        onLayerOrderChange(readLayerOrder());
-      });
-
-      destroyDragula = () => drake.destroy();
-    };
-
-    void setupDragula();
-
-    return () => {
-      isDisposed = true;
-      destroyDragula?.();
-    };
-  }, [onLayerOrderChange]);
+    next.splice(targetIndex, 0, sourceLayer);
+    onLayerOrderChange(next);
+  };
 
   const renderCategory = (category: AppearanceCategory): React.JSX.Element => {
     const options = getOptions(category.id, appearance, assetBaseUrl);
@@ -133,18 +116,27 @@ export default function Wardrobe({
         key={category.id}
         heading={t(category.labelKey as TranslationKey)}
         icon={category.icon}
-        className={`wardrobe-option-card p-2.5 pt-6 ${layerCategory ? 'layer-order-card' : ''}`}
+        className={`wardrobe-option-card p-2.5 pt-6 ${layerCategory ? 'layer-order-card' : ''} ${
+          layerCategory === draggingLayer ? 'is-dragging' : ''
+        }`}
         data-layer-id={layerCategory ?? undefined}
+        onDragOver={
+          layerCategory ? (event) => allowLayerDrop(event, layerCategory) : undefined
+        }
+        onDrop={layerCategory ? (event) => dropLayer(event, layerCategory) : undefined}
       >
         {layerCategory && (
-          <div className="layer-order-controls" aria-hidden={false}>
+          <div className="layer-order-controls">
             <button
               type="button"
               className="layer-order-handle"
               aria-label={`${t('action.dragLayer')} ${t(category.labelKey as TranslationKey)}`}
               title={t('action.dragLayer')}
+              draggable
+              onDragStart={(event) => startLayerDrag(event, layerCategory)}
+              onDragEnd={finishLayerDrag}
             >
-              <i className="fas fa-grip-vertical" aria-hidden="true" />
+              <SkinCrafterIcon name="fa-grip-vertical" />
             </button>
             <button
               type="button"
@@ -154,7 +146,7 @@ export default function Wardrobe({
               disabled={layerIndex <= 0}
               onClick={() => nudgeLayer(layerCategory, -1)}
             >
-              <i className="fas fa-chevron-up" aria-hidden="true" />
+              <SkinCrafterIcon name="fa-chevron-up" />
             </button>
             <button
               type="button"
@@ -166,7 +158,7 @@ export default function Wardrobe({
               disabled={layerIndex >= textureLayerOrder.length - 1}
               onClick={() => nudgeLayer(layerCategory, 1)}
             >
-              <i className="fas fa-chevron-down" aria-hidden="true" />
+              <SkinCrafterIcon name="fa-chevron-down" />
             </button>
           </div>
         )}
@@ -187,7 +179,7 @@ export default function Wardrobe({
                 <button
                   key={option.id}
                   type="button"
-                  className={`color-option-swatch h-7 w-7 border pixel-border transition-transform hover:scale-105 ${
+                  className={`color-option-swatch h-7 w-7 border pixel-border ${
                     isSelected ? 'is-selected' : ''
                   }`}
                   style={{ backgroundColor: option.color ?? option.id }}
@@ -195,7 +187,7 @@ export default function Wardrobe({
                   aria-pressed={isSelected}
                   onClick={() => onAppearanceChange(category.id, option.id)}
                 >
-                  {isSelected && <i className="fas fa-check" aria-hidden="true" />}
+                  {isSelected && <SkinCrafterIcon name="fa-check" />}
                 </button>
               );
             }
@@ -205,9 +197,7 @@ export default function Wardrobe({
                 key={option.id}
                 type="button"
                 className={`pixel-button min-h-8 px-2 py-1 border text-xs leading-tight transition-colors ${
-                  isSelected
-                    ? 'skincrafter-option-selected'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  isSelected ? 'skincrafter-option-selected' : 'skincrafter-secondary-action'
                 }`}
                 aria-pressed={isSelected}
                 onClick={() => onAppearanceChange(category.id, option.id)}
@@ -229,7 +219,7 @@ export default function Wardrobe({
     >
       <div className="space-y-1.5 options-container md:flex-1 md:min-h-0">
         {fixedCategories.map(renderCategory)}
-        <div ref={layerContainerRef} className="layer-order-list space-y-1.5">
+        <div className="layer-order-list space-y-1.5">
           {layerCategories.map(renderCategory)}
         </div>
       </div>
