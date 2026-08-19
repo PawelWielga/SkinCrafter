@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PreviewArea from './components/previewArea';
 import TwoPanelLayout from './components/twoPanelLayout';
 import Wardrobe from './components/wardrobe';
@@ -7,6 +7,7 @@ import {
   normalizeAppearance,
   normalizeTextureLayerOrder,
   type AppearanceCategoryId,
+  type AppearanceState,
   type TextureLayerCategoryId,
 } from './data/appearance';
 import { defaultLanguage, translate, type TranslationKey } from './i18n/translations';
@@ -59,6 +60,7 @@ export default function SkinCrafterEditor({
   });
   const [combinedTexture, setCombinedTexture] = useState<string | null>(null);
   const [skinOutput, setSkinOutput] = useState<ReturnType<typeof createSkinOutput> | null>(null);
+  const onSkinChangeRef = useRef(onSkinChange);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
@@ -81,25 +83,80 @@ export default function SkinCrafterEditor({
   }, [publishState, state]);
 
   useEffect(() => {
+    onSkinChangeRef.current = onSkinChange;
+  }, [onSkinChange]);
+
+  useEffect(() => {
     if (!value) persistence?.save(state);
   }, [persistence, state, value]);
 
-  const textureInputs = useMemo(
-    () => buildTextureInputs(state.appearance, state.layerOrder, assetBaseUrl),
-    [assetBaseUrl, state.appearance, state.layerOrder]
-  );
+  const {
+    race,
+    sex,
+    skinColor,
+    eyes,
+    eyesColor,
+    hair,
+    hairColor,
+    hat,
+    shirt,
+    pants,
+    shoes,
+    accessory,
+  } = state.appearance;
+  const layerOrderKey = JSON.stringify(state.layerOrder);
+  const canonicalAssetBaseUrl = assetBaseUrl?.replace(/\/+$/, '') || undefined;
 
   useEffect(() => {
     let current = true;
+    const appearanceSnapshot: AppearanceState = {
+      race,
+      sex,
+      skinColor,
+      eyes,
+      eyesColor,
+      hair,
+      hairColor,
+      hat,
+      shirt,
+      pants,
+      shoes,
+      accessory,
+    };
+    const layerOrderSnapshot = JSON.parse(layerOrderKey) as TextureLayerCategoryId[];
+    const textureInputs = buildTextureInputs(
+      appearanceSnapshot,
+      layerOrderSnapshot,
+      canonicalAssetBaseUrl
+    );
+
     void combineTextures(textureInputs).then((dataUrl) => {
       if (!current || !dataUrl) return;
-      const output = createSkinOutput(dataUrl, state.appearance, state.layerOrder);
+      const output = createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot);
       setCombinedTexture(dataUrl);
       setSkinOutput(output);
-      onSkinChange?.(output);
+      onSkinChangeRef.current?.(output);
     });
-    return () => { current = false; };
-  }, [onSkinChange, state.appearance, state.layerOrder, textureInputs]);
+
+    return () => {
+      current = false;
+    };
+  }, [
+    accessory,
+    canonicalAssetBaseUrl,
+    eyes,
+    eyesColor,
+    hair,
+    hairColor,
+    hat,
+    layerOrderKey,
+    pants,
+    race,
+    sex,
+    shirt,
+    shoes,
+    skinColor,
+  ]);
 
   const handleSave = onSave && skinOutput ? () => onSave(skinOutput) : undefined;
 
