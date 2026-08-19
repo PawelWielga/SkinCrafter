@@ -67,10 +67,16 @@ describe('SkinCrafterEditor public contract', () => {
     mockedCombineTextures.mockResolvedValue(DEFAULT_SKIN_DATA_URL);
   });
 
-  it('honors initial appearance supplied by a host', () => {
+  it('honors initial appearance supplied by a host', async () => {
     render(<SkinCrafterEditor initialSkin={{ appearance: { ...defaultAppearance, sex: 'Female' } }} />);
     expect(screen.getByRole('button', { name: 'Female' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('three-preview')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
   });
 
   it('emits upload-ready Blob/File data when the skin changes', async () => {
@@ -95,10 +101,16 @@ describe('SkinCrafterEditor public contract', () => {
     await waitFor(() => expect(saved.length).toBeGreaterThan(0));
   });
 
-  it('supports controlled state and reports edits to the host', () => {
+  it('supports controlled state and reports edits to the host', async () => {
     const state = createState();
     const onStateChange = vi.fn();
     render(<SkinCrafterEditor value={state} onStateChange={onStateChange} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Bear' }));
     expect(onStateChange).toHaveBeenCalledWith(
       expect.objectContaining({ appearance: expect.objectContaining({ race: 'Bear' }) })
