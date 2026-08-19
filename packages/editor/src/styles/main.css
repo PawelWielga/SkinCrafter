@@ -91,7 +91,11 @@
 .skincrafter-editor .customization-panel { scrollbar-width: none; -ms-overflow-style: none; }
 .skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
 @media (min-width: 768px) {
-  .skincrafter-editor .skincrafter-preview-surface { height: auto; min-height: 0; }
+  .skincrafter-editor .skincrafter-preview-surface {
+    height: auto;
+    min-height: 0;
+    max-height: calc(100dvh - var(--skincrafter-preview-bottom-offset, 0px));
+  }
   .skincrafter-editor .model-placeholder { min-height: 0; }
   .skincrafter-editor .options-container { max-height: none; overflow-y: auto; }
 }
