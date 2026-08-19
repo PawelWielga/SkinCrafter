@@ -1,52 +1,56 @@
 # SkinCrafter
 
-SkinCrafter is a React + TypeScript wardrobe editor for composing a Minecraft-style character skin. The main screen combines texture layers for race, skin color, optional wardrobe categories, and hats, then renders the result in a rotating Three.js preview.
+SkinCrafter is a React + TypeScript Minecraft skin creator. The repository is now a small npm workspace with one authoritative reusable editor implementation and a standalone website that consumes it.
 
-## Running locally
+## Repository layout
 
-Install dependencies and start the development server. Node 20 is the minimum supported runtime for local development and CI.
+```text
+SkinCrafter/
+├── packages/
+│   └── editor/       # @pawelwielga/skincrafter-editor
+└── apps/
+    └── standalone/   # skincrafter.dihor.pl / GitHub Pages app
+```
+
+`packages/editor` owns the wardrobe UI, appearance model, texture composition, packaged texture assets, localization used by the editor, and the Three.js preview. `apps/standalone` owns routing, navbar/footer, persisted language, local wardrobe persistence adapter, PlayerDB skin lookup, and deployment shell.
+
+There is no second editor implementation in the standalone app.
+
+## Local development
+
+Node 20 is the supported runtime.
 
 ```bash
 npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173` by default. Navigate to `/` for the wardrobe editor or `/mcskinview` to load a skin from Mojang APIs. The wardrobe remembers the current appearance and selected language using `localStorage`.
+The root `dev` command builds the reusable package first and then starts the standalone Vite app.
 
-## Loading a Minecraft skin
-
-Open `/mcskinview` to load a skin by entering a Minecraft username. This is a side feature, not the main MVP flow. The page contacts the Mojang APIs to retrieve the player's skin and shows it in the 3D preview.
-
-If the user cannot be found or the profile is missing a skin, an error message will be displayed.
-
-## Build
-
-To run TypeScript checks and create a production build:
+## Validation
 
 ```bash
+npm run lint
+npm test
+npm run test:e2e
 npm run build
 ```
 
-## Quality Commands
+The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview.
 
-```bash
-npm run typecheck
-npm run lint
-npm test
-```
+## Reusable editor package
 
-## Architecture
+The public package is `@pawelwielga/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, locale helpers and documented host contracts.
 
-- `src/pages/App.tsx` defines the application routes and the main wardrobe editor.
-- `src/pages/McSkinView.tsx` loads skins by Minecraft username through Mojang APIs.
-- `src/components/previewArea.tsx` contains preview controls and passes texture/pose state to Three.js.
-- `src/components/three/*` owns the Three.js scene, Minecraft body meshes, UV maps, and poses.
-- `src/components/wardrobe.tsx` renders customization controls from the shared appearance model.
-- `src/data/appearance.ts` is the source of truth for appearance categories, option defaults, layer order, and texture composition inputs.
-- `src/data/*TextureMap.ts` keeps texture URLs for currently backed asset categories.
-- `src/i18n/translations.ts` keeps UI labels for the supported languages.
-- `src/utils/combineTextures.ts` composes visible texture layers into the final preview/download image.
+See [`packages/editor/README.md`](packages/editor/README.md) for installation, callbacks, `Blob`/`File` skin output, controlled state, persistence adapters, localization, theming, asset handling and SemVer publishing.
 
-## Adding Appearance Options
+## Standalone routes
 
-For MVP, new options are developer-added. Update `src/data/appearance.ts` first, then add texture URLs to the relevant `src/data/*TextureMap.ts` file if the option has a PNG asset. Optional categories should use `None` as a real no-texture option instead of a blank placeholder image.
+- `/`: creator rendered by `SkinCrafterEditor` from the package.
+- `/mcskinview`: PlayerDB username lookup rendered with the package `SkinPreview`.
+
+The standalone application continues to persist `skincrafterLanguage`, `wardrobeAppearance`, and `wardrobeLayerOrder` in `localStorage`. That persistence is implemented by the standalone host adapter, not by the reusable package.
+
+## Distribution
+
+Editor releases use tags such as `editor-v0.1.0`. `.github/workflows/publish-editor.yml` verifies the tag/package version match, runs validation, attaches an npm-compatible `.tgz` to the GitHub release, and also publishes to npm when `NPM_TOKEN` is configured. Consumers should pin released versions rather than repository source.

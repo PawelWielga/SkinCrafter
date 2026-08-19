@@ -1,0 +1,29 @@
+.skincrafter-editor {
+  --skincrafter-accent: #15803d;
+  --skincrafter-accent-strong: #166534;
+  --skincrafter-surface: #ffffff;
+  --skincrafter-text: #374151;
+  --skincrafter-muted: #f3f4f6;
+  --skincrafter-border: #9ca3af;
+  color: var(--skincrafter-text);
+}
+
+.skincrafter-editor .skincrafter-accent-text {
+  color: var(--skincrafter-accent);
+}
+
+.skincrafter-editor .skincrafter-option-selected,
+.skincrafter-editor .skincrafter-primary-action {
+  background: var(--skincrafter-accent);
+  color: #fff;
+}
+
+.skincrafter-editor .skincrafter-option-selected:hover,
+.skincrafter-editor .skincrafter-primary-action:hover {
+  background: var(--skincrafter-accent-strong);
+}
+
+.skincrafter-editor .option-card,
+.skincrafter-editor .skincrafter-surface {
+  background: var(--skincrafter-surface);
+}

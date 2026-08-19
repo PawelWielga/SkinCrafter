@@ -4,6 +4,7 @@ test('wardrobe layout fits desktop viewport and renders the preview', async ({ p
   await page.goto('/');
 
   await expect(page.getByRole('img', { name: 'SkinCrafter logo' })).toBeVisible();
+  await expect(page.getByTestId('skincrafter-editor')).toBeVisible();
   await expect(page.getByRole('heading', { name: /preview/i })).toBeVisible();
 
   const canvas = page.locator('canvas').first();

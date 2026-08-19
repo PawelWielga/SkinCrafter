@@ -1,0 +1,46 @@
+{
+  "name": "@pawelwielga/skincrafter-editor",
+  "version": "0.1.0",
+  "description": "Reusable React/TypeScript Minecraft skin editor from SkinCrafter",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/style.css"
+  },
+  "sideEffects": [
+    "./dist/style.css"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "test": "vitest run"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.178.0"
+  },
+  "dependencies": {
+    "dragula": "^3.7.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PawelWielga/SkinCrafter.git",
+    "directory": "packages/editor"
+  },
+  "homepage": "https://github.com/PawelWielga/SkinCrafter#readme"
+}

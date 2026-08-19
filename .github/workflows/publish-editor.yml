@@ -1,0 +1,47 @@
+name: Publish editor package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    if: startsWith(github.event.release.tag_name, 'editor-v')
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+          cache: npm
+      - run: npm ci
+      - name: Verify release tag matches package version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./packages/editor/package.json').version")
+          test "${{ github.event.release.tag_name }}" = "editor-v${VERSION}"
+      - run: npm run lint
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm run build
+      - name: Pack versioned npm-compatible artifact
+        run: |
+          mkdir -p artifacts
+          npm pack -w @pawelwielga/skincrafter-editor --pack-destination ./artifacts
+      - name: Attach package tarball to GitHub release
+        run: gh release upload "${{ github.event.release.tag_name }}" artifacts/*.tgz --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Publish public npm package
+        if: env.NPM_TOKEN != ''
+        run: npm publish -w @pawelwielga/skincrafter-editor --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

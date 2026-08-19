@@ -1,6 +1,7 @@
 node_modules
 dist
-build
-public
-*.png
-*.svg
+apps/standalone/dist
+packages/editor/dist
+coverage
+playwright-report
+test-results

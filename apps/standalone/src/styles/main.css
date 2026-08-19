@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.pixel-border {
+  border-width: 2px;
+  border-style: solid;
+  border-image: linear-gradient(135deg, #8b8b8b, #c0c0c0) 1;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+}
+
+.pixel-button { position: relative; overflow: hidden; }
+.option-card { margin-top: .75rem; }

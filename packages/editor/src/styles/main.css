@@ -1,0 +1,69 @@
+@import './variables.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.skincrafter-editor,
+.skincrafter-editor * {
+  box-sizing: border-box;
+}
+
+@keyframes pixelFadeIn {
+  0% { opacity: 0; transform: translateY(5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.skincrafter-editor .pixel-border {
+  border-width: 2px;
+  border-style: solid;
+  border-image: linear-gradient(135deg, #8b8b8b, #c0c0c0) 1;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+}
+
+.skincrafter-editor .pixel-button { position: relative; overflow: hidden; }
+.skincrafter-editor .pixel-button:after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  transform: rotate(30deg);
+  background: linear-gradient(to right, rgba(255,255,255,.13) 0%, rgba(255,255,255,.13) 77%, rgba(255,255,255,.5) 92%, rgba(255,255,255,0) 100%);
+  transition: all .7s ease;
+}
+.skincrafter-editor .pixel-button:hover:after { opacity: 1; left: 100%; }
+.skincrafter-editor .option-card { margin-top: .75rem; transition: all .3s ease; animation: pixelFadeIn .4s ease-out; }
+.skincrafter-editor .wardrobe-option-card { margin-top: .45rem; }
+.skincrafter-editor .wardrobe-option-card h3 { font-size: .78rem; left: .55rem; line-height: 1rem; margin-bottom: .25rem; max-width: calc(100% - 1rem); min-height: 1rem; top: .45rem; }
+.skincrafter-editor .wardrobe-option-card h3 .fas { font-size: .72rem; margin-right: .35rem; }
+.skincrafter-editor .layer-order-card { padding-left: 2.4rem; }
+.skincrafter-editor .layer-order-card.is-dragging,
+.skincrafter-editor .layer-order-card.gu-transit { opacity: .48 !important; visibility: visible !important; }
+.skincrafter-editor .gu-mirror.layer-order-card { animation: none !important; cursor: grabbing; opacity: .82 !important; pointer-events: none; transition: none !important; }
+.skincrafter-editor .gu-mirror.layer-order-card,
+.skincrafter-editor .layer-order-card.gu-transit { transform: none !important; }
+.skincrafter-editor .layer-order-card h3 { left: 2.45rem; max-width: calc(100% - 2.9rem); }
+.skincrafter-editor .layer-order-controls { align-items: center; display: flex; flex-direction: column; gap: .18rem; left: .45rem; position: absolute; top: .55rem; width: 1.45rem; z-index: 20; }
+.skincrafter-editor .layer-order-handle,
+.skincrafter-editor .layer-order-nudge { align-items: center; background: var(--skincrafter-muted); border: 1px solid var(--skincrafter-border); color: var(--skincrafter-text); display: inline-flex; height: 1.25rem; justify-content: center; line-height: 1; width: 1.25rem; }
+.skincrafter-editor .layer-order-handle { cursor: grab; }
+.skincrafter-editor .layer-order-handle:active { cursor: grabbing; }
+.skincrafter-editor .layer-order-handle:hover,
+.skincrafter-editor .layer-order-nudge:not(:disabled):hover { background: #dcfce7; color: var(--skincrafter-accent-strong); }
+.skincrafter-editor .layer-order-nudge:disabled { cursor: not-allowed; opacity: .38; }
+.skincrafter-editor .layer-order-handle .fas { font-size: .75rem; }
+.skincrafter-editor .layer-order-nudge .fas { font-size: .55rem; }
+.skincrafter-editor .color-option-swatch { align-items: center; display: inline-flex; justify-content: center; position: relative; }
+.skincrafter-editor .color-option-swatch.is-selected { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--skincrafter-accent), 3px 3px 0 rgba(0,0,0,.16); }
+.skincrafter-editor .color-option-swatch .fas { color: #fff; font-size: .75rem; line-height: 1; text-shadow: -1px -1px 0 #111827,1px -1px 0 #111827,-1px 1px 0 #111827,1px 1px 0 #111827; }
+.skincrafter-editor .preview-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .5rem; }
+.skincrafter-editor .preview-action-button { align-items: center; display: flex; justify-content: center; min-height: 44px; min-width: 0; overflow-wrap: normal; text-align: center; word-break: normal; }
+.skincrafter-editor .model-placeholder { min-height: 300px; }
+.skincrafter-editor .customization-panel { scrollbar-width: none; -ms-overflow-style: none; }
+.skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
+@media (min-width: 768px) {
+  .skincrafter-editor .model-placeholder { min-height: 0; }
+  .skincrafter-editor .options-container { max-height: none; overflow-y: auto; }
+}
