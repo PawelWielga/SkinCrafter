@@ -28,6 +28,23 @@ test('wardrobe layout fits desktop viewport and renders the preview', async ({ p
   }
 });
 
+test('preview controls keep a single real WebGL canvas mounted', async ({ page }) => {
+  await page.goto('/');
+
+  const canvases = page.locator('canvas');
+  await expect(canvases).toHaveCount(1);
+  const originalCanvas = canvases.first();
+  const originalHandle = await originalCanvas.elementHandle();
+
+  await page.getByRole('button', { name: 'Change Pose' }).click();
+  await page.getByRole('button', { name: 'Hide Overlay' }).click();
+  await page.getByRole('button', { name: 'Stop Rotation' }).click();
+
+  await expect(canvases).toHaveCount(1);
+  const currentHandle = await canvases.first().elementHandle();
+  expect(await originalHandle?.evaluate((canvas, current) => canvas === current, currentHandle)).toBe(true);
+});
+
 test('skin view uses the same two-panel desktop layout', async ({ page }) => {
   await page.goto('/mcskinview');
 
