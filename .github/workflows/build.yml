@@ -13,12 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - name: Refresh security-fixed lockfile
-        if: github.event_name == 'push' && github.ref_name == 'chore/84-dev-audit'
+        if: github.event_name == 'pull_request' && github.head_ref == 'chore/84-dev-audit'
         run: |
           npm install --package-lock-only --ignore-scripts
           npm audit fix --package-lock-only
@@ -27,7 +29,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add package-lock.json
             git commit -m "chore: refresh secure dependency lockfile"
-            git push origin HEAD:${GITHUB_REF_NAME}
+            git push origin HEAD:${GITHUB_HEAD_REF}
           fi
       - run: npm ci
       - run: npm audit --audit-level=high
