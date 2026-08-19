@@ -105,7 +105,7 @@ export default function PreviewArea({
 
   return (
     <PanelSection title={t('panel.preview')} icon="fa-eye">
-      <div className="skincrafter-preview-surface preview-surface-frame overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full">
+      <div className="skincrafter-preview-surface overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full">
         <div className="flex justify-center items-center model-placeholder md:h-full">
           <ThreePreview
             texture={texture}
