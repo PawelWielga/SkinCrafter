@@ -1,4 +1,5 @@
 import React from 'react';
+import SkinCrafterIcon from './icon';
 
 interface PixelButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: string;
@@ -15,7 +16,7 @@ export default function PixelButton({
       className={`pixel-button preview-action-button p-2 pixel-border transition-colors ${className}`}
       {...props}
     >
-      {icon && <i className={`fas ${icon} mr-2`} />}
+      {icon && <SkinCrafterIcon name={icon} className="skincrafter-button-icon" />}
       {children}
     </button>
   );
