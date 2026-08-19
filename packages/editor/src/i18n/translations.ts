@@ -95,7 +95,7 @@ export const translations = {
     'category.eyes': 'Oczy',
     'category.eyesColor': 'Kolor Oczu',
     'category.hair': 'Wlosy',
-    'category.hairColor': 'Kolor Oczu',
+    'category.hairColor': 'Kolor Wlosow',
     'category.hat': 'Czapka',
     'category.shirt': 'Koszulka',
     'category.pants': 'Spodnie',
