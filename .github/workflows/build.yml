@@ -5,6 +5,9 @@ on:
     branches: ['**']
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,9 +17,20 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - name: Refresh security-fixed lockfile
+        if: github.event_name == 'push' && github.ref_name == 'chore/84-dev-audit'
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore: refresh secure dependency lockfile"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
       - run: npm ci
-      - run: npm audit --audit-level=high || true
-      - run: npm ls @babel/core brace-expansion glob js-yaml minimatch nanoid picomatch postcss rollup vite vitest ws yaml || true
+      - run: npm audit --audit-level=high
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm test
