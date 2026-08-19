@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PanelSection from './panelSection';
 import PixelButton from './pixelButton';
 import ThreePreview, { type SkinModel } from './three/three-preview';
@@ -43,9 +43,7 @@ export default function PreviewArea({
   const [pose, setPose] = useState<Pose>('default');
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
   const [autoRotate, setAutoRotate] = useState<boolean>(true);
-  const [offset, setOffset] = useState<number>(0);
   const [previewError, setPreviewError] = useState<SkinCrafterError | null>(null);
-  const buttonsRef = useRef<HTMLDivElement>(null);
 
   const cyclePose = (): void => {
     setPose((p) => (p === 'default' ? 'tpose' : p === 'tpose' ? 'walking' : 'default'));
@@ -89,31 +87,26 @@ export default function PreviewArea({
     );
   }, [texture]);
 
-  useEffect(() => {
-    const measure = () => {
-      const buttons = buttonsRef.current?.offsetHeight ?? 0;
-      setOffset(buttons + footerHeight);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [footerHeight]);
-
   const activeError = generationStatus === 'error' && generationError
     ? generationError
     : previewError;
+  const previewSurfaceStyle = {
+    '--skincrafter-preview-bottom-offset': `${Math.max(0, footerHeight)}px`,
+  } as React.CSSProperties;
 
   return (
     <PanelSection title={t('panel.preview')} icon="fa-eye">
-      <div className="skincrafter-preview-surface overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full">
-        <div className="flex justify-center items-center model-placeholder md:h-full">
+      <div
+        className="skincrafter-preview-surface overflow-hidden pixel-border flex-grow min-h-0 max-h-[70dvh] md:max-h-full"
+        style={previewSurfaceStyle}
+      >
+        <div className="flex justify-center items-center model-placeholder h-full">
           <ThreePreview
             texture={texture}
             pose={pose}
             model={model}
             showOverlay={showOverlay}
             autoRotate={autoRotate}
-            bottomOffset={offset}
             onError={handlePreviewError}
           />
         </div>
@@ -125,7 +118,7 @@ export default function PreviewArea({
         </p>
       )}
 
-      <div ref={buttonsRef} className="mt-4 preview-actions">
+      <div className="mt-4 preview-actions">
         <PixelButton
           className="skincrafter-secondary-action"
           icon="fa-arrows-rotate"
