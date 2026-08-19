@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { defaultPreviewTextureUrl } from '../../assetResolver';
 import type { SkinCrafterError } from '../../publicTypes';
 import type { Pose } from './pose-utils';
@@ -17,7 +17,6 @@ interface ThreePreviewProps {
   model?: SkinModel;
   showOverlay?: boolean;
   autoRotate?: boolean;
-  bottomOffset?: number;
   style?: React.CSSProperties;
   onError?: (error: SkinCrafterError) => void;
 }
@@ -38,7 +37,6 @@ export default function ThreePreview({
   model = 'classic',
   showOverlay = true,
   autoRotate = true,
-  bottomOffset = 0,
   style,
   onError,
 }: ThreePreviewProps): JSX.Element {
@@ -53,7 +51,6 @@ export default function ThreePreview({
     autoRotate,
     onError: (error: ThreePreviewRuntimeError) => onErrorRef.current?.(mapRuntimeError(error)),
   });
-  const [containerHeight, setContainerHeight] = useState<number>(0);
 
   useEffect(() => {
     onErrorRef.current = onError;
@@ -106,27 +103,13 @@ export default function ThreePreview({
     runtimeRef.current?.setAutoRotate(autoRotate);
   }, [autoRotate]);
 
-  useEffect(() => {
-    const updateHeight = () => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const viewportHeight = document.documentElement.clientHeight;
-      const height = viewportHeight - rect.top - bottomOffset;
-      setContainerHeight(height > 0 ? height : 0);
-    };
-
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, [bottomOffset]);
-
   return (
     <div
       ref={containerRef}
       style={{
         width: '100%',
-        minHeight: 200,
-        height: containerHeight ? `${containerHeight}px` : '100%',
+        height: '100%',
+        minHeight: 0,
         position: 'relative',
         touchAction: 'none',
         ...(style ?? {}),

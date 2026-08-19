@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 .skincrafter-editor {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
   width: 100%;
@@ -78,10 +80,22 @@
 .skincrafter-editor .color-option-swatch .skincrafter-icon { color: #fff; font-size: .75rem; line-height: 1; filter: drop-shadow(1px 0 #111827) drop-shadow(-1px 0 #111827) drop-shadow(0 1px #111827) drop-shadow(0 -1px #111827); }
 .skincrafter-editor .preview-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .5rem; }
 .skincrafter-editor .preview-action-button { align-items: center; display: flex; justify-content: center; min-height: 44px; min-width: 0; overflow-wrap: normal; text-align: center; word-break: normal; }
+.skincrafter-editor .skincrafter-preview-surface {
+  height: min(
+    70dvh,
+    max(300px, calc(100dvh - var(--skincrafter-preview-bottom-offset, 0px)))
+  );
+  min-height: 300px;
+}
 .skincrafter-editor .model-placeholder { min-height: 300px; }
 .skincrafter-editor .customization-panel { scrollbar-width: none; -ms-overflow-style: none; }
 .skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
 @media (min-width: 768px) {
+  .skincrafter-editor .skincrafter-preview-surface {
+    height: auto;
+    min-height: 0;
+    max-height: calc(100dvh - var(--skincrafter-preview-bottom-offset, 0px));
+  }
   .skincrafter-editor .model-placeholder { min-height: 0; }
   .skincrafter-editor .options-container { max-height: none; overflow-y: auto; }
 }
