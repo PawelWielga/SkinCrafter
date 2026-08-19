@@ -66,3 +66,15 @@ test('skin view uses the same two-panel desktop layout', async ({ page }) => {
     expect(layout.documentScrollHeight).toBeLessThanOrEqual(layout.documentClientHeight + 1);
   }
 });
+
+test('navbar keeps browser navigation on the public route paths', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('a[href="/mcskinview"]').click();
+  await expect(page).toHaveURL(/\/mcskinview$/);
+  await expect(page.getByLabel('Minecraft username')).toBeVisible();
+
+  await page.locator('a[href="/"]').click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId('skincrafter-editor')).toBeVisible();
+});

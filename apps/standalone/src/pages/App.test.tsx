@@ -37,7 +37,7 @@ describe('standalone app package integration', () => {
 
   it('renders the creator through the reusable package', () => {
     render(
-      <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
@@ -48,7 +48,7 @@ describe('standalone app package integration', () => {
 
   it('renders the skin-view route through the packaged preview', () => {
     render(
-      <MemoryRouter initialEntries={['/mcskinview']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <MemoryRouter initialEntries={['/mcskinview']}>
         <App />
       </MemoryRouter>
     );
