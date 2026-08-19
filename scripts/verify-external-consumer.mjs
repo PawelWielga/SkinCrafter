@@ -153,7 +153,7 @@ function verifyBrowserBuild(consumerRoot) {
 
   const indexHtml = readFileSync(indexPath, 'utf8');
   const assetPaths = Array.from(
-    indexHtml.matchAll(/(?:src|href)=["']([^"']+\/assets\/[^"']+)["']/g),
+    indexHtml.matchAll(/(?:src|href)=["']((?:\.\/|\/)?assets\/[^"']+)["']/g),
     (match) => match[1]
   );
   if (assetPaths.length === 0) {
