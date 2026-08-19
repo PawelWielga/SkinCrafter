@@ -48,11 +48,10 @@ test('mobile preview stays stable when resize fires while scrolled below it', as
       throw new Error('Preview canvas is missing');
     }
 
-    const surfaceRect = surface.getBoundingClientRect();
     const canvasRect = previewCanvas.getBoundingClientRect();
     return {
-      surfaceHeight: surfaceRect.height,
-      surfaceWidth: surfaceRect.width,
+      surfaceHeight: surface.clientHeight,
+      surfaceWidth: surface.clientWidth,
       canvasHeight: canvasRect.height,
       canvasWidth: canvasRect.width,
     };
