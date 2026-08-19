@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const ciBrowserChannel = process.env.CI ? 'chrome' : undefined;
+
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30_000,
@@ -18,8 +20,15 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: ciBrowserChannel,
+        viewport: { width: 1280, height: 720 },
+      },
     },
-    { name: 'chromium-mobile', use: { ...devices['Pixel 5'] } },
+    {
+      name: 'chromium-mobile',
+      use: { ...devices['Pixel 5'], channel: ciBrowserChannel },
+    },
   ],
 });
