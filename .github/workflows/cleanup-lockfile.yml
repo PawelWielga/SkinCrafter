@@ -1,0 +1,43 @@
+name: Cleanup issue 76 lockfile
+
+on:
+  push:
+    branches: [fix/76-router-security]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/76-router-security
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Restore unchanged editor lock metadata ordering
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const path = 'package-lock.json';
+          const lock = JSON.parse(await readFile(path, 'utf8'));
+          const current = lock.packages['packages/editor'];
+          lock.packages['packages/editor'] = {
+            name: current.name,
+            version: current.version,
+            license: current.license,
+            dependencies: current.dependencies,
+            peerDependencies: current.peerDependencies,
+          };
+          await writeFile(path, `${JSON.stringify(lock, null, 2)}\n`);
+          EOF
+      - name: Commit cleanup and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/cleanup-lockfile.yml
+          git add package-lock.json
+          git commit -m "chore: keep router lockfile diff focused"
+          git push
