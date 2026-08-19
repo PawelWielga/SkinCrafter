@@ -28,6 +28,70 @@ test('wardrobe layout fits desktop viewport and renders the preview', async ({ p
   }
 });
 
+test('mobile preview stays stable when resize fires while scrolled below it', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile', 'mobile regression coverage');
+
+  await page.goto('/');
+
+  const previewSurface = page.locator('.skincrafter-preview-surface').first();
+  const canvas = previewSurface.locator('canvas').first();
+  const canvases = page.locator('canvas');
+
+  await expect(previewSurface).toBeVisible();
+  await expect(canvas).toBeVisible();
+  await expect(canvases).toHaveCount(1);
+
+  const originalCanvasHandle = await canvas.elementHandle();
+  const readMetrics = async () => previewSurface.evaluate((surface) => {
+    const previewCanvas = surface.querySelector('canvas');
+    if (!(previewCanvas instanceof HTMLCanvasElement)) {
+      throw new Error('Preview canvas is missing');
+    }
+
+    const surfaceRect = surface.getBoundingClientRect();
+    const canvasRect = previewCanvas.getBoundingClientRect();
+    return {
+      surfaceHeight: surfaceRect.height,
+      surfaceWidth: surfaceRect.width,
+      canvasHeight: canvasRect.height,
+      canvasWidth: canvasRect.width,
+    };
+  });
+
+  const initial = await readMetrics();
+  expect(initial.surfaceHeight).toBeGreaterThan(200);
+  expect(Math.abs(initial.canvasHeight - initial.surfaceHeight)).toBeLessThanOrEqual(2);
+  expect(Math.abs(initial.canvasWidth - initial.surfaceWidth)).toBeLessThanOrEqual(2);
+
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(
+      () => previewSurface.evaluate((surface) => surface.getBoundingClientRect().top)
+    ).toBeLessThan(0);
+
+    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+
+    const whileScrolled = await readMetrics();
+    expect(Math.abs(whileScrolled.surfaceHeight - initial.surfaceHeight)).toBeLessThanOrEqual(2);
+    expect(Math.abs(whileScrolled.canvasHeight - whileScrolled.surfaceHeight)).toBeLessThanOrEqual(2);
+    expect(Math.abs(whileScrolled.canvasWidth - whileScrolled.surfaceWidth)).toBeLessThanOrEqual(2);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+    const afterReturn = await readMetrics();
+    expect(Math.abs(afterReturn.surfaceHeight - initial.surfaceHeight)).toBeLessThanOrEqual(2);
+    expect(Math.abs(afterReturn.canvasHeight - initial.canvasHeight)).toBeLessThanOrEqual(2);
+    expect(Math.abs(afterReturn.canvasWidth - initial.canvasWidth)).toBeLessThanOrEqual(2);
+    await expect(canvases).toHaveCount(1);
+  }
+
+  const currentCanvasHandle = await canvas.elementHandle();
+  expect(
+    await originalCanvasHandle?.evaluate((original, current) => original === current, currentCanvasHandle)
+  ).toBe(true);
+});
+
 test('preview controls keep a single real WebGL canvas mounted', async ({ page }) => {
   await page.goto('/');
 
