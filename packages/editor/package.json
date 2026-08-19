@@ -22,7 +22,8 @@
   "scripts": {
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit",
-    "build": "vite build && tsc -p tsconfig.build.json",
+    "build": "vite build && tsc -p tsconfig.build.json && node ./scripts/normalize-declarations.mjs && npm run verify:package",
+    "verify:package": "tsc -p tsconfig.consumer-bundler.json && tsc -p tsconfig.consumer-nodenext.json && node ./scripts/verify-package.mjs",
     "test": "vitest run"
   },
   "publishConfig": {
