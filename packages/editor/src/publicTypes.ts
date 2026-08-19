@@ -1,5 +1,9 @@
 import type React from 'react';
-import type { AppearanceState, TextureLayerCategoryId } from './data/appearance';
+import type {
+  AppearanceCategoryId,
+  AppearanceState,
+  TextureLayerCategoryId,
+} from './data/appearance';
 import type { Language } from './i18n/translations';
 
 export interface SkinCrafterState {
@@ -12,9 +16,55 @@ export interface SkinCrafterInitialSkin {
   layerOrder?: readonly string[];
 }
 
+export interface SkinCrafterSerializedStateV1 {
+  schemaVersion: 1;
+  appearance: AppearanceState;
+  layerOrder: TextureLayerCategoryId[];
+}
+
+export type SkinCrafterSerializedState = SkinCrafterSerializedStateV1;
+
+export type SkinCrafterStateMigrationNoticeCode =
+  | 'legacy_unversioned'
+  | 'schema_version_migrated'
+  | 'appearance_value_defaulted'
+  | 'layer_order_normalized';
+
+export interface SkinCrafterStateMigrationNotice {
+  code: SkinCrafterStateMigrationNoticeCode;
+  message: string;
+  path?: AppearanceCategoryId | 'layerOrder';
+  from?: unknown;
+  to?: unknown;
+}
+
+export type SkinCrafterStateParseErrorCode =
+  | 'invalid_state'
+  | 'unsupported_schema_version';
+
+export interface SkinCrafterStateParseError {
+  code: SkinCrafterStateParseErrorCode;
+  message: string;
+  schemaVersion?: number;
+}
+
+export type SkinCrafterStateParseResult =
+  | {
+    success: true;
+    state: SkinCrafterState;
+    serializedState: SkinCrafterSerializedState;
+    sourceSchemaVersion: number | null;
+    migrated: boolean;
+    notices: SkinCrafterStateMigrationNotice[];
+  }
+  | {
+    success: false;
+    error: SkinCrafterStateParseError;
+  };
+
 export interface SkinCrafterPersistenceAdapter {
-  load: () => SkinCrafterInitialSkin | null;
-  save: (state: SkinCrafterState) => void;
+  load: () => SkinCrafterInitialSkin | SkinCrafterState | null;
+  save: (state: SkinCrafterSerializedState) => void;
 }
 
 export interface SkinCrafterSkinMetadata {
