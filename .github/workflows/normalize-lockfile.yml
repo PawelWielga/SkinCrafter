@@ -1,0 +1,38 @@
+name: Normalize issue 76 lockfile
+
+on:
+  push:
+    branches: [fix/76-router-security]
+
+permissions:
+  contents: write
+
+jobs:
+  normalize-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/76-router-security
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Restore unrelated workspace lock metadata
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const path = 'package-lock.json';
+          const lock = JSON.parse(await readFile(path, 'utf8'));
+          lock.packages['packages/editor'].license = 'MIT';
+          await writeFile(path, `${JSON.stringify(lock, null, 2)}\n`);
+          EOF
+      - name: Commit normalized lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: keep lockfile changes scoped"
+          git push
