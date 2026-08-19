@@ -12,6 +12,10 @@
   color: var(--skincrafter-accent);
 }
 
+.skincrafter-editor .skincrafter-category-icon {
+  color: #d97706;
+}
+
 .skincrafter-editor .skincrafter-heading {
   color: var(--skincrafter-text);
 }
