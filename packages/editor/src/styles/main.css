@@ -78,7 +78,6 @@
 .skincrafter-editor .color-option-swatch .skincrafter-icon { color: #fff; font-size: .75rem; line-height: 1; filter: drop-shadow(1px 0 #111827) drop-shadow(-1px 0 #111827) drop-shadow(0 1px #111827) drop-shadow(0 -1px #111827); }
 .skincrafter-editor .preview-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .5rem; }
 .skincrafter-editor .preview-action-button { align-items: center; display: flex; justify-content: center; min-height: 44px; min-width: 0; overflow-wrap: normal; text-align: center; word-break: normal; }
-.skincrafter-editor .preview-surface-frame { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1); }
 .skincrafter-editor .model-placeholder { min-height: 300px; }
 .skincrafter-editor .customization-panel { scrollbar-width: none; -ms-overflow-style: none; }
 .skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
