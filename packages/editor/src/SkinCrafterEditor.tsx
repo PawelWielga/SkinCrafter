@@ -73,6 +73,19 @@ function generationErrorFrom(cause: unknown): SkinCrafterError {
   };
 }
 
+function notifyHost<TArgs extends unknown[]>(
+  callback: ((...args: TArgs) => void) | undefined,
+  ...args: TArgs
+): void {
+  if (!callback) return;
+
+  try {
+    callback(...args);
+  } catch (cause) {
+    console.error('SkinCrafter host callback failed', cause);
+  }
+}
+
 export default function SkinCrafterEditor({
   locale = defaultLanguage,
   value,
@@ -197,9 +210,11 @@ export default function SkinCrafterEditor({
     const layerOrderSnapshot = JSON.parse(layerOrderKey) as TextureLayerCategoryId[];
 
     setGenerationState({ key: generationKey, status: 'generating', error: null });
-    onStatusChangeRef.current?.('generating');
+    notifyHost(onStatusChangeRef.current, 'generating');
 
     const generate = async (): Promise<void> => {
+      let result: { dataUrl: string; output: SkinCrafterSkinOutput };
+
       try {
         const textureInputs = buildTextureInputs(
           appearanceSnapshot,
@@ -207,21 +222,26 @@ export default function SkinCrafterEditor({
           canonicalAssetBaseUrl
         );
         const dataUrl = await combineTextures(textureInputs);
-        if (!current) return;
-
-        const output = createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot);
-        setGeneratedSkin({ key: generationKey, texture: dataUrl, output });
-        setGenerationState({ key: generationKey, status: 'ready', error: null });
-        onSkinChangeRef.current?.(output);
-        onStatusChangeRef.current?.('ready');
+        result = {
+          dataUrl,
+          output: createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot),
+        };
       } catch (cause) {
         if (!current) return;
 
         const error = generationErrorFrom(cause);
         setGenerationState({ key: generationKey, status: 'error', error });
-        onStatusChangeRef.current?.('error');
-        onErrorRef.current?.(error);
+        notifyHost(onStatusChangeRef.current, 'error');
+        notifyHost(onErrorRef.current, error);
+        return;
       }
+
+      if (!current) return;
+
+      setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
+      setGenerationState({ key: generationKey, status: 'ready', error: null });
+      notifyHost(onSkinChangeRef.current, result.output);
+      notifyHost(onStatusChangeRef.current, 'ready');
     };
 
     void generate();
@@ -252,7 +272,7 @@ export default function SkinCrafterEditor({
   const canSave = generationStatus === 'ready' && skinOutput !== null;
   const handleSave = onSave && canSave && skinOutput ? () => onSave(skinOutput) : undefined;
   const handlePreviewError = useCallback((error: SkinCrafterError): void => {
-    onErrorRef.current?.(error);
+    notifyHost(onErrorRef.current, error);
   }, []);
 
   return (
