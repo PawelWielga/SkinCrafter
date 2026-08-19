@@ -33,6 +33,24 @@ export interface SkinCrafterSkinOutput {
   metadata: SkinCrafterSkinMetadata;
 }
 
+export type SkinCrafterGenerationStatus = 'idle' | 'generating' | 'ready' | 'error';
+
+export type SkinCrafterErrorCategory = 'generation' | 'asset' | 'preview';
+
+export type SkinCrafterErrorCode =
+  | 'generation_failed'
+  | 'asset_load_failed'
+  | 'preview_texture_load_failed'
+  | 'preview_webgl_initialization_failed';
+
+export interface SkinCrafterError {
+  code: SkinCrafterErrorCode;
+  category: SkinCrafterErrorCategory;
+  message: string;
+  assetUrl?: string;
+  cause?: unknown;
+}
+
 export interface SkinCrafterTheme {
   accent?: string;
   accentStrong?: string;
@@ -51,6 +69,8 @@ export interface SkinCrafterEditorProps {
   onStateChange?: (state: SkinCrafterState) => void;
   onSkinChange?: (skin: SkinCrafterSkinOutput) => void;
   onSave?: (skin: SkinCrafterSkinOutput) => void;
+  onStatusChange?: (status: SkinCrafterGenerationStatus) => void;
+  onError?: (error: SkinCrafterError) => void;
   className?: string;
   style?: React.CSSProperties;
   theme?: SkinCrafterTheme;
