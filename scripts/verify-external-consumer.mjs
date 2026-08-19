@@ -19,8 +19,8 @@ const fixtureRoot = join(repositoryRoot, 'tests', 'external-consumer');
 const editorPackageJson = JSON.parse(
   readFileSync(join(editorRoot, 'package.json'), 'utf8')
 );
-const rootPackageJson = JSON.parse(
-  readFileSync(join(repositoryRoot, 'package.json'), 'utf8')
+const rootPackageLock = JSON.parse(
+  readFileSync(join(repositoryRoot, 'package-lock.json'), 'utf8')
 );
 const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
@@ -52,12 +52,12 @@ function collectStringTargets(value, targets = new Set()) {
   return targets;
 }
 
-function getToolingSpec(name) {
-  const version = rootPackageJson.devDependencies?.[name];
-  if (!version) {
-    fail(`root devDependency ${name} is required by the consumer smoke test.`);
+function getLockedSpec(name) {
+  const lockEntry = rootPackageLock.packages?.[`node_modules/${name}`];
+  if (!lockEntry?.version) {
+    fail(`package-lock.json must pin ${name} for the consumer smoke test.`);
   }
-  return `${name}@${version}`;
+  return `${name}@${lockEntry.version}`;
 }
 
 function verifyInstalledArtifact(consumerRoot, tarballPath, packResult) {
@@ -194,16 +194,14 @@ try {
     fail(`npm pack did not create ${tarballPath}`);
   }
 
-  const peerSpecs = Object.entries(editorPackageJson.peerDependencies ?? {}).map(
-    ([name, version]) => `${name}@${version}`
-  );
+  const peerSpecs = Object.keys(editorPackageJson.peerDependencies ?? {}).map(getLockedSpec);
   const toolingSpecs = [
     '@types/react',
     '@types/react-dom',
     '@types/three',
     'typescript',
     'vite',
-  ].map(getToolingSpec);
+  ].map(getLockedSpec);
 
   run(
     npmExecutable,
