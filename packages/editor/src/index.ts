@@ -1,4 +1,3 @@
-import 'dragula/dist/dragula.css';
 import './styles/main.css';
 
 export { default as SkinCrafterEditor } from './SkinCrafterEditor';
