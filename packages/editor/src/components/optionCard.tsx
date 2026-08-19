@@ -10,7 +10,7 @@ interface OptionCardProps extends React.HTMLAttributes<HTMLDivElement> {
 export default function OptionCard({
   heading,
   icon,
-  iconClassName = 'skincrafter-accent-text',
+  iconClassName = 'skincrafter-category-icon',
   className = '',
   children,
   ...props
