@@ -56,7 +56,7 @@ function CharacterEditor() {
 - `locale`: host-controlled `en` or `pl`. The package does not own a language selector.
 - `initialSkin`: initial appearance/layer-order input for uncontrolled use.
 - `value` + `onStateChange`: fully host-controlled editor state.
-- `persistence`: optional adapter with `load()` and `save()`. The package never reads or writes `localStorage` directly.
+- `persistence`: optional host storage adapter. `load()` returns runtime/legacy initial state and `save()` receives the current versioned serialized state. The package never reads or writes `localStorage` directly.
 - `onSkinChange`: receives the current generated PNG as `Blob`, `File`, data URL and metadata after the current semantic state has generated successfully.
 - `onSave`: called from the editor save/download action with the same upload-ready output. The action is unavailable while the current state is not `ready`.
 - `onStatusChange`: reports generation transitions such as `generating`, `ready` and `error`.
@@ -119,18 +119,76 @@ Late async completions are ignored when they belong to an obsolete editor state.
 
 The host can append `file` directly to `FormData`. DOM/canvas scraping is not part of the supported contract.
 
-## Persistence
+## Persistence and schema compatibility
 
-Persistence belongs to the host. Example:
+Persistence storage belongs to the host, while the persisted format and migration rules belong to the package.
+
+The current wire format is `SkinCrafterSerializedStateV1`:
 
 ```ts
-const persistence = {
-  load: () => JSON.parse(localStorage.getItem('my-editor-state') ?? 'null'),
-  save: (state) => localStorage.setItem('my-editor-state', JSON.stringify(state)),
+interface SkinCrafterSerializedStateV1 {
+  schemaVersion: 1;
+  appearance: AppearanceState;
+  layerOrder: TextureLayerCategoryId[];
+}
+```
+
+Use the exported helpers rather than duplicating parsing, normalization or migrations:
+
+```ts
+import {
+  parseSkinCrafterState,
+  serializeSkinCrafterState,
+  type SkinCrafterPersistenceAdapter,
+} from '@pawelwielga/skincrafter-editor';
+
+const STORAGE_KEY = 'my-editor-state';
+
+const persistence: SkinCrafterPersistenceAdapter = {
+  load: () => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    let value: unknown;
+    try {
+      value = JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+
+    const parsed = parseSkinCrafterState(value);
+    if (!parsed.success) {
+      // In particular, do not reinterpret an unknown future schema as the current format.
+      console.error(parsed.error.code, parsed.error.message);
+      return null;
+    }
+
+    return parsed.state;
+  },
+  save: (state) => {
+    // `state` is already the current SkinCrafterSerializedState.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  },
 };
 ```
 
-The standalone SkinCrafter app uses this pattern and keeps its legacy wardrobe keys compatible.
+`serializeSkinCrafterState(runtimeState)` is also exported for hosts that persist controlled state outside the component adapter.
+
+`parseSkinCrafterState(value)` returns a discriminated `SkinCrafterStateParseResult`:
+
+- current schema input returns the normalized runtime state and canonical serialized state,
+- legacy unversioned state is migrated explicitly,
+- schema version `0` is supported as the explicit older migration step into version `1`,
+- unknown future versions fail with `unsupported_schema_version` and are never treated as the current schema,
+- malformed state fails with `invalid_state`,
+- removed/invalid option IDs fall back through the editor's normal option rules and emit `appearance_value_defaulted` migration notices,
+- layer order keeps valid known layers in their stored relative order, removes invalid/duplicate entries and appends missing known layers in the package's canonical order; normalization is reported through a `layer_order_normalized` notice.
+
+A successful parse includes `sourceSchemaVersion`, `migrated`, `notices`, the runtime `state`, and the canonical current `serializedState`. Hosts can therefore distinguish a clean current-schema load from a migration or fallback instead of guessing whether a default value was intentional.
+
+When a future release changes the persisted semantic model incompatibly, the package will advance `schemaVersion` and add deterministic migrations. Storage/database selection remains a host concern.
+
+The standalone SkinCrafter site migrates its historical `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys into the versioned `skincrafterState` entry. After a successful migration it reads the versioned entry on later loads, while current saves keep the old aggregate keys synchronized for backward compatibility with older standalone builds.
 
 ## Localization
 
