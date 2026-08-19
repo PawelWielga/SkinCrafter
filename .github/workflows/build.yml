@@ -5,32 +5,15 @@ on:
     branches: ['**']
   pull_request:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Refresh security-fixed lockfile
-        if: github.event_name == 'pull_request' && github.head_ref == 'chore/84-dev-audit'
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          npm audit fix --package-lock-only
-          if ! git diff --quiet -- package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "chore: refresh secure dependency lockfile"
-            git push origin HEAD:${GITHUB_HEAD_REF}
-          fi
       - run: npm ci
       - run: npm audit --audit-level=high
       - run: npm audit --omit=dev --audit-level=high
