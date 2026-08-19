@@ -161,6 +161,42 @@ describe('SkinCrafterEditor public contract', () => {
     expect(mockedCombineTextures).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps a successful generation ready when host notification callbacks throw', async () => {
+    const callbackFailure = new Error('host callback failed');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const onError = vi.fn();
+    const onSkinChange = vi.fn(() => {
+      throw callbackFailure;
+    });
+    const onStatusChange = vi.fn((status: string) => {
+      if (status === 'ready') throw callbackFailure;
+    });
+
+    render(
+      <SkinCrafterEditor
+        onSkinChange={onSkinChange}
+        onStatusChange={onStatusChange}
+        onError={onError}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(onSkinChange).toHaveBeenCalledTimes(1);
+    expect(onStatusChange.mock.calls.map(([status]) => status)).toEqual(['generating', 'ready']);
+    expect(onError).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Download character skin' })).toBeEnabled();
+    expect(consoleError).toHaveBeenCalledTimes(2);
+    expect(consoleError).toHaveBeenCalledWith('SkinCrafter host callback failed', callbackFailure);
+
+    consoleError.mockRestore();
+  });
+
   it('does not recompose semantically equal controlled state with a new object identity', async () => {
     const onSkinChange = vi.fn();
     const { rerender } = render(<SkinCrafterEditor value={createState()} onSkinChange={onSkinChange} />);
