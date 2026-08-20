@@ -253,9 +253,13 @@ Editor icons are bundled package-owned inline SVGs. An embedding host does not n
 
 ## Assets and non-root routes
 
-Default texture assets are bundled by the package build, so `/character`, `/account/character`, or any other host route does not change where the default textures resolve.
+SkinCrafter-owned wardrobe PNGs are part of the package artifact, but they are emitted as separate cache-safe hashed files rather than embedded as base64 payloads in `dist/index.js`. The editor JavaScript therefore grows with logical asset references, not with the binary size of every texture, and the browser only requests texture files that are actually used by preview/composition or option thumbnails.
 
-If a host intentionally serves a compatible asset set itself, pass `assetBaseUrl`, for example `/character/skincrafter-assets/`. All logical texture paths are then resolved below that prefix instead of assuming `/textures/...` at the application root.
+Default package asset URLs are relative to the emitted editor module. A normal bundler such as Vite can therefore carry the installed package assets into an application served from `/character`, `/account/character`, or another non-root base without SkinCrafter assuming `/textures/...` or `/assets/...` at the application root. The packed `.tgz` includes the emitted PNG files under `dist/assets/`; their hashed filenames are intentionally cacheable as immutable build artifacts and may change when the underlying texture bytes change.
+
+If a host intentionally serves a compatible asset set itself, pass `assetBaseUrl`, for example `/character/skincrafter-assets/` or an absolute CDN prefix. All logical texture paths are then resolved below that prefix instead of using the package-emitted URL. The override must mirror the logical `textures/...` layout used by SkinCrafter. Package assets remain available in the distributable artifact as the default fallback, but their bytes are not duplicated inside the JavaScript bundle.
+
+When adding a new wardrobe texture, add it to `packages/editor/src/assets/textures` and the typed manifest in `src/assetResolver.ts`. Keep the logical path stable unless the corresponding wardrobe mapping is intentionally changed. Package verification checks that wardrobe PNGs are emitted as separate hashed files, referenced by the runtime bundle, included by `npm pack`, and never reintroduced as inline PNG data URLs. The external-consumer smoke test also builds the packed package below `/character/` so route-relative asset regressions fail CI.
 
 ## Release/versioning policy
 
