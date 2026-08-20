@@ -20,13 +20,13 @@ The automated suite is intentionally a regression detector. Real touch ergonomic
 | Creator mobile | `tests/e2e/accessibility.spec.ts`, `tests/e2e/layout.spec.ts`, `tests/e2e/p2-audit.spec.ts` | Mobile controls, preview sizing, locale layout and responsive transitions are exercised in Chromium. |
 | Desktop drag and drop | `tests/e2e/p2-audit.spec.ts`, `packages/editor/src/components/wardrobe.test.tsx` | Native browser drag/drop changes the committed layer order; lower-level tests protect preview/drop/cancel behavior. |
 | Touch reorder logic | `packages/editor/src/components/wardrobe.test.tsx`, `packages/editor/src/components/wardrobe.touch-regression.test.tsx` | Pointer/touch preview and commit behavior are deterministic. This is not evidence of physical-device ergonomics. |
-| Keyboard layer ordering | `tests/e2e/layout.spec.ts`, `tests/e2e/p2-audit.spec.ts`, `packages/editor/src/components/wardrobe.test.tsx` | Up/down actions are keyboard-operable and desktop focus follows up → drag handle → down. |
+| Keyboard navigation and focus order | `tests/e2e/layout.spec.ts`, `tests/e2e/p2-audit.spec.ts`, `packages/editor/src/components/wardrobe.test.tsx` | Every visible enabled editor focus target is traversed by Tab in authored DOM order on desktop and mobile, positive `tabindex` overrides are absent, preview actions activate from the keyboard, and layer nudge controls remain keyboard-operable. |
 | Focus visibility | `tests/e2e/p2-audit.spec.ts` | Keyboard navigation places `:focus-visible` on the focused layer drag control and Chrome exposes a non-zero outline. |
 | Accessible control names | `tests/e2e/accessibility.spec.ts`, `tests/e2e/p2-audit.spec.ts` | Layer controls have explicit accessible names and visible editor buttons in both supported locales are not unnamed. |
-| Responsive hidden controls | `tests/e2e/accessibility.spec.ts`, `tests/e2e/layout.spec.ts` | The mobile-hidden drag handle is not visible and is skipped by the keyboard focus sequence. |
+| Responsive hidden controls | `tests/e2e/accessibility.spec.ts`, `tests/e2e/layout.spec.ts`, `tests/e2e/p2-audit.spec.ts` | The mobile-hidden drag handle is not visible, is skipped by the keyboard focus sequence and does not appear among the visible Tab targets. |
 | Mobile touch targets | `tests/e2e/accessibility.spec.ts` | Visible mobile reorder buttons are at least 24×24 CSS pixels and do not overlap each other or the layer heading. |
 | Scroll/resize lifecycle | `tests/e2e/layout.spec.ts` | Repeated scroll → resize → return cycles preserve preview dimensions and the same WebGL canvas. |
-| Orientation-style resize | `tests/e2e/p2-audit.spec.ts` | Portrait → landscape → portrait viewport changes preserve a single canvas, preview fit and no horizontal overflow. |
+| Orientation-style resize | `tests/e2e/p2-audit.spec.ts` | Portrait → landscape → portrait viewport changes preserve a single canvas, recover the original preview fit and avoid horizontal overflow. |
 | Repeated preview interaction | `tests/e2e/layout.spec.ts`, `tests/e2e/p2-audit.spec.ts` | Preview controls do not replace the renderer canvas, including a repeated pose-change sequence. |
 | Classic/Slim renderer | `packages/editor/src/components/three/three-preview-model-parity.test.ts`, `packages/editor/src/components/three/diagnostic-fixtures.test.ts`, `RENDERER_PARITY.md` | Classic and Slim geometry/UV/model switching are pinned to the audited Minecraft Java renderer contract. |
 | Imported skin | `packages/editor/src/SkinCrafterEditor.importedSkin.test.tsx`, `packages/editor/src/importedSkin.test.ts` | Existing 64×64 PNG input is validated, preserves its declared Classic/Slim model and remains editable without replacing unrelated imported pixels. |
@@ -58,7 +58,7 @@ Before closing #118, record the exact device/browser/OS and perform all of the f
 - Use a normal desktop browser with mouse and keyboard, not only automation.
 - Reorder layers using native drag and drop.
 - Navigate the primary editor controls by keyboard and verify the visual focus indicator is clearly noticeable, not merely technically present.
-- Verify focus order matches the visible order and responsive-hidden controls cannot receive focus.
+- Verify the automated authored focus order also feels logical against the visible layout and that responsive-hidden controls cannot receive focus.
 - Exercise preview controls repeatedly and verify camera/model interaction remains usable.
 - Exercise Classic and Slim rendering, imported-skin continuation, PL and EN, and both public routes.
 
