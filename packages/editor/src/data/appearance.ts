@@ -121,30 +121,69 @@ export function normalizeTextureLayerOrder(value: readonly string[] | null | und
   return next;
 }
 
+function buildTextureInputForLayer(
+  layer: AppearanceCategoryId,
+  appearance: AppearanceState,
+  assetBaseUrl?: string
+): TextureInput {
+  if (layer === 'race') {
+    return { url: getRaceTextureUrl(appearance.race as Race, appearance.sex, assetBaseUrl), tint: appearance.skinColor, blendMode: 'multiply' };
+  }
+  if (layer === 'hat') return getHatTextureUrl(appearance.hat as Hat, assetBaseUrl);
+  if (layer === 'shirt') {
+    const url = getShirtTextureUrl(appearance.shirt as Shirt, assetBaseUrl);
+    return url ? { url, blendMode: 'source-over' } : null;
+  }
+  if (layer === 'pants') {
+    const url = getPantsTextureUrl(appearance.pants as Pants, assetBaseUrl);
+    return url ? { url, blendMode: 'source-over' } : null;
+  }
+  if (layer === 'eyes') {
+    const option = getOptions('eyes', appearance, assetBaseUrl).find((item) => item.id === appearance.eyes);
+    return option?.texture ? { url: option.texture, tint: appearance.eyesColor, blendMode: 'source-over', tintTarget: 'nonWhite' } : null;
+  }
+  const option = getOptions(layer, appearance, assetBaseUrl).find((item) => item.id === appearance[layer]);
+  return option?.texture ?? null;
+}
+
+function orderedTextureLayers(textureLayerOrder: readonly string[]): AppearanceCategoryId[] {
+  return ['race', 'sex', 'eyes', 'hair', ...normalizeTextureLayerOrder(textureLayerOrder)];
+}
+
 export function buildTextureInputs(
   appearance: AppearanceState,
   textureLayerOrder: readonly string[] = textureLayerCategories,
   assetBaseUrl?: string
 ): TextureInput[] {
-  const layerOrder: AppearanceCategoryId[] = ['race', 'sex', 'eyes', 'hair', ...normalizeTextureLayerOrder(textureLayerOrder)];
-  return layerOrder.map((layer) => {
+  return orderedTextureLayers(textureLayerOrder).map((layer) =>
+    buildTextureInputForLayer(layer, appearance, assetBaseUrl)
+  );
+}
+
+export function buildTextureInputsForCategories(
+  appearance: AppearanceState,
+  textureLayerOrder: readonly string[],
+  activeCategories: readonly AppearanceCategoryId[],
+  assetBaseUrl?: string
+): TextureInput[] {
+  const active = new Set(activeCategories);
+  const shouldIncludeLayer = (layer: AppearanceCategoryId): boolean => {
     if (layer === 'race') {
-      return { url: getRaceTextureUrl(appearance.race as Race, appearance.sex, assetBaseUrl), tint: appearance.skinColor, blendMode: 'multiply' };
+      return active.has('race') || active.has('sex') || active.has('skinColor');
     }
-    if (layer === 'hat') return getHatTextureUrl(appearance.hat as Hat, assetBaseUrl);
-    if (layer === 'shirt') {
-      const url = getShirtTextureUrl(appearance.shirt as Shirt, assetBaseUrl);
-      return url ? { url, blendMode: 'source-over' } : null;
-    }
-    if (layer === 'pants') {
-      const url = getPantsTextureUrl(appearance.pants as Pants, assetBaseUrl);
-      return url ? { url, blendMode: 'source-over' } : null;
+    if (layer === 'sex') {
+      return false;
     }
     if (layer === 'eyes') {
-      const option = getOptions('eyes', appearance, assetBaseUrl).find((item) => item.id === appearance.eyes);
-      return option?.texture ? { url: option.texture, tint: appearance.eyesColor, blendMode: 'source-over', tintTarget: 'nonWhite' } : null;
+      return active.has('eyes') || active.has('eyesColor');
     }
-    const option = getOptions(layer, appearance, assetBaseUrl).find((item) => item.id === appearance[layer]);
-    return option?.texture ?? null;
-  });
+    if (layer === 'hair') {
+      return active.has('hair') || active.has('hairColor');
+    }
+    return active.has(layer);
+  };
+
+  return orderedTextureLayers(textureLayerOrder)
+    .filter(shouldIncludeLayer)
+    .map((layer) => buildTextureInputForLayer(layer, appearance, assetBaseUrl));
 }

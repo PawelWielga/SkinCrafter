@@ -3,7 +3,9 @@ import PreviewArea from './components/previewArea';
 import TwoPanelLayout from './components/twoPanelLayout';
 import Wardrobe from './components/wardrobe';
 import {
+  appearanceCategories,
   buildTextureInputs,
+  buildTextureInputsForCategories,
   normalizeAppearance,
   normalizeTextureLayerOrder,
   type AppearanceCategoryId,
@@ -11,11 +13,13 @@ import {
   type TextureLayerCategoryId,
 } from './data/appearance';
 import { defaultLanguage, translate, type TranslationKey } from './i18n/translations';
+import { InvalidInitialSkinError, loadImportedSkin } from './importedSkin';
 import type {
   SkinCrafterEditorProps,
   SkinCrafterError,
   SkinCrafterGenerationStatus,
   SkinCrafterInitialSkin,
+  SkinCrafterSkinModel,
   SkinCrafterSkinOutput,
   SkinCrafterState,
   SkinCrafterTheme,
@@ -36,10 +40,32 @@ interface GenerationState {
   error: SkinCrafterError | null;
 }
 
+interface ImportedSkinRuntime {
+  source: Blob;
+  dataUrl: string;
+  fingerprint: string;
+  model: SkinCrafterSkinModel;
+  baselineState: SkinCrafterState;
+}
+
+interface ImportLoadState {
+  source: Blob | null;
+  model: SkinCrafterSkinModel | null;
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  error: SkinCrafterError | null;
+}
+
 function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null): SkinCrafterState {
   return {
     appearance: normalizeAppearance(value?.appearance ?? null),
     layerOrder: normalizeTextureLayerOrder(value?.layerOrder),
+  };
+}
+
+function cloneState(state: SkinCrafterState): SkinCrafterState {
+  return {
+    appearance: { ...state.appearance },
+    layerOrder: [...state.layerOrder],
   };
 }
 
@@ -71,6 +97,17 @@ function generationErrorFrom(cause: unknown): SkinCrafterError {
     category: 'generation',
     message: 'Failed to generate the current skin.',
     cause,
+  };
+}
+
+function initialSkinErrorFrom(cause: unknown): SkinCrafterError {
+  return {
+    code: 'invalid_initial_skin',
+    category: 'input',
+    message: cause instanceof InvalidInitialSkinError
+      ? cause.message
+      : 'Initial skin must be a decodable 64x64 Minecraft PNG.',
+    cause: cause instanceof InvalidInitialSkinError ? cause.cause ?? cause : cause,
   };
 }
 
@@ -114,13 +151,29 @@ export default function SkinCrafterEditor({
     status: 'idle',
     error: null,
   });
+  const [loadedImportedSkin, setLoadedImportedSkin] = useState<ImportedSkinRuntime | null>(null);
+  const [importLoadState, setImportLoadState] = useState<ImportLoadState>({
+    source: null,
+    model: null,
+    status: 'idle',
+    error: null,
+  });
+  const [activatedCategories, setActivatedCategories] = useState<AppearanceCategoryId[]>([]);
   const onSkinChangeRef = useRef(onSkinChange);
   const onStatusChangeRef = useRef(onStatusChange);
   const onErrorRef = useRef(onError);
+  const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
+  const equivalentImportPendingRef = useRef(false);
+  const lastGeneratedKeyRef = useRef<string | null>(null);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const t = useCallback((key: TranslationKey) => translate(locale, key), [locale]);
+  const initialImage = initialSkin?.image ?? null;
+  const initialModel = initialSkin?.model ?? null;
+  const hasImportedRequest = initialImage !== null;
 
   const publishState = useCallback((next: SkinCrafterState) => {
     if (!value) setInternalState(next);
@@ -128,11 +181,16 @@ export default function SkinCrafterEditor({
   }, [onStateChange, value]);
 
   const handleAppearanceChange = useCallback((category: AppearanceCategoryId, nextValue: string) => {
+    if (hasImportedRequest) {
+      setActivatedCategories((current) =>
+        current.includes(category) ? current : [...current, category]
+      );
+    }
     publishState({
       ...state,
       appearance: normalizeAppearance({ ...state.appearance, [category]: nextValue }),
     });
-  }, [publishState, state]);
+  }, [hasImportedRequest, publishState, state]);
 
   const handleLayerOrderChange = useCallback((layerOrder: TextureLayerCategoryId[]) => {
     publishState({ ...state, layerOrder: normalizeTextureLayerOrder(layerOrder) });
@@ -151,8 +209,94 @@ export default function SkinCrafterEditor({
   }, [onError]);
 
   useEffect(() => {
+    if (!initialImage) {
+      loadedImportedSkinRef.current = null;
+      equivalentImportPendingRef.current = false;
+      setLoadedImportedSkin(null);
+      setActivatedCategories([]);
+      setImportLoadState({ source: null, model: null, status: 'idle', error: null });
+      return undefined;
+    }
+
+    if (!initialModel) {
+      equivalentImportPendingRef.current = false;
+      const error = initialSkinErrorFrom(
+        new InvalidInitialSkinError('Initial skin model must be either classic or slim.')
+      );
+      setImportLoadState({ source: initialImage, model: null, status: 'error', error });
+      notifyHost(onStatusChangeRef.current, 'error');
+      notifyHost(onErrorRef.current, error);
+      return undefined;
+    }
+
+    let current = true;
+    const requestBaseline = cloneState(stateRef.current);
+    setImportLoadState({ source: initialImage, model: initialModel, status: 'loading', error: null });
+    notifyHost(onStatusChangeRef.current, 'generating');
+
+    void loadImportedSkin(initialImage, initialModel)
+      .then((loaded) => {
+        if (!current) return;
+
+        const previous = loadedImportedSkinRef.current;
+        const semanticallyUnchanged = previous !== null
+          && previous.fingerprint === loaded.fingerprint
+          && previous.model === loaded.model;
+        const next: ImportedSkinRuntime = semanticallyUnchanged
+          ? { ...previous, source: initialImage }
+          : {
+              source: initialImage,
+              dataUrl: loaded.dataUrl,
+              fingerprint: loaded.fingerprint,
+              model: loaded.model,
+              baselineState: requestBaseline,
+            };
+
+        equivalentImportPendingRef.current = semanticallyUnchanged;
+        loadedImportedSkinRef.current = next;
+        setLoadedImportedSkin(next);
+        if (!semanticallyUnchanged) setActivatedCategories([]);
+        setImportLoadState({ source: initialImage, model: initialModel, status: 'ready', error: null });
+
+        if (semanticallyUnchanged) {
+          notifyHost(onStatusChangeRef.current, 'ready');
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!current) return;
+        equivalentImportPendingRef.current = false;
+        const error = initialSkinErrorFrom(cause);
+        setImportLoadState({ source: initialImage, model: initialModel, status: 'error', error });
+        notifyHost(onStatusChangeRef.current, 'error');
+        notifyHost(onErrorRef.current, error);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [initialImage, initialModel]);
+
+  useEffect(() => {
     if (!value) persistence?.save(serializeSkinCrafterState(state));
   }, [persistence, state, value]);
+
+  const importedLoadedCurrent = hasImportedRequest
+    && initialModel !== null
+    && loadedImportedSkin?.source === initialImage
+    && loadedImportedSkin.model === initialModel;
+  const effectiveActiveCategories = useMemo(() => {
+    if (!importedLoadedCurrent || !loadedImportedSkin) return [];
+
+    const active = new Set<AppearanceCategoryId>(activatedCategories);
+    for (const category of appearanceCategories) {
+      if (state.appearance[category.id] !== loadedImportedSkin.baselineState.appearance[category.id]) {
+        active.add(category.id);
+      }
+    }
+    return appearanceCategories
+      .map((category) => category.id)
+      .filter((category) => active.has(category));
+  }, [activatedCategories, importedLoadedCurrent, loadedImportedSkin, state.appearance]);
 
   const {
     race,
@@ -169,7 +313,19 @@ export default function SkinCrafterEditor({
     accessory,
   } = state.appearance;
   const layerOrderKey = JSON.stringify(state.layerOrder);
+  const activeCategoriesKey = JSON.stringify(effectiveActiveCategories);
   const canonicalAssetBaseUrl = assetBaseUrl?.replace(/\/+$/, '') || undefined;
+  const sexWasEdited = effectiveActiveCategories.includes('sex');
+  const compositionSex = importedLoadedCurrent && loadedImportedSkin && !sexWasEdited
+    ? loadedImportedSkin.model === 'slim' ? 'Female' : 'Male'
+    : sex;
+  const effectiveModel: SkinCrafterSkinModel = importedLoadedCurrent
+    && loadedImportedSkin
+    && !sexWasEdited
+    ? loadedImportedSkin.model
+    : sex === 'Female' ? 'slim' : 'classic';
+  const importedFingerprint = importedLoadedCurrent ? loadedImportedSkin?.fingerprint ?? null : null;
+  const importedDataUrl = importedLoadedCurrent ? loadedImportedSkin?.dataUrl ?? null : null;
   const generationKey = JSON.stringify([
     race,
     sex,
@@ -185,14 +341,39 @@ export default function SkinCrafterEditor({
     accessory,
     layerOrderKey,
     canonicalAssetBaseUrl ?? null,
+    importedFingerprint,
+    effectiveModel,
+    activeCategoriesKey,
   ]);
   const currentGeneratedSkin = generatedSkin?.key === generationKey ? generatedSkin : null;
-  const generationStatus: SkinCrafterGenerationStatus = generationState.key === generationKey
-    ? generationState.status
-    : 'idle';
-  const generationError = generationState.key === generationKey ? generationState.error : null;
+  const importLoadIsCurrent = hasImportedRequest
+    && importLoadState.source === initialImage
+    && importLoadState.model === initialModel;
+  const importIsPending = hasImportedRequest
+    && (!importLoadIsCurrent || importLoadState.status === 'loading');
+  const importHasError = importLoadIsCurrent && importLoadState.status === 'error';
+  const generationStatus: SkinCrafterGenerationStatus = importIsPending
+    ? 'generating'
+    : importHasError
+      ? 'error'
+      : generationState.key === generationKey
+        ? generationState.status
+        : 'idle';
+  const generationError = importHasError
+    ? importLoadState.error
+    : generationState.key === generationKey
+      ? generationState.error
+      : null;
 
   useEffect(() => {
+    if (hasImportedRequest && !importedLoadedCurrent) return undefined;
+
+    if (equivalentImportPendingRef.current) {
+      const currentImportAlreadyGenerated = lastGeneratedKeyRef.current === generationKey;
+      equivalentImportPendingRef.current = false;
+      if (currentImportAlreadyGenerated) return undefined;
+    }
+
     let current = true;
     const appearanceSnapshot: AppearanceState = {
       race,
@@ -208,7 +389,12 @@ export default function SkinCrafterEditor({
       shoes,
       accessory,
     };
+    const compositionAppearanceSnapshot: AppearanceState = {
+      ...appearanceSnapshot,
+      sex: compositionSex,
+    };
     const layerOrderSnapshot = JSON.parse(layerOrderKey) as TextureLayerCategoryId[];
+    const activeCategorySnapshot = JSON.parse(activeCategoriesKey) as AppearanceCategoryId[];
 
     setGenerationState({ key: generationKey, status: 'generating', error: null });
     notifyHost(onStatusChangeRef.current, 'generating');
@@ -217,15 +403,28 @@ export default function SkinCrafterEditor({
       let result: { dataUrl: string; output: SkinCrafterSkinOutput };
 
       try {
-        const textureInputs = buildTextureInputs(
-          appearanceSnapshot,
-          layerOrderSnapshot,
-          canonicalAssetBaseUrl
-        );
-        const dataUrl = await combineTextures(textureInputs);
+        let dataUrl: string;
+        if (importedDataUrl) {
+          const textureInputs = buildTextureInputsForCategories(
+            compositionAppearanceSnapshot,
+            layerOrderSnapshot,
+            activeCategorySnapshot,
+            canonicalAssetBaseUrl
+          );
+          dataUrl = textureInputs.filter(Boolean).length === 0
+            ? importedDataUrl
+            : await combineTextures([importedDataUrl, ...textureInputs]);
+        } else {
+          const textureInputs = buildTextureInputs(
+            appearanceSnapshot,
+            layerOrderSnapshot,
+            canonicalAssetBaseUrl
+          );
+          dataUrl = await combineTextures(textureInputs);
+        }
         result = {
           dataUrl,
-          output: createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot),
+          output: createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot, effectiveModel),
         };
       } catch (cause) {
         if (!current) return;
@@ -239,6 +438,7 @@ export default function SkinCrafterEditor({
 
       if (!current) return;
 
+      lastGeneratedKeyRef.current = generationKey;
       setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
       setGenerationState({ key: generationKey, status: 'ready', error: null });
       notifyHost(onSkinChangeRef.current, result.output);
@@ -252,13 +452,19 @@ export default function SkinCrafterEditor({
     };
   }, [
     accessory,
+    activeCategoriesKey,
     canonicalAssetBaseUrl,
+    compositionSex,
+    effectiveModel,
     eyes,
     eyesColor,
     generationKey,
     hair,
     hairColor,
+    hasImportedRequest,
     hat,
+    importedDataUrl,
+    importedLoadedCurrent,
     layerOrderKey,
     pants,
     race,
@@ -288,7 +494,7 @@ export default function SkinCrafterEditor({
         left={
           <PreviewArea
             texture={combinedTexture}
-            model={state.appearance.sex === 'Female' ? 'slim' : 'classic'}
+            model={effectiveModel}
             footerHeight={previewBottomOffset}
             t={t}
             onSave={handleSave}

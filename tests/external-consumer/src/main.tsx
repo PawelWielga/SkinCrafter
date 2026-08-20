@@ -7,6 +7,7 @@ import {
   parseSkinCrafterState,
   serializeSkinCrafterState,
   type SkinCrafterEditorProps,
+  type SkinCrafterImportedInitialSkin,
   type SkinCrafterSerializedState,
   type SkinCrafterSkinOutput,
 } from '@pawelwielga/skincrafter-editor';
@@ -23,9 +24,16 @@ if (!parsedState.success) {
 
 document.documentElement.dataset.skinStateSchema = String(serializedState.schemaVersion);
 
+const importedSkin: SkinCrafterImportedInitialSkin = {
+  image: new Blob([new Uint8Array()], { type: 'image/png' }),
+  model: 'slim',
+  appearance: parsedState.state.appearance,
+  layerOrder: parsedState.state.layerOrder,
+};
+
 const editorProps: SkinCrafterEditorProps = {
   locale: 'en',
-  initialSkin: parsedState.state,
+  initialSkin: importedSkin,
   onSkinChange: (skin: SkinCrafterSkinOutput) => {
     document.documentElement.dataset.skinModel = skin.metadata.model;
   },
