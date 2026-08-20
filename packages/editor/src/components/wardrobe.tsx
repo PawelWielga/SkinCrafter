@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import SkinCrafterIcon from './icon';
+import { createLayerPreviewOrder, type LayerDropPosition } from './layerDrag';
 import OptionCard from './optionCard';
 import PanelSection from './panelSection';
 import {
@@ -22,8 +23,6 @@ interface WardrobeProps {
   assetBaseUrl?: string;
 }
 
-type LayerDropPosition = 'before' | 'after';
-
 interface LayerDropHint {
   targetLayer: TextureLayerCategoryId;
   position: LayerDropPosition;
@@ -42,27 +41,6 @@ const layerOrdersEqual = (
   left: TextureLayerCategoryId[],
   right: TextureLayerCategoryId[]
 ): boolean => left.length === right.length && left.every((layer, index) => layer === right[index]);
-
-export const createLayerPreviewOrder = (
-  layerOrder: TextureLayerCategoryId[],
-  sourceLayer: TextureLayerCategoryId,
-  targetLayer: TextureLayerCategoryId,
-  position: LayerDropPosition
-): TextureLayerCategoryId[] => {
-  if (!layerOrder.includes(sourceLayer) || !layerOrder.includes(targetLayer)) {
-    return [...layerOrder];
-  }
-
-  if (sourceLayer === targetLayer) {
-    return [...layerOrder];
-  }
-
-  const next = layerOrder.filter((layer) => layer !== sourceLayer);
-  const targetIndex = next.indexOf(targetLayer);
-  const insertionIndex = targetIndex + (position === 'after' ? 1 : 0);
-  next.splice(insertionIndex, 0, sourceLayer);
-  return next;
-};
 
 export default function Wardrobe({
   appearance,

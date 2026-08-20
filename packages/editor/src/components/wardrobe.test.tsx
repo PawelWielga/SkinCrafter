@@ -6,7 +6,8 @@ import {
   type TextureLayerCategoryId,
 } from '../data/appearance';
 import { translate, type TranslationKey } from '../i18n/translations';
-import Wardrobe, { createLayerPreviewOrder } from './wardrobe';
+import { createLayerPreviewOrder } from './layerDrag';
+import Wardrobe from './wardrobe';
 
 const t = (key: TranslationKey): string => translate('en', key);
 
