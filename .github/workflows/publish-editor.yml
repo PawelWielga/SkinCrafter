@@ -36,13 +36,13 @@ jobs:
       - name: Pack versioned npm-compatible artifact
         run: |
           mkdir -p artifacts
-          npm pack -w @pawelwielga/skincrafter-editor --pack-destination ./artifacts
+          npm pack -w @dihor/skincrafter-editor --pack-destination ./artifacts
       - name: Attach package tarball to GitHub release
         run: gh release upload "${{ github.event.release.tag_name }}" artifacts/*.tgz --clobber
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Publish public npm package
         if: env.NPM_TOKEN != ''
-        run: npm publish -w @pawelwielga/skincrafter-editor --access public --provenance
+        run: npm publish -w @dihor/skincrafter-editor --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
