@@ -242,7 +242,13 @@ export default function Wardrobe({
 
     for (const card of cards) {
       const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
-      if (!rawLayer || !isTextureLayerCategory(rawLayer)) continue;
+      if (
+        !rawLayer ||
+        !isTextureLayerCategory(rawLayer) ||
+        rawLayer === draggingLayerRef.current
+      ) {
+        continue;
+      }
 
       const rect = card.getBoundingClientRect();
       if (clientY < rect.top + rect.height / 2) {
@@ -254,7 +260,14 @@ export default function Wardrobe({
       }
     }
 
-    const lastCard = cards.at(-1);
+    const lastCard = cards.findLast((card) => {
+      const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
+      return Boolean(
+        rawLayer &&
+          isTextureLayerCategory(rawLayer) &&
+          rawLayer !== draggingLayerRef.current
+      );
+    });
     const lastLayer = lastCard?.dataset.layerId as AppearanceCategoryId | undefined;
     return lastLayer && isTextureLayerCategory(lastLayer)
       ? { targetLayer: lastLayer, position: 'after' }
