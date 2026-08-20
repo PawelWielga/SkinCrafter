@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Library asset URLs must stay relative to the emitted module so installed packages work
+  // under arbitrary host routes instead of assuming the application is served from `/`.
+  base: './',
   build: {
     lib: {
       entry: 'src/index.ts',
@@ -12,6 +15,9 @@ export default defineConfig({
     },
     rollupOptions: {
       external: ['react', 'react/jsx-runtime', 'react-dom', 'three'],
+      output: {
+        assetFileNames: 'assets/[name]-[hash][extname]',
+      },
     },
   },
   test: {
