@@ -1,18 +1,11 @@
-export type TextureBlendMode = 'source-over' | 'multiply';
-export type TextureTintTarget = 'all' | 'nonWhite';
-
 export interface TextureLayerInput {
   url: string | null;
   tint?: string;
-  blendMode?: TextureBlendMode;
-  tintTarget?: TextureTintTarget;
 }
 
 export interface TextureLayer {
   url: string;
   tint?: string;
-  blendMode: TextureBlendMode;
-  tintTarget: TextureTintTarget;
 }
 
 export interface RgbaPixel {
@@ -38,17 +31,21 @@ export class TextureLoadError extends Error {
 
 const MINECRAFT_SKIN_SIZE = 64;
 
+/**
+ * Maximum RGB channel spread that is still considered authored grayscale.
+ * A tolerance of 4/255 absorbs tiny export noise without tinting visibly chromatic details.
+ */
+export const GRAYSCALE_TINT_TOLERANCE = 4;
+
 const normalizeLayer = (layer: TextureInput): TextureLayer | null => {
   if (!layer) return null;
   if (typeof layer === 'string') {
-    return { url: layer, blendMode: 'source-over', tintTarget: 'all' };
+    return { url: layer };
   }
   return layer.url
     ? {
         url: layer.url,
         tint: layer.tint,
-        blendMode: layer.blendMode ?? 'source-over',
-        tintTarget: layer.tintTarget ?? 'all',
       }
     : null;
 };
@@ -70,33 +67,62 @@ export function hexToPixel(hex: string): RgbaPixel {
   };
 }
 
-export function multiplyPixel(base: RgbaPixel, tint: RgbaPixel): RgbaPixel {
-  return {
-    r: Math.round((base.r * tint.r) / 255),
-    g: Math.round((base.g * tint.g) / 255),
-    b: Math.round((base.b * tint.b) / 255),
-    a: base.a,
-  };
+function isProtectedBlackOrWhite(pixel: RgbaPixel): boolean {
+  const isBlack = pixel.r === 0 && pixel.g === 0 && pixel.b === 0;
+  const isWhite = pixel.r === 255 && pixel.g === 255 && pixel.b === 255;
+  return isBlack || isWhite;
 }
 
-export function isWhitePixel(pixel: RgbaPixel): boolean {
-  return pixel.r >= 250 && pixel.g >= 250 && pixel.b >= 250;
+export function isTintableGrayscalePixel(pixel: RgbaPixel): boolean {
+  if (pixel.a === 0 || isProtectedBlackOrWhite(pixel)) {
+    return false;
+  }
+
+  const darkest = Math.min(pixel.r, pixel.g, pixel.b);
+  const lightest = Math.max(pixel.r, pixel.g, pixel.b);
+  return lightest - darkest <= GRAYSCALE_TINT_TOLERANCE;
 }
 
-export function tintNonWhitePixel(base: RgbaPixel, tint: RgbaPixel): RgbaPixel {
-  if (base.a === 0 || isWhitePixel(base)) {
+export function tintGrayscalePixel(base: RgbaPixel, tint: RgbaPixel): RgbaPixel {
+  if (!isTintableGrayscalePixel(base)) {
     return base;
   }
 
+  const grayscaleIntensity = (base.r + base.g + base.b) / (3 * 255);
   return {
-    r: tint.r,
-    g: tint.g,
-    b: tint.b,
+    r: Math.round(tint.r * grayscaleIntensity),
+    g: Math.round(tint.g * grayscaleIntensity),
+    b: Math.round(tint.b * grayscaleIntensity),
     a: base.a,
   };
 }
 
-const drawNonWhiteTintLayer = (
+export function tintGrayscalePixelBuffer(
+  source: Uint8ClampedArray,
+  tint: RgbaPixel
+): Uint8ClampedArray {
+  const result = new Uint8ClampedArray(source);
+
+  for (let index = 0; index < result.length; index += 4) {
+    const next = tintGrayscalePixel(
+      {
+        r: source[index],
+        g: source[index + 1],
+        b: source[index + 2],
+        a: source[index + 3],
+      },
+      tint
+    );
+    result[index] = next.r;
+    result[index + 1] = next.g;
+    result[index + 2] = next.b;
+    result[index + 3] = next.a;
+  }
+
+  return result;
+}
+
+const drawTintedLayer = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   tint: string,
@@ -116,22 +142,7 @@ const drawNonWhiteTintLayer = (
   layerCtx.drawImage(img, 0, 0, width, height);
 
   const imageData = layerCtx.getImageData(0, 0, width, height);
-  const tintPixel = hexToPixel(tint);
-
-  for (let index = 0; index < imageData.data.length; index += 4) {
-    const base = {
-      r: imageData.data[index],
-      g: imageData.data[index + 1],
-      b: imageData.data[index + 2],
-      a: imageData.data[index + 3],
-    };
-    const next = tintNonWhitePixel(base, tintPixel);
-    imageData.data[index] = next.r;
-    imageData.data[index + 1] = next.g;
-    imageData.data[index + 2] = next.b;
-    imageData.data[index + 3] = next.a;
-  }
-
+  imageData.data.set(tintGrayscalePixelBuffer(imageData.data, hexToPixel(tint)));
   layerCtx.putImageData(imageData, 0, 0);
   ctx.drawImage(layerCanvas, 0, 0);
 };
@@ -140,8 +151,6 @@ const drawLayer = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   tint: string | undefined,
-  blendMode: TextureBlendMode,
-  tintTarget: TextureTintTarget,
   width: number,
   height: number
 ): void => {
@@ -150,28 +159,7 @@ const drawLayer = (
     return;
   }
 
-  if (tintTarget === 'nonWhite') {
-    drawNonWhiteTintLayer(ctx, img, tint, width, height);
-    return;
-  }
-
-  const layerCanvas = document.createElement('canvas');
-  layerCanvas.width = width;
-  layerCanvas.height = height;
-  const layerCtx = layerCanvas.getContext('2d', { willReadFrequently: true });
-  if (!layerCtx) {
-    ctx.drawImage(img, 0, 0, width, height);
-    return;
-  }
-  layerCtx.imageSmoothingEnabled = false;
-
-  layerCtx.drawImage(img, 0, 0, width, height);
-  layerCtx.globalCompositeOperation = blendMode;
-  layerCtx.fillStyle = tint;
-  layerCtx.fillRect(0, 0, layerCanvas.width, layerCanvas.height);
-  layerCtx.globalCompositeOperation = 'destination-in';
-  layerCtx.drawImage(img, 0, 0, width, height);
-  ctx.drawImage(layerCanvas, 0, 0);
+  drawTintedLayer(ctx, img, tint, width, height);
 };
 
 export default async function combineTextures(inputs: TextureInput[]): Promise<string> {
@@ -205,7 +193,7 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
 
   images.forEach((img, index) => {
     const layer = layers[index];
-    drawLayer(ctx, img, layer.tint, layer.blendMode, layer.tintTarget, canvas.width, canvas.height);
+    drawLayer(ctx, img, layer.tint, canvas.width, canvas.height);
   });
 
   return canvas.toDataURL('image/png');
