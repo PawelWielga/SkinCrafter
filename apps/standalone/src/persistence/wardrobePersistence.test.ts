@@ -3,7 +3,7 @@ import {
   defaultAppearance,
   normalizeTextureLayerOrder,
   serializeSkinCrafterState,
-} from '@pawelwielga/skincrafter-editor';
+} from '@dihor/skincrafter-editor';
 import {
   WARDROBE_STATE_STORAGE_KEY,
   wardrobePersistence,
