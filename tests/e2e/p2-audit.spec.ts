@@ -112,13 +112,12 @@ test('mobile preview survives portrait-landscape-portrait resizing without canva
         previewSurface.evaluate((surface) => {
           const previewCanvas = surface.querySelector('canvas');
           if (!(previewCanvas instanceof HTMLCanvasElement)) return false;
-          const surfaceRect = surface.getBoundingClientRect();
           const canvasRect = previewCanvas.getBoundingClientRect();
           return (
-            surfaceRect.width > 100 &&
-            surfaceRect.height > 100 &&
-            Math.abs(surfaceRect.width - canvasRect.width) <= 2 &&
-            Math.abs(surfaceRect.height - canvasRect.height) <= 2
+            surface.clientWidth > 100 &&
+            surface.clientHeight > 100 &&
+            Math.abs(surface.clientWidth - canvasRect.width) <= 2 &&
+            Math.abs(surface.clientHeight - canvasRect.height) <= 2
           );
         })
       )
