@@ -50,7 +50,7 @@ See [`packages/editor/README.md`](packages/editor/README.md) for installation, c
 - `/`: creator rendered by `SkinCrafterEditor` from the package.
 - `/mcskinview`: PlayerDB username lookup rendered with the package `SkinPreview`.
 
-The standalone application persists current wardrobe data under `skincrafterState` using the package's versioned serialization format. Existing `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys are migrated on load, and the aggregate legacy keys remain synchronized on save for backward compatibility. Storage ownership stays in the standalone host rather than the reusable package.
+The standalone application persists current wardrobe data under `skincrafterState` using the package's versioned serialization format. Existing `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys are migrated on load, and the aggregate legacy keys remain synchronized on save for backward compatibility. If an older standalone build later changes the synchronized aggregate keys, the next current build detects that valid divergence and migrates those newer user choices forward instead of overwriting them with stale `skincrafterState`. A `skincrafterState` written by an unsupported future schema is preserved byte-for-byte and persistence writes are suppressed until that record is removed or a compatible build is used. Storage ownership stays in the standalone host rather than the reusable package.
 
 ## Distribution
 
