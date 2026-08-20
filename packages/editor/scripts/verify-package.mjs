@@ -4,12 +4,13 @@ import {
   readdirSync,
   readFileSync,
 } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
+import { extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const packageJsonPath = join(packageRoot, 'package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+const distRoot = join(packageRoot, 'dist');
 
 function fail(message) {
   throw new Error(`[package verification] ${message}`);
@@ -30,12 +31,16 @@ function collectStringTargets(value, targets = new Set()) {
   return targets;
 }
 
-function listDeclarationFiles(directory) {
+function listFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = join(directory, entry.name);
-    if (entry.isDirectory()) return listDeclarationFiles(entryPath);
-    return entry.isFile() && entry.name.endsWith('.d.ts') ? [entryPath] : [];
+    if (entry.isDirectory()) return listFiles(entryPath);
+    return entry.isFile() ? [entryPath] : [];
   });
+}
+
+function toPackagePath(filePath) {
+  return relative(packageRoot, filePath).replaceAll('\\', '/');
 }
 
 if (packageJson.type !== 'module') {
@@ -75,7 +80,8 @@ for (const target of exportedTargets) {
   }
 }
 
-const declarations = listDeclarationFiles(join(packageRoot, 'dist'));
+const distFiles = listFiles(distRoot);
+const declarations = distFiles.filter((filePath) => filePath.endsWith('.d.ts'));
 for (const declarationPath of declarations) {
   const declaration = readFileSync(declarationPath, 'utf8');
   if (/^\s*import\s+['"][^'"]+\.css['"];?\s*$/m.test(declaration)) {
@@ -89,6 +95,34 @@ for (const declarationPath of declarations) {
       fail(`extensionless relative declaration specifier ${match[2]} in ${declarationPath}`);
     }
   }
+}
+
+const indexJsPath = join(distRoot, 'index.js');
+const indexJs = readFileSync(indexJsPath, 'utf8');
+if (/data:image\/png(?:;[^,]*)?,/i.test(indexJs)) {
+  fail('primary JavaScript bundle contains an inline PNG data URL.');
+}
+
+const emittedPngFiles = distFiles.filter((filePath) => filePath.endsWith('.png'));
+if (emittedPngFiles.length === 0) {
+  fail('editor build emitted no PNG assets; wardrobe textures must remain separate files.');
+}
+
+for (const assetPath of emittedPngFiles) {
+  const packagePath = toPackagePath(assetPath);
+  if (!/^dist\/assets\/[^/]+-[A-Za-z0-9_-]+\.png$/.test(packagePath)) {
+    fail(`wardrobe asset is not emitted as a cache-safe hashed file: ${packagePath}`);
+  }
+}
+
+const referencedPngAssets = new Set(
+  Array.from(indexJs.matchAll(/assets\/[^"'`\\\s)]+\.png/g), (match) => match[0])
+);
+if (referencedPngAssets.size !== emittedPngFiles.length) {
+  fail(
+    `primary bundle references ${referencedPngAssets.size} emitted PNG assets, ` +
+      `but ${emittedPngFiles.length} PNG files were emitted.`
+  );
 }
 
 const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -108,6 +142,13 @@ for (const target of exportedTargets) {
   }
 }
 
+for (const assetPath of emittedPngFiles) {
+  const packedPath = toPackagePath(assetPath);
+  if (!packedPaths.has(packedPath)) {
+    fail(`emitted wardrobe asset is missing from npm pack output: ${packedPath}`);
+  }
+}
+
 const allowedTopLevelFiles = /^(?:README(?:\.[^/]+)?|LICEN[CS]E(?:\.[^/]+)?|NOTICE(?:\.[^/]+)?|CHANGELOG(?:\.[^/]+)?|package\.json)$/i;
 for (const packedFile of packResult.files) {
   const path = packedFile.path;
@@ -117,5 +158,6 @@ for (const packedFile of packResult.files) {
 }
 
 console.log(
-  `Verified ESM exports, ${declarations.length} declaration files and ${packResult.files.length} packed files.`
+  `Verified ESM exports, ${declarations.length} declaration files, ` +
+    `${emittedPngFiles.length} emitted PNG assets and ${packResult.files.length} packed files.`
 );
