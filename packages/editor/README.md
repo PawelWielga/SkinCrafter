@@ -186,9 +186,9 @@ const persistence: SkinCrafterPersistenceAdapter = {
 
 A successful parse includes `sourceSchemaVersion`, `migrated`, `notices`, the runtime `state`, and the canonical current `serializedState`. Hosts can therefore distinguish a clean current-schema load from a migration or fallback instead of guessing whether a default value was intentional.
 
-When a future release changes the persisted semantic model incompatibly, the package will advance `schemaVersion` and add deterministic migrations. Storage/database selection remains a host concern.
+When a future release changes the persisted semantic model incompatibly, the package will advance `schemaVersion` and add deterministic migrations. Storage/database selection remains a host concern. Hosts that encounter `unsupported_schema_version` should preserve the original record rather than replacing it with defaults from an older package release.
 
-The standalone SkinCrafter site migrates its historical `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys into the versioned `skincrafterState` entry. After a successful migration it reads the versioned entry on later loads, while current saves keep the old aggregate keys synchronized for backward compatibility with older standalone builds.
+The standalone SkinCrafter site migrates its historical `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys into the versioned `skincrafterState` entry. Current saves keep the aggregate legacy keys synchronized for backward compatibility with older standalone builds. If those valid aggregate keys later diverge from `skincrafterState`, the standalone treats the divergence as a newer edit made by an older compatible build and migrates those user choices forward into the current schema. If `skincrafterState` uses an unsupported future schema, the standalone renders with normal in-memory defaults but preserves that record and suppresses persistence writes until the incompatible record is removed or a compatible build is used, preventing an older build from downgrading newer persisted data.
 
 ## Localization
 
