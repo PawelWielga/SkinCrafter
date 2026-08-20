@@ -127,20 +127,20 @@ function buildTextureInputForLayer(
   assetBaseUrl?: string
 ): TextureInput {
   if (layer === 'race') {
-    return { url: getRaceTextureUrl(appearance.race as Race, appearance.sex, assetBaseUrl), tint: appearance.skinColor, blendMode: 'multiply' };
+    return { url: getRaceTextureUrl(appearance.race as Race, appearance.sex, assetBaseUrl), tint: appearance.skinColor };
   }
   if (layer === 'hat') return getHatTextureUrl(appearance.hat as Hat, assetBaseUrl);
   if (layer === 'shirt') {
     const url = getShirtTextureUrl(appearance.shirt as Shirt, assetBaseUrl);
-    return url ? { url, blendMode: 'source-over' } : null;
+    return url ? { url } : null;
   }
   if (layer === 'pants') {
     const url = getPantsTextureUrl(appearance.pants as Pants, assetBaseUrl);
-    return url ? { url, blendMode: 'source-over' } : null;
+    return url ? { url } : null;
   }
   if (layer === 'eyes') {
     const option = getOptions('eyes', appearance, assetBaseUrl).find((item) => item.id === appearance.eyes);
-    return option?.texture ? { url: option.texture, tint: appearance.eyesColor, blendMode: 'source-over', tintTarget: 'nonWhite' } : null;
+    return option?.texture ? { url: option.texture, tint: appearance.eyesColor } : null;
   }
   const option = getOptions(layer, appearance, assetBaseUrl).find((item) => item.id === appearance[layer]);
   return option?.texture ?? null;
