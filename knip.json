@@ -1,0 +1,54 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "eslint.config.js",
+        "playwright.config.ts",
+        "scripts/*.mjs",
+        "tests/e2e/*.ts"
+      ],
+      "project": [
+        "eslint.config.js",
+        "playwright.config.ts",
+        "scripts/**/*.mjs",
+        "tests/e2e/**/*.ts"
+      ]
+    },
+    "packages/editor": {
+      "entry": [
+        "src/index.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/setupTests.ts",
+        "scripts/*.mjs",
+        "type-tests/*.ts",
+        "vite.config.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.mjs",
+        "type-tests/**/*.ts",
+        "vite.config.ts"
+      ],
+      "ignoreDependencies": [
+        "react-dom"
+      ]
+    },
+    "apps/standalone": {
+      "entry": [
+        "src/main.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/setupTests.ts",
+        "scripts/*.mjs",
+        "vite.config.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.mjs",
+        "vite.config.ts"
+      ]
+    }
+  }
+}
