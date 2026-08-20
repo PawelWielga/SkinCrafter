@@ -1,5 +1,5 @@
 {
-  "name": "@pawelwielga/skincrafter-editor",
+  "name": "@dihor/skincrafter-editor",
   "version": "0.1.0",
   "description": "Reusable React/TypeScript Minecraft skin editor from SkinCrafter",
   "type": "module",
