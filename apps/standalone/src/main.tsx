@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import '@pawelwielga/skincrafter-editor/styles.css';
+import '@dihor/skincrafter-editor/styles.css';
 import './styles/main.css';
 import App from './pages/App';
 
