@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
 } from 'node:fs';
@@ -23,6 +24,7 @@ const rootPackageLock = JSON.parse(
   readFileSync(join(repositoryRoot, 'package-lock.json'), 'utf8')
 );
 const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const consumerBasePath = '/character/';
 
 function fail(message) {
   throw new Error(`[external consumer] ${message}`);
@@ -50,6 +52,14 @@ function collectStringTargets(value, targets = new Set()) {
   }
 
   return targets;
+}
+
+function listFiles(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(directory, entry.name);
+    if (entry.isDirectory()) return listFiles(entryPath);
+    return entry.isFile() ? [entryPath] : [];
+  });
 }
 
 function getLockedSpec(name) {
@@ -134,6 +144,13 @@ function verifyInstalledArtifact(consumerRoot, tarballPath, packResult) {
     fail(`unexpected stylesheet export target: ${JSON.stringify(styleExport)}`);
   }
 
+  const packedTextureAssets = (packResult.files ?? []).filter(
+    (file) => /^dist\/assets\/[^/]+\.png$/.test(file.path)
+  );
+  if (packedTextureAssets.length === 0) {
+    fail('packed editor artifact contains no emitted texture assets.');
+  }
+
   for (const packedFile of packResult.files ?? []) {
     if (!packedFile.path.startsWith('dist/')) {
       continue;
@@ -144,7 +161,7 @@ function verifyInstalledArtifact(consumerRoot, tarballPath, packResult) {
   }
 }
 
-function verifyBrowserBuild(consumerRoot) {
+function verifyBrowserBuild(consumerRoot, packResult) {
   const distRoot = join(consumerRoot, 'dist');
   const indexPath = join(distRoot, 'index.html');
   if (!existsSync(indexPath)) {
@@ -152,19 +169,54 @@ function verifyBrowserBuild(consumerRoot) {
   }
 
   const indexHtml = readFileSync(indexPath, 'utf8');
-  const assetPaths = Array.from(
-    indexHtml.matchAll(/(?:src|href)=["']((?:\.\/|\/)?assets\/[^"']+)["']/g),
+  const entryAssetPaths = Array.from(
+    indexHtml.matchAll(/(?:src|href)=["']([^"']+\/assets\/[^"']+)["']/g),
     (match) => match[1]
   );
-  if (assetPaths.length === 0) {
+  if (entryAssetPaths.length === 0) {
     fail('Vite consumer build did not reference any generated JS/CSS assets.');
   }
 
-  for (const assetPath of assetPaths) {
-    const normalizedPath = assetPath.replace(/^\.\//, '').replace(/^\//, '');
+  for (const assetPath of entryAssetPaths) {
+    if (!assetPath.startsWith(consumerBasePath)) {
+      fail(`Vite consumer entry asset is not rooted below ${consumerBasePath}: ${assetPath}`);
+    }
+    const normalizedPath = assetPath.slice(consumerBasePath.length);
     const absolutePath = join(distRoot, normalizedPath);
     if (!existsSync(absolutePath)) {
       fail(`Vite consumer output references a missing asset: ${assetPath}`);
+    }
+  }
+
+  const distFiles = listFiles(distRoot);
+  const runtimeTextFiles = distFiles.filter(
+    (filePath) => filePath.endsWith('.js') || filePath.endsWith('.css')
+  );
+  const runtimeText = runtimeTextFiles.map((filePath) => readFileSync(filePath, 'utf8')).join('\n');
+
+  if (/['"`]\/assets\/[^'"`]+\.png/i.test(runtimeText)) {
+    fail('external consumer contains a root-relative texture URL that ignores the non-root base.');
+  }
+
+  const packedTextureCount = (packResult.files ?? []).filter(
+    (file) => /^dist\/assets\/[^/]+\.png$/.test(file.path)
+  ).length;
+  const consumerTextureAssets = distFiles.filter((filePath) => filePath.endsWith('.png'));
+  if (consumerTextureAssets.length !== packedTextureCount) {
+    fail(
+      `external consumer emitted ${consumerTextureAssets.length} PNG assets, ` +
+        `but the installed package contains ${packedTextureCount} wardrobe PNG assets.`
+    );
+  }
+
+  for (const texturePath of consumerTextureAssets) {
+    const textureName = basename(texturePath);
+    if (!runtimeText.includes(textureName)) {
+      fail(`external consumer emitted an unreferenced texture asset: ${textureName}`);
+    }
+    const textureBase64 = readFileSync(texturePath).toString('base64');
+    if (runtimeText.includes(textureBase64)) {
+      fail(`external consumer runtime embeds wardrobe texture bytes: ${textureName}`);
     }
   }
 }
@@ -225,11 +277,12 @@ try {
   run(process.execPath, [tscPath, '-p', 'tsconfig.nodenext.json'], { cwd: consumerRoot });
 
   const vitePath = join(consumerRoot, 'node_modules', 'vite', 'bin', 'vite.js');
-  run(process.execPath, [vitePath, 'build'], { cwd: consumerRoot });
-  verifyBrowserBuild(consumerRoot);
+  run(process.execPath, [vitePath, 'build', '--base', consumerBasePath], { cwd: consumerRoot });
+  verifyBrowserBuild(consumerRoot, packResult);
 
   console.log(
-    `External consumer smoke test passed for ${editorPackageJson.name}@${editorPackageJson.version} from ${packResult.filename}.`
+    `External consumer smoke test passed for ${editorPackageJson.name}@${editorPackageJson.version} ` +
+      `from ${packResult.filename} below ${consumerBasePath}.`
   );
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });
