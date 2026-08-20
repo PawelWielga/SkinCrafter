@@ -90,6 +90,9 @@
 .skincrafter-editor .model-placeholder { min-height: 300px; }
 .skincrafter-editor .customization-panel { scrollbar-width: none; -ms-overflow-style: none; }
 .skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
+@media (max-width: 767px) {
+  .skincrafter-editor .layer-order-handle { display: none; }
+}
 @media (min-width: 768px) {
   .skincrafter-editor .skincrafter-preview-surface {
     height: auto;
