@@ -7,7 +7,7 @@ SkinCrafter is a React + TypeScript Minecraft skin creator. The repository is no
 ```text
 SkinCrafter/
 ├── packages/
-│   └── editor/       # @pawelwielga/skincrafter-editor
+│   └── editor/       # @dihor/skincrafter-editor
 └── apps/
     └── standalone/   # skincrafter.dihor.pl / GitHub Pages app
 ```
@@ -41,7 +41,7 @@ The root commands validate both workspaces. The e2e suite proves that the standa
 
 ## Reusable editor package
 
-The public package is `@pawelwielga/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, versioned state parse/serialize helpers, locale helpers and documented host contracts.
+The public package is `@dihor/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, versioned state parse/serialize helpers, locale helpers and documented host contracts.
 
 See [`packages/editor/README.md`](packages/editor/README.md) for installation, callbacks, `Blob`/`File` skin output, controlled state, persistence adapters, schema migrations, localization, theming, asset handling and SemVer publishing.
 
