@@ -1,5 +1,5 @@
 import React, { useCallback, useState, type ChangeEvent, type FormEvent } from 'react';
-import { SkinPreview } from '@pawelwielga/skincrafter-editor';
+import { SkinPreview } from '@dihor/skincrafter-editor';
 import fetchSkin from '../api/fetchSkin';
 import AppShell from '../components/appShell';
 
