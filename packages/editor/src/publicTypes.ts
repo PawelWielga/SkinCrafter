@@ -6,15 +6,30 @@ import type {
 } from './data/appearance';
 import type { Language } from './i18n/translations';
 
+export type SkinCrafterSkinModel = 'classic' | 'slim';
+
 export interface SkinCrafterState {
   appearance: AppearanceState;
   layerOrder: TextureLayerCategoryId[];
 }
 
-export interface SkinCrafterInitialSkin {
+export interface SkinCrafterSemanticInitialSkin {
   appearance?: Partial<AppearanceState>;
   layerOrder?: readonly string[];
+  image?: never;
+  model?: never;
 }
+
+export interface SkinCrafterImportedInitialSkin {
+  appearance?: Partial<AppearanceState>;
+  layerOrder?: readonly string[];
+  image: Blob;
+  model: SkinCrafterSkinModel;
+}
+
+export type SkinCrafterInitialSkin =
+  | SkinCrafterSemanticInitialSkin
+  | SkinCrafterImportedInitialSkin;
 
 export interface SkinCrafterSerializedStateV1 {
   schemaVersion: 1;
@@ -63,7 +78,7 @@ export type SkinCrafterStateParseResult =
   };
 
 export interface SkinCrafterPersistenceAdapter {
-  load: () => SkinCrafterInitialSkin | SkinCrafterState | null;
+  load: () => SkinCrafterSemanticInitialSkin | SkinCrafterState | null;
   save: (state: SkinCrafterSerializedState) => void;
 }
 
@@ -71,7 +86,7 @@ export interface SkinCrafterSkinMetadata {
   width: 64;
   height: 64;
   mimeType: 'image/png';
-  model: 'classic' | 'slim';
+  model: SkinCrafterSkinModel;
   appearance: AppearanceState;
   layerOrder: TextureLayerCategoryId[];
 }
@@ -85,11 +100,12 @@ export interface SkinCrafterSkinOutput {
 
 export type SkinCrafterGenerationStatus = 'idle' | 'generating' | 'ready' | 'error';
 
-export type SkinCrafterErrorCategory = 'generation' | 'asset' | 'preview';
+export type SkinCrafterErrorCategory = 'generation' | 'asset' | 'preview' | 'input';
 
 export type SkinCrafterErrorCode =
   | 'generation_failed'
   | 'asset_load_failed'
+  | 'invalid_initial_skin'
   | 'preview_texture_load_failed'
   | 'preview_webgl_initialization_failed';
 

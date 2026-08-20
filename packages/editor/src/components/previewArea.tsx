@@ -25,6 +25,7 @@ const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, ke
 
 function errorTranslationKey(error: SkinCrafterError): TranslationKey {
   if (error.code === 'asset_load_failed') return 'error.assetLoad';
+  if (error.code === 'invalid_initial_skin') return 'error.initialSkin';
   if (error.category === 'preview') return 'error.preview';
   return 'error.generation';
 }
