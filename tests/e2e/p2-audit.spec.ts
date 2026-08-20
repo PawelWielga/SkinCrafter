@@ -104,34 +104,68 @@ test('mobile preview survives portrait-landscape-portrait resizing without canva
   await expect(canvas).toBeVisible();
   await expect(page.locator('canvas')).toHaveCount(1);
 
+  const portraitViewport = page.viewportSize();
+  expect(portraitViewport).not.toBeNull();
   const originalCanvas = await canvas.elementHandle();
 
-  const expectStablePreview = async (): Promise<void> => {
-    await expect
-      .poll(() =>
-        previewSurface.evaluate((surface) => {
-          const previewCanvas = surface.querySelector('canvas');
-          if (!(previewCanvas instanceof HTMLCanvasElement)) return false;
-          const canvasRect = previewCanvas.getBoundingClientRect();
-          return (
-            surface.clientWidth > 100 &&
-            surface.clientHeight > 100 &&
-            Math.abs(surface.clientWidth - canvasRect.width) <= 2 &&
-            Math.abs(surface.clientHeight - canvasRect.height) <= 2
-          );
-        })
-      )
-      .toBe(true);
+  const readPreviewMetrics = () =>
+    previewSurface.evaluate((surface) => {
+      const previewCanvas = surface.querySelector('canvas');
+      if (!(previewCanvas instanceof HTMLCanvasElement)) {
+        return null;
+      }
+      const canvasRect = previewCanvas.getBoundingClientRect();
+      return {
+        surfaceWidth: surface.clientWidth,
+        surfaceHeight: surface.clientHeight,
+        canvasWidth: canvasRect.width,
+        canvasHeight: canvasRect.height,
+      };
+    });
 
-    await expect(page.locator('canvas')).toHaveCount(1);
-    await expectNoHorizontalOverflow(page);
+  const expectPortraitFit = async (): Promise<void> => {
+    await expect
+      .poll(async () => {
+        const metrics = await readPreviewMetrics();
+        return Boolean(
+          metrics &&
+            metrics.surfaceWidth > 100 &&
+            metrics.surfaceHeight > 100 &&
+            Math.abs(metrics.surfaceWidth - metrics.canvasWidth) <= 2 &&
+            Math.abs(metrics.surfaceHeight - metrics.canvasHeight) <= 2
+        );
+      })
+      .toBe(true);
   };
 
-  await expectStablePreview();
-  await page.setViewportSize({ width: 740, height: 393 });
-  await expectStablePreview();
-  await page.setViewportSize({ width: 393, height: 851 });
-  await expectStablePreview();
+  await expectPortraitFit();
+  const initialMetrics = await readPreviewMetrics();
+  expect(initialMetrics).not.toBeNull();
+
+  await page.setViewportSize({
+    width: portraitViewport!.height,
+    height: portraitViewport!.width,
+  });
+  await expect(canvas).toBeVisible();
+  await expect
+    .poll(async () => {
+      const metrics = await readPreviewMetrics();
+      return Math.min(metrics?.canvasWidth ?? 0, metrics?.canvasHeight ?? 0);
+    })
+    .toBeGreaterThan(100);
+  await expect(page.locator('canvas')).toHaveCount(1);
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize(portraitViewport!);
+  await expectPortraitFit();
+  await expectNoHorizontalOverflow(page);
+
+  const returnedMetrics = await readPreviewMetrics();
+  expect(returnedMetrics).not.toBeNull();
+  expect(Math.abs(returnedMetrics!.surfaceWidth - initialMetrics!.surfaceWidth)).toBeLessThanOrEqual(2);
+  expect(Math.abs(returnedMetrics!.surfaceHeight - initialMetrics!.surfaceHeight)).toBeLessThanOrEqual(2);
+  expect(Math.abs(returnedMetrics!.canvasWidth - initialMetrics!.canvasWidth)).toBeLessThanOrEqual(2);
+  expect(Math.abs(returnedMetrics!.canvasHeight - initialMetrics!.canvasHeight)).toBeLessThanOrEqual(2);
 
   const currentCanvas = await canvas.elementHandle();
   expect(await originalCanvas?.evaluate((original, current) => original === current, currentCanvas)).toBe(
