@@ -12,7 +12,7 @@ SkinCrafter/
     └── standalone/   # skincrafter.dihor.pl / GitHub Pages app
 ```
 
-`packages/editor` owns the wardrobe UI, appearance model, texture composition, packaged texture assets, localization used by the editor, and the Three.js preview. `apps/standalone` owns routing, navbar/footer, persisted language, local wardrobe persistence adapter, PlayerDB skin lookup, and deployment shell.
+`packages/editor` owns the wardrobe UI, appearance model, texture composition, packaged texture assets, localization used by the editor, Three.js preview and the versioned state serialization/migration contract. `apps/standalone` owns routing, navbar/footer, persisted language, local wardrobe storage, PlayerDB skin lookup and deployment shell.
 
 There is no second editor implementation in the standalone app.
 
@@ -34,22 +34,23 @@ npm run lint
 npm test
 npm run test:e2e
 npm run build
+npm run test:consumer
 ```
 
-The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview.
+The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview. The consumer smoke test installs the real packed editor artifact in a clean external project.
 
 ## Reusable editor package
 
-The public package is `@pawelwielga/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, locale helpers and documented host contracts.
+The public package is `@pawelwielga/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, versioned state parse/serialize helpers, locale helpers and documented host contracts.
 
-See [`packages/editor/README.md`](packages/editor/README.md) for installation, callbacks, `Blob`/`File` skin output, controlled state, persistence adapters, localization, theming, asset handling and SemVer publishing.
+See [`packages/editor/README.md`](packages/editor/README.md) for installation, callbacks, `Blob`/`File` skin output, controlled state, persistence adapters, schema migrations, localization, theming, asset handling and SemVer publishing.
 
 ## Standalone routes
 
 - `/`: creator rendered by `SkinCrafterEditor` from the package.
 - `/mcskinview`: PlayerDB username lookup rendered with the package `SkinPreview`.
 
-The standalone application continues to persist `skincrafterLanguage`, `wardrobeAppearance`, and `wardrobeLayerOrder` in `localStorage`. That persistence is implemented by the standalone host adapter, not by the reusable package.
+The standalone application persists current wardrobe data under `skincrafterState` using the package's versioned serialization format. Existing `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys are migrated on load, and the aggregate legacy keys remain synchronized on save for backward compatibility. If an older standalone build later changes the synchronized aggregate keys, the next current build detects that valid divergence and migrates those newer user choices forward instead of overwriting them with stale `skincrafterState`. A `skincrafterState` written by an unsupported future schema is preserved byte-for-byte and persistence writes are suppressed until that record is removed or a compatible build is used. Storage ownership stays in the standalone host rather than the reusable package.
 
 ## Distribution
 

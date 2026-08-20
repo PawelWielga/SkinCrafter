@@ -21,6 +21,7 @@ import type {
   SkinCrafterTheme,
 } from './publicTypes';
 import { createSkinOutput } from './skinOutput';
+import { serializeSkinCrafterState } from './stateSerialization';
 import combineTextures, { TextureLoadError } from './utils/combineTextures';
 
 interface GeneratedSkinResult {
@@ -150,7 +151,7 @@ export default function SkinCrafterEditor({
   }, [onError]);
 
   useEffect(() => {
-    if (!value) persistence?.save(state);
+    if (!value) persistence?.save(serializeSkinCrafterState(state));
   }, [persistence, state, value]);
 
   const {
