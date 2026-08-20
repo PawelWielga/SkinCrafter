@@ -353,6 +353,16 @@ export default function Wardrobe({
           <div className="layer-order-controls">
             <button
               type="button"
+              className="layer-order-nudge"
+              aria-label={`${t('action.moveLayerUp')} ${t(category.labelKey as TranslationKey)}`}
+              title={t('action.moveLayerUp')}
+              disabled={layerIndex <= 0}
+              onClick={() => nudgeLayer(layerCategory, -1)}
+            >
+              <SkinCrafterIcon name="fa-chevron-up" />
+            </button>
+            <button
+              type="button"
               className="layer-order-handle"
               aria-label={`${t('action.dragLayer')} ${t(category.labelKey as TranslationKey)}`}
               title={t('action.dragLayer')}
@@ -362,16 +372,6 @@ export default function Wardrobe({
               onDragEnd={finishLayerDrag}
             >
               <SkinCrafterIcon name="fa-grip-vertical" />
-            </button>
-            <button
-              type="button"
-              className="layer-order-nudge"
-              aria-label={`${t('action.moveLayerUp')} ${t(category.labelKey as TranslationKey)}`}
-              title={t('action.moveLayerUp')}
-              disabled={layerIndex <= 0}
-              onClick={() => nudgeLayer(layerCategory, -1)}
-            >
-              <SkinCrafterIcon name="fa-chevron-up" />
             </button>
             <button
               type="button"
