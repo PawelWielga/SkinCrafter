@@ -7,7 +7,7 @@ Reusable React/TypeScript editor used by the standalone SkinCrafter website and 
 Pin an explicit released version in the consuming application:
 
 ```bash
-npm install @dihor/skincrafter-editor@0.1.0 react@18 react-dom@18 three@0.178
+npm install @dihor/skincrafter-editor@1.0.0 react@18 react-dom@18 three@0.178
 ```
 
 Import the component and its packaged stylesheet:
