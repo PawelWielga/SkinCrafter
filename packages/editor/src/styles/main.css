@@ -152,7 +152,11 @@
 .skincrafter-editor .customization-panel { scrollbar-width: none; -ms-overflow-style: none; }
 .skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
 @media (max-width: 767px) {
-  .skincrafter-editor .layer-order-controls { gap: .09rem; }
+  .skincrafter-editor .layer-order-card { padding-left: 2.7rem; }
+  .skincrafter-editor .layer-order-card h3 { left: 2.75rem; max-width: calc(100% - 3.2rem); }
+  .skincrafter-editor .layer-order-controls { gap: .09rem; width: 1.75rem; }
+  .skincrafter-editor .layer-order-handle,
+  .skincrafter-editor .layer-order-nudge { width: 1.75rem; }
   .skincrafter-editor .layer-order-handle {
     border-bottom-width: 0;
     border-top-width: 0;
