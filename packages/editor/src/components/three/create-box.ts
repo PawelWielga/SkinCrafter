@@ -22,6 +22,7 @@ export interface CreateBoxOptions {
 }
 
 const TEX_SIZE = 64;
+const DEFAULT_FLIP_Y_FACES: BoxFace[] = ['bottom'];
 
 export default function createBox(
   tex: THREE.Texture,
@@ -39,7 +40,7 @@ export default function createBox(
     expand = 0,
     rotate180Faces = [],
     flipXFaces = [],
-    flipYFaces = [],
+    flipYFaces = DEFAULT_FLIP_Y_FACES,
   } = options;
   const rotatedFaces = new Set<BoxFace>(rotate180Faces);
   const flippedXFaces = new Set<BoxFace>(flipXFaces);
@@ -47,13 +48,20 @@ export default function createBox(
 
   const geometry = new THREE.BoxGeometry(width + expand, height + expand, depth + expand);
 
+  const createMaterial = (): THREE.MeshBasicMaterial =>
+    new THREE.MeshBasicMaterial({
+      transparent,
+      toneMapped: false,
+      alphaTest: transparent ? 0.1 : 0,
+    });
+
   const materials: THREE.MeshBasicMaterial[] = [
-    new THREE.MeshBasicMaterial({ transparent, toneMapped: false }), // right
-    new THREE.MeshBasicMaterial({ transparent, toneMapped: false }), // left
-    new THREE.MeshBasicMaterial({ transparent, toneMapped: false }), // top
-    new THREE.MeshBasicMaterial({ transparent, toneMapped: false }), // bottom
-    new THREE.MeshBasicMaterial({ transparent, toneMapped: false }), // front
-    new THREE.MeshBasicMaterial({ transparent, toneMapped: false }), // back
+    createMaterial(), // right
+    createMaterial(), // left
+    createMaterial(), // top
+    createMaterial(), // bottom
+    createMaterial(), // front
+    createMaterial(), // back
   ];
 
   const setUV = (
@@ -72,8 +80,9 @@ export default function createBox(
 
     map.magFilter = THREE.NearestFilter;
     map.minFilter = THREE.NearestFilter;
-    map.wrapS = THREE.RepeatWrapping;
-    map.wrapT = THREE.RepeatWrapping;
+    map.generateMipmaps = false;
+    map.wrapS = THREE.ClampToEdgeWrapping;
+    map.wrapT = THREE.ClampToEdgeWrapping;
     map.repeat.set(flipX ? -repeatX : repeatX, flipY ? -repeatY : repeatY);
     map.offset.set(flipX ? right : left, flipY ? top : bottom);
     map.needsUpdate = true;
