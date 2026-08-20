@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@pawelwielga/skincrafter-editor', async () => {
-  const actual = await vi.importActual<typeof import('@pawelwielga/skincrafter-editor')>(
-    '@pawelwielga/skincrafter-editor'
+vi.mock('@dihor/skincrafter-editor', async () => {
+  const actual = await vi.importActual<typeof import('@dihor/skincrafter-editor')>(
+    '@dihor/skincrafter-editor'
   );
   return {
     ...actual,
