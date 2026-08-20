@@ -44,6 +44,74 @@ test('layer drag handles are hidden only on mobile', async ({ page }, testInfo) 
   }
 });
 
+test('layer order controls keep their full height across the mobile breakpoint', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'responsive transition regression');
+
+  await page.setViewportSize({ width: 900, height: 720 });
+  await page.goto('/');
+
+  const shoesCard = page.locator('[data-layer-id="shoes"]');
+  const controls = shoesCard.locator('.layer-order-controls');
+  const dragHandle = shoesCard.getByRole('button', { name: 'Drag layer Shoes' });
+  const moveUp = shoesCard.getByRole('button', { name: 'Move layer up Shoes' });
+  const moveDown = shoesCard.getByRole('button', { name: 'Move layer down Shoes' });
+
+  await expect(shoesCard).toBeVisible();
+  await expect(dragHandle).toBeVisible();
+
+  const desktopControlsBox = await controls.boundingBox();
+  const desktopCardBox = await shoesCard.boundingBox();
+  const desktopHandleBox = await dragHandle.boundingBox();
+  const desktopUpBox = await moveUp.boundingBox();
+  const desktopDownBox = await moveDown.boundingBox();
+
+  expect(desktopControlsBox).not.toBeNull();
+  expect(desktopCardBox).not.toBeNull();
+  expect(desktopHandleBox).not.toBeNull();
+  expect(desktopUpBox).not.toBeNull();
+  expect(desktopDownBox).not.toBeNull();
+  expect(desktopControlsBox!.height).toBeGreaterThan(60);
+  expect(desktopUpBox!.y).toBeLessThan(desktopHandleBox!.y);
+  expect(desktopHandleBox!.y).toBeLessThan(desktopDownBox!.y);
+  expect(Math.abs(desktopUpBox!.height - desktopHandleBox!.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(desktopDownBox!.height - desktopHandleBox!.height)).toBeLessThanOrEqual(1);
+
+  await moveUp.focus();
+  await page.keyboard.press('Tab');
+  await expect(dragHandle).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(moveDown).toBeFocused();
+
+  expect(await controls.evaluate((element) => getComputedStyle(element).transitionProperty)).toContain(
+    'gap'
+  );
+  expect(await moveUp.evaluate((element) => getComputedStyle(element).transitionProperty)).toContain(
+    'flex-basis'
+  );
+
+  await page.setViewportSize({ width: 600, height: 720 });
+  await expect(dragHandle).toBeHidden();
+  await expect.poll(async () => (await moveUp.boundingBox())?.height ?? 0).toBeGreaterThan(
+    desktopUpBox!.height + 5
+  );
+
+  const mobileControlsBox = await controls.boundingBox();
+  const mobileCardBox = await shoesCard.boundingBox();
+  const mobileUpBox = await moveUp.boundingBox();
+  const mobileDownBox = await moveDown.boundingBox();
+
+  expect(mobileControlsBox).not.toBeNull();
+  expect(mobileCardBox).not.toBeNull();
+  expect(mobileUpBox).not.toBeNull();
+  expect(mobileDownBox).not.toBeNull();
+  expect(Math.abs(mobileControlsBox!.height - desktopControlsBox!.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(mobileCardBox!.height - desktopCardBox!.height)).toBeLessThanOrEqual(1);
+  expect(mobileUpBox!.height).toBeGreaterThan(mobileControlsBox!.height * 0.45);
+  expect(mobileDownBox!.height).toBeGreaterThan(mobileControlsBox!.height * 0.45);
+  expect(Math.abs(mobileUpBox!.height - mobileDownBox!.height)).toBeLessThanOrEqual(1);
+  expect(mobileUpBox!.height + mobileDownBox!.height).toBeGreaterThan(mobileControlsBox!.height * 0.9);
+});
+
 test('mobile preview stays stable when resize fires while scrolled below it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile', 'mobile regression coverage');
 
