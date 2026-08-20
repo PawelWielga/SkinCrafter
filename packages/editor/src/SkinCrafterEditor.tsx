@@ -163,6 +163,8 @@ export default function SkinCrafterEditor({
   const onStatusChangeRef = useRef(onStatusChange);
   const onErrorRef = useRef(onError);
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
+  const equivalentImportPendingRef = useRef(false);
+  const lastGeneratedKeyRef = useRef<string | null>(null);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
@@ -209,6 +211,7 @@ export default function SkinCrafterEditor({
   useEffect(() => {
     if (!initialImage) {
       loadedImportedSkinRef.current = null;
+      equivalentImportPendingRef.current = false;
       setLoadedImportedSkin(null);
       setActivatedCategories([]);
       setImportLoadState({ source: null, model: null, status: 'idle', error: null });
@@ -216,6 +219,7 @@ export default function SkinCrafterEditor({
     }
 
     if (!initialModel) {
+      equivalentImportPendingRef.current = false;
       const error = initialSkinErrorFrom(
         new InvalidInitialSkinError('Initial skin model must be either classic or slim.')
       );
@@ -248,6 +252,7 @@ export default function SkinCrafterEditor({
               baselineState: requestBaseline,
             };
 
+        equivalentImportPendingRef.current = semanticallyUnchanged;
         loadedImportedSkinRef.current = next;
         setLoadedImportedSkin(next);
         if (!semanticallyUnchanged) setActivatedCategories([]);
@@ -259,6 +264,7 @@ export default function SkinCrafterEditor({
       })
       .catch((cause: unknown) => {
         if (!current) return;
+        equivalentImportPendingRef.current = false;
         const error = initialSkinErrorFrom(cause);
         setImportLoadState({ source: initialImage, model: initialModel, status: 'error', error });
         notifyHost(onStatusChangeRef.current, 'error');
@@ -362,6 +368,12 @@ export default function SkinCrafterEditor({
   useEffect(() => {
     if (hasImportedRequest && !importedLoadedCurrent) return undefined;
 
+    if (equivalentImportPendingRef.current) {
+      const currentImportAlreadyGenerated = lastGeneratedKeyRef.current === generationKey;
+      equivalentImportPendingRef.current = false;
+      if (currentImportAlreadyGenerated) return undefined;
+    }
+
     let current = true;
     const appearanceSnapshot: AppearanceState = {
       race,
@@ -426,6 +438,7 @@ export default function SkinCrafterEditor({
 
       if (!current) return;
 
+      lastGeneratedKeyRef.current = generationKey;
       setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
       setGenerationState({ key: generationKey, status: 'ready', error: null });
       notifyHost(onSkinChangeRef.current, result.output);
