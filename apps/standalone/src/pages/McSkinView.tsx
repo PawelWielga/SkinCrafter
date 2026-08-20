@@ -1,13 +1,20 @@
-import React, { useCallback, useState, type ChangeEvent, type FormEvent } from 'react';
+import React, {
+  useCallback,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react';
 import { SkinPreview } from '@dihor/skincrafter-editor';
-import fetchSkin from '../api/fetchSkin';
+import fetchSkin, { type FetchedSkin } from '../api/fetchSkin';
 import AppShell from '../components/appShell';
 
 const McSkinView: React.FC = () => {
   const [username, setUsername] = useState('');
-  const [texture, setTexture] = useState<string | null>(null);
+  const [skin, setSkin] = useState<FetchedSkin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const requestIdRef = useRef(0);
 
   const handleUsernameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setUsername(event.target.value);
@@ -20,15 +27,25 @@ const McSkinView: React.FC = () => {
       return;
     }
 
+    const requestId = ++requestIdRef.current;
     setError(null);
+    setSkin(null);
     setLoading(true);
+
     try {
-      setTexture(await fetchSkin(username.trim()));
+      const fetchedSkin = await fetchSkin(username.trim());
+      if (requestId === requestIdRef.current) {
+        setSkin(fetchedSkin);
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
-      setTexture(null);
+      if (requestId === requestIdRef.current) {
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+        setSkin(null);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [username]);
 
@@ -37,7 +54,12 @@ const McSkinView: React.FC = () => {
       {({ footerHeight, language, t }) => (
         <div className="flex-1 min-h-0 flex flex-col md:flex-row">
           <div className="flex-1 min-h-0 w-full md:w-1/2">
-            <SkinPreview texture={texture} locale={language} bottomOffset={footerHeight} />
+            <SkinPreview
+              texture={skin?.texture ?? null}
+              model={skin?.model ?? 'classic'}
+              locale={language}
+              bottomOffset={footerHeight}
+            />
           </div>
           <div className="flex-1 min-h-0 w-full md:w-1/2">
             <section className="mb-4 md:mb-0 md:flex md:flex-col md:h-full md:min-h-0 p-4">
