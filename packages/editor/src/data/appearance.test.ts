@@ -41,17 +41,17 @@ describe('appearance model', () => {
     );
     expect(inputs[0]).toEqual(expect.objectContaining({
       url: '/character/skincrafter-assets/textures/race/human/male.png',
+      tint: defaultAppearance.skinColor,
     }));
     expect(inputs[2]).toEqual(expect.objectContaining({
       url: '/character/skincrafter-assets/textures/eyes/clasic.png',
+      tint: defaultAppearance.eyesColor,
     }));
     expect(inputs[4]).toEqual({
       url: '/character/skincrafter-assets/textures/bottom/pants.png',
-      blendMode: 'source-over',
     });
     expect(inputs[5]).toEqual({
       url: '/character/skincrafter-assets/textures/top/male/hoodie.png',
-      blendMode: 'source-over',
     });
     expect(inputs[6]).toBe('/character/skincrafter-assets/textures/hat/duck.png');
   });
