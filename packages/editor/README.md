@@ -176,7 +176,6 @@ interface SkinCrafterSerializedStateV1 {
 ```
 
 Use the exported helpers rather than duplicating parsing, normalization or migrations:
-
 ```ts
 import {
   parseSkinCrafterState,
@@ -265,11 +264,12 @@ When adding a new wardrobe texture, add it to `packages/editor/src/assets/textur
 
 The package follows SemVer. The version is stored in `packages/editor/package.json`.
 
-1. Update the package version and changelog/release notes.
-2. Merge the change to `main` after `npm test`, `npm run test:e2e`, and `npm run build` pass.
+1. Update the package version and keep the standalone dependency on `@dihor/skincrafter-editor` aligned with that version; refresh `package-lock.json` in the same change.
+2. Merge the release preparation to `main` after repository validation, including `npm test`, `npm run test:e2e`, `npm run build`, and `npm run test:consumer`, passes.
 3. Create a GitHub release with tag `editor-v<version>`, for example `editor-v0.1.0`.
-4. `.github/workflows/publish-editor.yml` verifies that the tag matches the package version, validates the workspace, creates an npm-compatible `.tgz`, and attaches that tarball to the GitHub release.
-5. If repository secret `NPM_TOKEN` is configured, the same workflow also publishes `@dihor/skincrafter-editor` to the public npm registry with provenance.
-6. Production consumers pin an explicit released package version, from npm when available or from the matching versioned GitHub release artifact. They must not use repository branches, copied source, or local filesystem links.
+4. `.github/workflows/publish-editor.yml` verifies that the tag matches the package version, validates the workspace on the supported Node 20 baseline, creates an npm-compatible `.tgz`, and attaches that tarball to the GitHub release.
+5. The workflow publishes `@dihor/skincrafter-editor` to the public npm registry with provenance. npm Trusted Publishing through GitHub Actions OIDC is the preferred authentication method; configure the npm package to trust repository `PawelWielga/SkinCrafter` and workflow `publish-editor.yml`. Repository secret `NPM_TOKEN` remains an optional fallback.
+6. Trusted Publishing requires the package to already exist on npm, so the initial package version is published manually before the trusted publisher relationship is configured. Future releases are published automatically when the matching GitHub release is published.
+7. Production consumers pin an explicit released package version, from npm when available or from the matching versioned GitHub release artifact. They must not use repository branches, copied source, or local filesystem links.
 
 Breaking public contract changes require a major version bump. Additive public props/types are minor releases. Fixes that preserve the contract are patch releases.
