@@ -1,0 +1,44 @@
+name: Apply editor npm scope rename
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-editor-scope.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - name: Rename package scope and synchronize lockfile
+        shell: bash
+        run: |
+          git grep -Il -F '@pawelwielga/skincrafter-editor' | while IFS= read -r file; do
+            sed -i 's|@pawelwielga/skincrafter-editor|@dihor/skincrafter-editor|g' "$file"
+          done
+          npm install --package-lock-only --ignore-scripts
+          if git grep -n -F '@pawelwielga/skincrafter-editor'; then
+            echo 'Old package scope is still referenced.' >&2
+            exit 1
+          fi
+          node -e "const p=require('./packages/editor/package.json'); if(p.name!=='@dihor/skincrafter-editor') process.exit(1)"
+      - name: Commit rename to main
+        shell: bash
+        run: |
+          rm -f .github/workflows/apply-editor-scope.yml .github/workflows/rename-editor-scope.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'chore: move editor package to @dihor scope'
+          git push origin HEAD:main
