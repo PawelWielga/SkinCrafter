@@ -77,7 +77,7 @@ describe('McSkinView model integration', () => {
     const usernameInput = screen.getByLabelText('Minecraft username');
 
     fireEvent.change(usernameInput, { target: { value: 'Alex' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Load skin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-model', 'slim');
@@ -88,7 +88,7 @@ describe('McSkinView model integration', () => {
     });
 
     fireEvent.change(usernameInput, { target: { value: 'Steve' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Load skin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-model', 'classic');
@@ -115,14 +115,14 @@ describe('McSkinView model integration', () => {
     const usernameInput = screen.getByLabelText('Minecraft username');
 
     fireEvent.change(usernameInput, { target: { value: 'Alex' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Load skin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-model', 'slim');
     });
 
     fireEvent.change(usernameInput, { target: { value: 'MissingPlayer' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Load skin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
 
     expect(await screen.findByText('User not found')).toBeInTheDocument();
     expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-texture', '');
