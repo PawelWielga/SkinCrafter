@@ -91,6 +91,65 @@ test('desktop drag and keyboard layer ordering work in the real browser', async 
   await expect(moveShoesDown).toBeFocused();
 });
 
+test('all visible editor controls follow the authored keyboard tab order', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.getByTestId('skincrafter-editor');
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveAttribute('data-skincrafter-generation-status', 'ready');
+
+  const candidateSelector = [
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    'a[href]',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(', ');
+
+  const audit = await editor.locator(candidateSelector).evaluateAll((elements) => {
+    let focusIndex = 0;
+    let positiveTabIndex = 0;
+
+    for (const element of elements) {
+      if (!(element instanceof HTMLElement)) continue;
+
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const visible =
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        rect.width > 0 &&
+        rect.height > 0;
+
+      if (!visible || element.tabIndex < 0) continue;
+      if (element.tabIndex > 0) positiveTabIndex += 1;
+
+      element.dataset.p2FocusIndex = String(focusIndex);
+      focusIndex += 1;
+    }
+
+    return { count: focusIndex, positiveTabIndex };
+  });
+
+  expect(audit.count).toBeGreaterThan(10);
+  expect(audit.positiveTabIndex).toBe(0);
+
+  const first = editor.locator('[data-p2-focus-index="0"]');
+  await first.focus();
+  await expect(first).toBeFocused();
+
+  for (let index = 1; index < audit.count; index += 1) {
+    await page.keyboard.press('Tab');
+    await expect(editor.locator(`[data-p2-focus-index="${index}"]`)).toBeFocused();
+  }
+
+  const hideOverlay = page.getByRole('button', { name: 'Hide Overlay' });
+  await hideOverlay.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Show Overlay' })).toBeVisible();
+});
+
 test('mobile preview survives portrait-landscape-portrait resizing without canvas replacement', async ({
   page,
 }, testInfo) => {
