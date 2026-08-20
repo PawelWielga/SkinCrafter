@@ -52,3 +52,5 @@ jobs:
         env:
           # Optional fallback. Trusted Publishing via OIDC is preferred and works without this secret.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Verify published package from public npm registry
+        run: npm run test:consumer:registry
