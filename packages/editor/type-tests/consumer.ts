@@ -7,8 +7,8 @@ import {
   type SkinCrafterSkinOutput,
   type SkinCrafterState,
   type SkinPreviewProps,
-} from '@pawelwielga/skincrafter-editor';
-import '@pawelwielga/skincrafter-editor/styles.css';
+} from '@dihor/skincrafter-editor';
+import '@dihor/skincrafter-editor/styles.css';
 
 type PublicTypeContract = [
   AppearanceState,
