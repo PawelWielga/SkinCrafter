@@ -1,4 +1,4 @@
-# @pawelwielga/skincrafter-editor
+# @dihor/skincrafter-editor
 
 Reusable React/TypeScript editor used by the standalone SkinCrafter website and by external hosts such as VanillaOdyssey Web.
 
@@ -7,7 +7,7 @@ Reusable React/TypeScript editor used by the standalone SkinCrafter website and 
 Pin an explicit released version in the consuming application:
 
 ```bash
-npm install @pawelwielga/skincrafter-editor@0.1.0 react@18 react-dom@18 three@0.178
+npm install @dihor/skincrafter-editor@0.1.0 react@18 react-dom@18 three@0.178
 ```
 
 Import the component and its packaged stylesheet:
@@ -18,8 +18,8 @@ import {
   type SkinCrafterError,
   type SkinCrafterGenerationStatus,
   type SkinCrafterSkinOutput,
-} from '@pawelwielga/skincrafter-editor';
-import '@pawelwielga/skincrafter-editor/styles.css';
+} from '@dihor/skincrafter-editor';
+import '@dihor/skincrafter-editor/styles.css';
 
 function CharacterEditor() {
   const handleSave = (skin: SkinCrafterSkinOutput) => {
@@ -75,7 +75,7 @@ A host that already owns the authoritative Minecraft skin can pass the fetched b
 import {
   SkinCrafterEditor,
   type SkinCrafterSkinOutput,
-} from '@pawelwielga/skincrafter-editor';
+} from '@dihor/skincrafter-editor';
 
 function ExistingSkinEditor({ existingSkin }: { existingSkin: Blob }) {
   const save = (skin: SkinCrafterSkinOutput) => {
@@ -182,7 +182,7 @@ import {
   parseSkinCrafterState,
   serializeSkinCrafterState,
   type SkinCrafterPersistenceAdapter,
-} from '@pawelwielga/skincrafter-editor';
+} from '@dihor/skincrafter-editor';
 
 const STORAGE_KEY = 'my-editor-state';
 
@@ -238,7 +238,7 @@ The editor locale is a prop. An embedding application owns the locale and can co
 
 ## Styling and theme hooks
 
-Import `@pawelwielga/skincrafter-editor/styles.css`. Package Tailwind preflight is disabled, and generated utilities plus package-owned selectors are scoped below `.skincrafter-editor`. Importing the stylesheet therefore does not redefine common host classes such as `flex`, `grid`, `container` or `border` outside the editor boundary. Package keyframes use the `skincrafter-` prefix.
+Import `@dihor/skincrafter-editor/styles.css`. Package Tailwind preflight is disabled, and generated utilities plus package-owned selectors are scoped below `.skincrafter-editor`. Importing the stylesheet therefore does not redefine common host classes such as `flex`, `grid`, `container` or `border` outside the editor boundary. Package keyframes use the `skincrafter-` prefix.
 
 The editor root is `.skincrafter-editor`. `className` and `style` are applied to that root. `theme` maps to these CSS variables:
 
@@ -269,7 +269,7 @@ The package follows SemVer. The version is stored in `packages/editor/package.js
 2. Merge the change to `main` after `npm test`, `npm run test:e2e`, and `npm run build` pass.
 3. Create a GitHub release with tag `editor-v<version>`, for example `editor-v0.1.0`.
 4. `.github/workflows/publish-editor.yml` verifies that the tag matches the package version, validates the workspace, creates an npm-compatible `.tgz`, and attaches that tarball to the GitHub release.
-5. If repository secret `NPM_TOKEN` is configured, the same workflow also publishes `@pawelwielga/skincrafter-editor` to the public npm registry with provenance.
+5. If repository secret `NPM_TOKEN` is configured, the same workflow also publishes `@dihor/skincrafter-editor` to the public npm registry with provenance.
 6. Production consumers pin an explicit released package version, from npm when available or from the matching versioned GitHub release artifact. They must not use repository branches, copied source, or local filesystem links.
 
 Breaking public contract changes require a major version bump. Additive public props/types are minor releases. Fixes that preserve the contract are patch releases.
