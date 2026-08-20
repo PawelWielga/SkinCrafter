@@ -77,7 +77,7 @@
 }
 .skincrafter-editor .layer-order-card.drop-before::before { top: -.36rem; }
 .skincrafter-editor .layer-order-card.drop-after::after { bottom: -.36rem; }
-.skincrafter-editor .layer-order-card h3 { left: 2.45rem; max-width: calc(100% - 2.9rem); }
+.skincrafter-editor .layer-order-card h3 { left: 2.45rem; max-width: calc(100% - 2.9rem); touch-action: none; }
 .skincrafter-editor .layer-order-controls { align-items: center; display: flex; flex-direction: column; gap: .18rem; left: .45rem; position: absolute; top: .55rem; width: 1.45rem; z-index: 20; }
 .skincrafter-editor .layer-order-handle,
 .skincrafter-editor .layer-order-nudge { align-items: center; background: var(--skincrafter-muted); border: 1px solid var(--skincrafter-border); color: var(--skincrafter-text); display: inline-flex; height: 1.25rem; justify-content: center; line-height: 1; width: 1.25rem; }
@@ -128,7 +128,7 @@
 .skincrafter-editor .options-container { overflow-y: visible; padding-bottom: .5rem; padding-right: .5rem; }
 @media (max-width: 767px) {
   .skincrafter-editor .layer-order-handle { display: none; }
-  .skincrafter-editor .layer-order-card h3 { cursor: grab; touch-action: none; }
+  .skincrafter-editor .layer-order-card h3 { cursor: grab; }
   .skincrafter-editor .layer-order-card.is-dragging h3 { cursor: grabbing; }
 }
 @media (min-width: 768px) {
