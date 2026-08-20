@@ -10,6 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Verify legacy editor package scope is absent
+        shell: bash
+        run: |
+          OLD_SCOPE='@pawelwielga'"/skincrafter-editor"
+          if git grep -n -F "$OLD_SCOPE"; then
+            echo "Legacy editor package scope is still referenced." >&2
+            exit 1
+          fi
       - uses: actions/setup-node@v6
         with:
           node-version: 20

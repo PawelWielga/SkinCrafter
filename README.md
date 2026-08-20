@@ -54,4 +54,4 @@ The standalone application persists current wardrobe data under `skincrafterStat
 
 ## Distribution
 
-Editor releases use tags such as `editor-v0.1.0`. `.github/workflows/publish-editor.yml` verifies the tag/package version match, runs validation, attaches an npm-compatible `.tgz` to the GitHub release, and also publishes to npm when `NPM_TOKEN` is configured. Consumers should pin released versions rather than repository source.
+Editor releases use tags such as `editor-v0.1.0`. `.github/workflows/publish-editor.yml` verifies the tag/package version match, runs repository validation on the supported Node 20 baseline, attaches an npm-compatible `.tgz` to the GitHub release, and publishes the package to npm. npm Trusted Publishing (GitHub Actions OIDC) is the preferred authentication path and requires the npm package to trust `publish-editor.yml`; an `NPM_TOKEN` repository secret remains an optional fallback. The publication step uses a Trusted-Publishing-capable Node/npm runtime while normal project validation remains on Node 20. Consumers should pin released versions rather than repository source.

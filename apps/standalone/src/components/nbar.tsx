@@ -6,7 +6,7 @@ import {
   translate,
   type Language,
   type TranslationKey,
-} from '@pawelwielga/skincrafter-editor';
+} from '@dihor/skincrafter-editor';
 
 interface NBarProps {
   logoSrc?: string;

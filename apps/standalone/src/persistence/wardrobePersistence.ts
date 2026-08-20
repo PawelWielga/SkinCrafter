@@ -5,7 +5,7 @@ import {
   type SkinCrafterPersistenceAdapter,
   type SkinCrafterSerializedState,
   type SkinCrafterState,
-} from '@pawelwielga/skincrafter-editor';
+} from '@dihor/skincrafter-editor';
 
 export const WARDROBE_STATE_STORAGE_KEY = 'skincrafterState';
 
