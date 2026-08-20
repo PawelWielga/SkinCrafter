@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const fixtures = [
@@ -17,7 +18,7 @@ const fixtures = [
 
 describe('renderer diagnostic skin fixtures', () => {
   it.each(fixtures)('$name fixture is a stable 64x64 PNG', ({ file, sha256 }) => {
-    const bytes = readFileSync(new URL(`./fixtures/${file}`, import.meta.url));
+    const bytes = readFileSync(resolve(process.cwd(), 'src/components/three/fixtures', file));
 
     expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     expect(bytes.readUInt32BE(16)).toBe(64);
