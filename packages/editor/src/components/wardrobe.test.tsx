@@ -56,6 +56,25 @@ function mockCardRect(card: HTMLElement, top: number, height = 80): void {
   } as DOMRect);
 }
 
+function fireTouchPointer(
+  target: Element,
+  type: 'pointerdown' | 'pointermove' | 'pointerup',
+  options: { pointerId: number; clientX: number; clientY: number; button?: number }
+): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    button: options.button ?? 0,
+    clientX: options.clientX,
+    clientY: options.clientY,
+  });
+  Object.defineProperties(event, {
+    pointerId: { value: options.pointerId },
+    pointerType: { value: 'touch' },
+  });
+  fireEvent(target, event);
+}
+
 describe('Wardrobe host isolation and layer ordering', () => {
   it('renders package-owned icons without creating compatibility globals', () => {
     const browserWindow = window as Window & { global?: unknown };
@@ -174,10 +193,8 @@ describe('Wardrobe host isolation and layer ordering', () => {
     const hatCard = hatHeading.closest<HTMLElement>('[data-layer-id="hat"]');
     expect(hatCard).not.toBeNull();
 
-    fireEvent.pointerDown(hatHeading, {
+    fireTouchPointer(hatHeading, 'pointerdown', {
       pointerId: 7,
-      pointerType: 'touch',
-      button: 0,
       clientX: 160,
       clientY: 240,
     });
@@ -185,9 +202,8 @@ describe('Wardrobe host isolation and layer ordering', () => {
     const ghost = screen.getByTestId('layer-drag-ghost');
     expect(ghost).toHaveClass('is-touch');
 
-    fireEvent.pointerMove(hatCard!, {
+    fireTouchPointer(hatCard!, 'pointermove', {
       pointerId: 7,
-      pointerType: 'touch',
       clientX: 160,
       clientY: 110,
     });
@@ -201,9 +217,8 @@ describe('Wardrobe host isolation and layer ordering', () => {
       'accessory',
     ] satisfies TextureLayerCategoryId[]);
 
-    fireEvent.pointerUp(hatCard!, {
+    fireTouchPointer(hatCard!, 'pointerup', {
       pointerId: 7,
-      pointerType: 'touch',
       clientX: 160,
       clientY: 110,
     });
