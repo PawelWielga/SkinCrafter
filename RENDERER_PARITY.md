@@ -8,17 +8,17 @@ The audit was performed for issue #105. The goal is not to approximate a Minecra
 
 The implementation was checked against multiple independent references rather than a single screenshot:
 
-1. **Minecraft Java model contract**
-   - [mappings.dev: `net.minecraft.client.model.PlayerModel` for Java 1.21](https://mappings.dev/1.21/net/minecraft/client/model/PlayerModel.html) confirms the current `PlayerModel`/`HumanoidModel` model split and the Classic/Slim (`thinArms`) contract.
-   - The established Java player geometry uses 8×8×8 head, 8×12×4 torso, 4×12×4 Classic arms, 3×12×4 Slim arms and 4×12×4 legs, with shoulder pivots at X ±5 and hip pivots at X ±1.9.
+1. **Minecraft Java 1.21.11 model source**
+   - [`HumanoidModel.createMesh`](https://github.com/H1lkaaaGD/Minecraft_1.21.11_Source/blob/main/net/minecraft/client/model/HumanoidModel.java) defines the 8×8×8 head, 8×12×4 torso, 4×12×4 Classic arms, 4×12×4 legs, shoulder pivots at X ±5 and leg pivots at X ±1.9.
+   - [`PlayerModel.createMesh`](https://github.com/H1lkaaaGD/Minecraft_1.21.11_Source/blob/main/net/minecraft/client/model/player/PlayerModel.java) replaces Classic arms with 3×12×4 Slim arms at the same shoulder pivots and defines the independent left/right skin regions and all second layers.
+   - This is important for current parity: an older `y=2.5` Slim-arm placement was a snapshot regression, while 1.21.11 uses `y=2.0` for both Classic and Slim.
 2. **Canonical Java skin UV implementation**
-   - [`bs-community/skinview3d/src/model.ts`](https://github.com/bs-community/skinview3d/blob/master/src/model.ts) is used as a second, implementation-level reference for the 64×64 cube atlas formula, independent left/right limb regions, Classic/Slim arm widths and model proportions.
-3. **Skin-format and layer rules**
-   - [Minecraft Wiki's skin-format reference](https://minecraft.fandom.com/wiki/Skin) documents 4-pixel Classic arms, 3-pixel Slim arms, the modern 64×64 layered atlas and transparent second layers.
-   - The same reference documents second-layer dilation of 0.25 model pixels on torso/arms/legs and 0.5 model pixels on the head.
-4. **Java alpha cutout**
-   - The current Java shader family keeps Minecraft's alpha `0.1` cutout; for example the [1.21.11 `rendertype_item_entity_translucent_cull` shader](https://mcasset.cloud/1.21.11-rc3/assets/minecraft/shaders/core/rendertype_item_entity_translucent_cull.fsh) discards fragments below `0.1`.
-   - The preview mirrors that threshold for transparent outer-layer materials while retaining higher partial alpha values.
+   - [`bs-community/skinview3d/src/model.ts`](https://github.com/bs-community/skinview3d/blob/master/src/model.ts) is used as an independent implementation-level cross-check for the 64×64 cube atlas formula, independent left/right limb regions, Classic/Slim arm widths and outer-layer dimensions.
+3. **Skin loading and alpha rules**
+   - [`SkinTextureDownloader`](https://github.com/H1lkaaaGD/Minecraft_1.21.11_Source/blob/main/net/minecraft/client/renderer/texture/SkinTextureDownloader.java) forces the modern base-layer regions opaque while leaving second-layer alpha available.
+   - [`RenderPipelines.ENTITY_TRANSLUCENT`](https://github.com/H1lkaaaGD/Minecraft_1.21.11_Source/blob/main/net/minecraft/client/renderer/RenderPipelines.java) uses translucent blending, disables face culling and applies an alpha cutoff of `0.1`.
+4. **Texture sampling**
+   - [`DynamicTexture`](https://github.com/H1lkaaaGD/Minecraft_1.21.11_Source/blob/main/net/minecraft/client/renderer/texture/DynamicTexture.java) uses a repeating `NEAREST` sampler and a single texture level for downloaded skin pixels.
 
 The references intentionally cover both the model and the atlas. A visually plausible model can still be wrong by one pixel, one face or one pivot, so screenshots alone are not treated as the source of truth.
 
@@ -37,7 +37,7 @@ Coordinates below use SkinCrafter's positive-Y-up scene. They are equivalent to 
 | Right leg | 4×12×4 | (-1.9, 0, 0) | 4.5×12.5×4.5 | (-1.9, 6, 0) |
 | Left leg | 4×12×4 | (1.9, 0, 0) | 4.5×12.5×4.5 | (1.9, 6, 0) |
 
-Outer-layer centers stay locked to their matching base meshes. Their larger size comes only from Minecraft's dilation, not from an additional positional offset.
+Outer-layer centers stay locked to their matching base meshes. Their larger size comes only from Minecraft's dilation: 0.5 model pixels per side for the hat and 0.25 per side for jacket, sleeves and pants.
 
 ### Classic/Slim switching
 
@@ -65,19 +65,22 @@ The bottom face has the opposite vertical orientation in Three.js `BoxGeometry`,
 - Classic and Slim arms,
 - hat, jacket, sleeves and pants layers.
 
-This also prevents a regression where both limbs accidentally point at the same legacy atlas region.
+`create-box.test.ts` additionally checks the actual texture transform for all six material slots, including the bottom-face inversion. This prevents a correct atlas rectangle from still being rendered mirrored or upside down by the Three.js face orientation.
 
-## Texture sampling and alpha
+## Texture sampling, culling and alpha
 
 The preview uses:
 
 - `NearestFilter` for minification and magnification,
 - mipmaps disabled,
+- repeating texture addressing on the per-face skin maps, matching Java's `DynamicTexture` sampler,
 - sRGB texture color space,
-- `ClampToEdgeWrapping` for per-face atlas crops,
-- no lighting/tone-mapping modification of skin colors (`MeshBasicMaterial`, `toneMapped: false`).
+- no lighting/tone-mapping modification of skin colors (`MeshBasicMaterial`, `toneMapped: false`),
+- double-sided materials, matching `ENTITY_TRANSLUCENT` with culling disabled.
 
-Base-layer materials are opaque. Outer-layer materials enable blending and use `alphaTest = 0.1`, matching Minecraft's entity translucent alpha cutoff. Fully transparent outer pixels are therefore discarded instead of writing invisible depth, opaque pixels remain opaque, and partial alpha above the cutoff remains translucent.
+Java's skin loader strips alpha from the base-layer atlas regions before rendering. SkinCrafter gets the same visible result by rendering base-layer materials as opaque: their RGB is preserved while transparent source alpha cannot make the base body disappear.
+
+Outer-layer materials enable blending and use `alphaTest = 0.1`, matching Minecraft's entity translucent alpha cutoff. Fully transparent outer pixels are discarded, opaque pixels remain opaque, and partial alpha above the cutoff remains translucent.
 
 ## Diagnostic fixtures
 
@@ -100,7 +103,7 @@ Their dimensions and SHA-256 hashes are regression-tested in `diagnostic-fixture
 
 ## Findings fixed by this audit
 
-The pre-audit renderer was close, but not 1:1 in four places:
+The pre-audit renderer was close, but not 1:1 in several places:
 
 1. **Leg centers used X ±2 instead of Minecraft's X ±1.9.**
    - Fixed in model construction and pose pivots.
@@ -110,6 +113,10 @@ The pre-audit renderer was close, but not 1:1 in four places:
    - Fixed centrally in `createBox`, so every base and outer cuboid follows the same six-face rule.
 4. **Walking/T-pose rotations were performed around each mesh center and compensated with hand-tuned translations.**
    - Replaced with rotations around the Java shoulder/hip pivots. Classic and Slim arms share the same shoulder pivot while retaining their different half-pixel centers.
+5. **Transparent materials did not mirror Java's current alpha cutoff/culling contract.**
+   - Outer layers now use the `0.1` cutoff and all player surfaces are double-sided, while base layers remain visibly opaque like Java's preprocessed base atlas.
+6. **Per-face wrapping did not explicitly follow Java's current repeating nearest sampler.**
+   - Face maps now use `RepeatWrapping`, nearest filters and no mipmaps.
 
 The atlas rectangles themselves were already correct. The audit adds formula-based tests so that fact is now executable rather than implicit.
 
@@ -121,9 +128,8 @@ Instead, parity is protected at the lower level where the relevant errors origin
 
 - exact cuboid dimensions and centers,
 - exact pivot-based transformations,
-- exact six-face UV rectangles,
-- exact default bottom-face transform,
-- exact sampling/wrapping/alpha material configuration,
+- exact six-face UV rectangles and transforms,
+- exact sampling/wrapping/culling/alpha material configuration,
 - deterministic diagnostic PNGs.
 
-Together these checks are stricter for skin-atlas parity than an antialiased screenshot while remaining stable in CI.
+The diagnostic skins remain available for manual front/back/left/right/top/bottom inspection. Together these checks are stricter for skin-atlas parity than an antialiased screenshot while remaining stable in CI.

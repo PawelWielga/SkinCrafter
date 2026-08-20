@@ -53,6 +53,7 @@ export default function createBox(
       transparent,
       toneMapped: false,
       alphaTest: transparent ? 0.1 : 0,
+      side: THREE.DoubleSide,
     });
 
   const materials: THREE.MeshBasicMaterial[] = [
@@ -81,8 +82,8 @@ export default function createBox(
     map.magFilter = THREE.NearestFilter;
     map.minFilter = THREE.NearestFilter;
     map.generateMipmaps = false;
-    map.wrapS = THREE.ClampToEdgeWrapping;
-    map.wrapT = THREE.ClampToEdgeWrapping;
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
     map.repeat.set(flipX ? -repeatX : repeatX, flipY ? -repeatY : repeatY);
     map.offset.set(flipX ? right : left, flipY ? top : bottom);
     map.needsUpdate = true;
