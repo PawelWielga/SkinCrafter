@@ -33,12 +33,26 @@ test('desktop drag and keyboard layer ordering work in the real browser', async 
   const shirtBox = await shirtCard.boundingBox();
   expect(shirtBox).not.toBeNull();
 
-  await hatDragHandle.dragTo(shirtCard, {
-    targetPosition: {
-      x: Math.max(1, Math.floor(shirtBox!.width / 2)),
-      y: Math.max(1, Math.floor(shirtBox!.height - 2)),
-    },
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await hatDragHandle.dispatchEvent('dragstart', { dataTransfer });
+  await shirtCard.dispatchEvent('dragover', {
+    dataTransfer,
+    clientX: shirtBox!.x + shirtBox!.width / 2,
+    clientY: shirtBox!.y + shirtBox!.height - 2,
   });
+  await expect.poll(() => readLayerOrder(page)).toEqual([
+    'shirt',
+    'hat',
+    'pants',
+    'shoes',
+    'accessory',
+  ]);
+  await shirtCard.dispatchEvent('drop', {
+    dataTransfer,
+    clientX: shirtBox!.x + shirtBox!.width / 2,
+    clientY: shirtBox!.y + shirtBox!.height - 2,
+  });
+  await dataTransfer.dispose();
 
   await expect.poll(() => readLayerOrder(page)).toEqual([
     'shirt',
@@ -115,7 +129,7 @@ test('mobile preview survives portrait-landscape-portrait resizing without canva
   };
 
   await expectStablePreview();
-  await page.setViewportSize({ width: 851, height: 393 });
+  await page.setViewportSize({ width: 740, height: 393 });
   await expectStablePreview();
   await page.setViewportSize({ width: 393, height: 851 });
   await expectStablePreview();
