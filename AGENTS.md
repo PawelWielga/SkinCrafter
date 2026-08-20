@@ -18,7 +18,7 @@ The most important architectural invariant is:
 
 > Editor behavior must never be duplicated in the standalone app or in an external host.
 
-`@pawelwielga/skincrafter-editor` owns skin editing, appearance state, texture composition, editor localization, editor UI, package-owned assets, generated skin output, and Three.js preview behavior. Hosts own application-specific routing, authentication, persistence location, networking, navigation, page chrome, and backend integration.
+`@dihor/skincrafter-editor` owns skin editing, appearance state, texture composition, editor localization, editor UI, package-owned assets, generated skin output, and Three.js preview behavior. Hosts own application-specific routing, authentication, persistence location, networking, navigation, page chrome, and backend integration.
 
 Do not solve integration problems by copying source code, scraping editor DOM/canvas state, using iframes as the application contract, or making a consumer depend on an unreleased repository branch.
 
@@ -88,7 +88,7 @@ Exact versions in `package.json` and `package-lock.json` are authoritative. Do n
 
 ### `packages/editor`
 
-Package name: `@pawelwielga/skincrafter-editor`.
+Package name: `@dihor/skincrafter-editor`.
 
 This is the authoritative reusable implementation and public integration boundary.
 
@@ -144,7 +144,7 @@ These rules are architectural constraints, not suggestions.
 - Do not move editor state, wardrobe behavior, texture composition, skin generation, or Three.js implementation into `apps/standalone`.
 - Do not add VanillaOdyssey-specific APIs, authentication, database models, routing, or backend networking to `packages/editor`.
 - The reusable package must not directly own browser persistence such as `localStorage`. Persistence is supplied by a host adapter or host-controlled state.
-- External consumers import only from `@pawelwielga/skincrafter-editor` and its documented exports. Never require imports from `src`, `dist`, or repository-internal paths.
+- External consumers import only from `@dihor/skincrafter-editor` and its documented exports. Never require imports from `src`, `dist`, or repository-internal paths.
 - Keep the public API small, typed, host-agnostic, and intentional.
 - Do not expose DOM nodes, canvas internals, Three.js implementation objects, or temporary internal data structures as stable public API unless the issue explicitly requires a designed contract.
 - The standalone app should exercise the same public integration path expected from VanillaOdyssey or another external host.
