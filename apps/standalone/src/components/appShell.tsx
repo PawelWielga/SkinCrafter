@@ -5,7 +5,7 @@ import {
   translate,
   type Language,
   type TranslationKey,
-} from '@pawelwielga/skincrafter-editor';
+} from '@dihor/skincrafter-editor';
 import MyFooter from './myFooter';
 import NBar from './nbar';
 
