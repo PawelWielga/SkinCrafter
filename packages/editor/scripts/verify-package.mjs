@@ -147,10 +147,14 @@ if (referencedPngAssets.size !== emittedPngFiles.length) {
   );
 }
 
-const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmCliPath = process.env.npm_execpath;
+if (!npmCliPath) {
+  fail('npm executable path is unavailable; run package verification through npm.');
+}
+
 const packJson = execFileSync(
-  npmExecutable,
-  ['pack', '--dry-run', '--json', '--ignore-scripts'],
+  process.execPath,
+  [npmCliPath, 'pack', '--dry-run', '--json', '--ignore-scripts'],
   { cwd: packageRoot, encoding: 'utf8' }
 );
 const packResult = JSON.parse(packJson)[0];
