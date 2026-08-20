@@ -16,7 +16,10 @@ export default defineConfig({
     rollupOptions: {
       external: ['react', 'react/jsx-runtime', 'react-dom', 'three'],
       output: {
-        assetFileNames: 'assets/[name]-[hash][extname]',
+        assetFileNames: (assetInfo) =>
+          assetInfo.names.some((name) => name.endsWith('.css'))
+            ? '[name][extname]'
+            : 'assets/[name]-[hash][extname]',
       },
     },
   },
