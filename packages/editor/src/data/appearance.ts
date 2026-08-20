@@ -147,7 +147,7 @@ function buildTextureInputForLayer(
 }
 
 function orderedTextureLayers(textureLayerOrder: readonly string[]): AppearanceCategoryId[] {
-  return ['race', 'eyes', 'hair', ...normalizeTextureLayerOrder(textureLayerOrder)];
+  return ['race', 'sex', 'eyes', 'hair', ...normalizeTextureLayerOrder(textureLayerOrder)];
 }
 
 export function buildTextureInputs(
@@ -170,6 +170,9 @@ export function buildTextureInputsForCategories(
   const shouldIncludeLayer = (layer: AppearanceCategoryId): boolean => {
     if (layer === 'race') {
       return active.has('race') || active.has('sex') || active.has('skinColor');
+    }
+    if (layer === 'sex') {
+      return false;
     }
     if (layer === 'eyes') {
       return active.has('eyes') || active.has('eyesColor');

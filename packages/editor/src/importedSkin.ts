@@ -64,6 +64,25 @@ function readPngDimensions(bytes: Uint8Array): { width: number; height: number }
   };
 }
 
+async function readBlobBytes(image: Blob): Promise<Uint8Array> {
+  if (typeof image.arrayBuffer === 'function') {
+    return new Uint8Array(await image.arrayBuffer());
+  }
+
+  return new Promise<Uint8Array>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (!(reader.result instanceof ArrayBuffer)) {
+        reject(new Error('Blob reader did not return an ArrayBuffer.'));
+        return;
+      }
+      resolve(new Uint8Array(reader.result));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Blob reader failed.'));
+    reader.readAsArrayBuffer(image);
+  });
+}
+
 async function validateDecodedImage(dataUrl: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const image = new Image();
@@ -98,7 +117,7 @@ export async function loadImportedSkin(
 
   let bytes: Uint8Array;
   try {
-    bytes = new Uint8Array(await image.arrayBuffer());
+    bytes = await readBlobBytes(image);
   } catch (cause) {
     throw new InvalidInitialSkinError('Initial skin data could not be read.', cause);
   }

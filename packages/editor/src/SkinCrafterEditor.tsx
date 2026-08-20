@@ -163,7 +163,6 @@ export default function SkinCrafterEditor({
   const onStatusChangeRef = useRef(onStatusChange);
   const onErrorRef = useRef(onError);
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
-  const readyGenerationKeyRef = useRef<string | null>(null);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
@@ -362,7 +361,6 @@ export default function SkinCrafterEditor({
 
   useEffect(() => {
     if (hasImportedRequest && !importedLoadedCurrent) return undefined;
-    if (readyGenerationKeyRef.current === generationKey) return undefined;
 
     let current = true;
     const appearanceSnapshot: AppearanceState = {
@@ -428,7 +426,6 @@ export default function SkinCrafterEditor({
 
       if (!current) return;
 
-      readyGenerationKeyRef.current = generationKey;
       setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
       setGenerationState({ key: generationKey, status: 'ready', error: null });
       notifyHost(onSkinChangeRef.current, result.output);
