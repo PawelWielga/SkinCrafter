@@ -10,8 +10,8 @@ import {
   type SkinCrafterImportedInitialSkin,
   type SkinCrafterSerializedState,
   type SkinCrafterSkinOutput,
-} from '@pawelwielga/skincrafter-editor';
-import '@pawelwielga/skincrafter-editor/styles.css';
+} from '@dihor/skincrafter-editor';
+import '@dihor/skincrafter-editor/styles.css';
 
 const serializedState: SkinCrafterSerializedState = serializeSkinCrafterState({
   appearance: { ...defaultAppearance },
