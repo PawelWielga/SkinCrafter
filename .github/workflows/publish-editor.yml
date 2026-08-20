@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: npm
+          package-manager-cache: false
       - run: npm ci
       - name: Verify release tag matches package version
         shell: bash
