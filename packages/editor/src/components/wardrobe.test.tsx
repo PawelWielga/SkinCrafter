@@ -184,10 +184,20 @@ describe('Wardrobe host isolation and layer ordering', () => {
   it('supports touch preview from the card heading and commits on pointer release', () => {
     const onLayerOrderChange = vi.fn();
     const { container } = renderWardrobe(onLayerOrderChange);
+    const cardTops: Record<TextureLayerCategoryId, number> = {
+      hat: 0,
+      shirt: 100,
+      pants: 200,
+      shoes: 300,
+      accessory: 400,
+    };
     const layerCards = [
       ...container.querySelectorAll<HTMLElement>('.layer-order-list > [data-layer-id]'),
     ];
-    layerCards.forEach((card, index) => mockCardRect(card, index * 100));
+    layerCards.forEach((card) => {
+      const layer = card.dataset.layerId as TextureLayerCategoryId;
+      mockCardRect(card, cardTops[layer]);
+    });
 
     const hatHeading = screen.getByRole('heading', { name: 'Hat' });
     const hatCard = hatHeading.closest<HTMLElement>('[data-layer-id="hat"]');
@@ -205,7 +215,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
     fireTouchPointer(hatCard!, 'pointermove', {
       pointerId: 7,
       clientX: 160,
-      clientY: 110,
+      clientY: 210,
     });
 
     expect(onLayerOrderChange).not.toHaveBeenCalled();
@@ -220,7 +230,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
     fireTouchPointer(hatCard!, 'pointerup', {
       pointerId: 7,
       clientX: 160,
-      clientY: 110,
+      clientY: 210,
     });
 
     expect(onLayerOrderChange).toHaveBeenCalledWith([
