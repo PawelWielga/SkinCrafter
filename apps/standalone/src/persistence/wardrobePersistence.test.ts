@@ -52,22 +52,63 @@ describe('standalone wardrobe persistence', () => {
     expect(rewritten?.appearance?.hat).toBe('Duck');
   });
 
-  it('uses the rewritten versioned state on later loads instead of repeating legacy migration', () => {
+  it('uses the versioned state when synchronized legacy aggregate keys are semantically unchanged', () => {
+    const serialized = serializeSkinCrafterState({
+      appearance: { ...defaultAppearance, hat: 'Duck' },
+      layerOrder: normalizeTextureLayerOrder(null),
+    });
+    localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(serialized));
     localStorage.setItem(
       LEGACY_APPEARANCE_STORAGE_KEY,
-      JSON.stringify({ ...defaultAppearance, hat: 'Duck' })
+      JSON.stringify(serialized.appearance)
+    );
+    localStorage.setItem(
+      LEGACY_LAYER_ORDER_STORAGE_KEY,
+      JSON.stringify(serialized.layerOrder)
     );
 
-    const firstLoad = wardrobePersistence.load();
-    expect(firstLoad?.appearance?.hat).toBe('Duck');
+    const loaded = wardrobePersistence.load();
 
+    expect(loaded?.appearance?.hat).toBe('Duck');
+    expect(JSON.parse(localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null')).toEqual(
+      serialized
+    );
+  });
+
+  it('migrates divergent valid legacy aggregate keys forward instead of overwriting newer user edits', () => {
+    const staleVersioned = serializeSkinCrafterState({
+      appearance: { ...defaultAppearance, hat: 'Duck' },
+      layerOrder: normalizeTextureLayerOrder(null),
+    });
+    const newerLegacyAppearance = { ...defaultAppearance, hat: 'None', shirt: 'Superman' };
+    const newerLegacyLayerOrder = ['pants', 'shirt', 'hat'];
+
+    localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(staleVersioned));
     localStorage.setItem(
       LEGACY_APPEARANCE_STORAGE_KEY,
-      JSON.stringify({ ...defaultAppearance, hat: 'None' })
+      JSON.stringify(newerLegacyAppearance)
+    );
+    localStorage.setItem(
+      LEGACY_LAYER_ORDER_STORAGE_KEY,
+      JSON.stringify(newerLegacyLayerOrder)
     );
 
-    const secondLoad = wardrobePersistence.load();
-    expect(secondLoad?.appearance?.hat).toBe('Duck');
+    const loaded = wardrobePersistence.load();
+
+    expect(loaded?.appearance?.hat).toBe('None');
+    expect(loaded?.appearance?.shirt).toBe('Superman');
+    expect(loaded?.layerOrder).toEqual(['pants', 'shirt', 'hat', 'shoes', 'accessory']);
+
+    const rewritten = JSON.parse(
+      localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null'
+    ) as { schemaVersion?: number; appearance?: { hat?: string; shirt?: string } } | null;
+    expect(rewritten).toMatchObject({
+      schemaVersion: 1,
+      appearance: {
+        hat: 'None',
+        shirt: 'Superman',
+      },
+    });
   });
 
   it('persists the current schema while keeping legacy keys synchronized', () => {
@@ -87,21 +128,36 @@ describe('standalone wardrobe persistence', () => {
     );
   });
 
-  it('does not silently reinterpret an unknown future schema as the current schema', () => {
-    localStorage.setItem(
-      WARDROBE_STATE_STORAGE_KEY,
-      JSON.stringify({
-        schemaVersion: 2,
-        appearance: { ...defaultAppearance },
-        layerOrder: normalizeTextureLayerOrder(null),
-      })
-    );
-
-    expect(() => wardrobePersistence.load()).toThrow(
-      'Unsupported SkinCrafter state schema version: 2.'
-    );
-    expect(JSON.parse(localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null')).toMatchObject({
+  it('keeps an unsupported future schema intact and disables persistence until it is removed', () => {
+    const futureState = {
       schemaVersion: 2,
+      appearance: { ...defaultAppearance, hat: 'Duck' },
+      layerOrder: normalizeTextureLayerOrder(null),
+      futureOnlyField: 'keep-me',
+    };
+    const attemptedSave = serializeSkinCrafterState({
+      appearance: { ...defaultAppearance, hat: 'None' },
+      layerOrder: normalizeTextureLayerOrder(null),
     });
+
+    localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(futureState));
+
+    expect(() => wardrobePersistence.load()).not.toThrow();
+    expect(wardrobePersistence.load()).toBeNull();
+
+    wardrobePersistence.save(attemptedSave);
+
+    expect(JSON.parse(localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null')).toEqual(
+      futureState
+    );
+    expect(localStorage.getItem(LEGACY_APPEARANCE_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(LEGACY_LAYER_ORDER_STORAGE_KEY)).toBeNull();
+
+    localStorage.removeItem(WARDROBE_STATE_STORAGE_KEY);
+    wardrobePersistence.save(attemptedSave);
+
+    expect(JSON.parse(localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null')).toEqual(
+      attemptedSave
+    );
   });
 });
