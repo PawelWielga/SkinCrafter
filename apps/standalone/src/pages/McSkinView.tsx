@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from 'react';
+import React, { useCallback, useState, type ChangeEvent, type FormEvent } from 'react';
 import { SkinPreview } from '@dihor/skincrafter-editor';
 import fetchSkin, { type FetchedSkin } from '../api/fetchSkin';
 import AppShell from '../components/appShell';
@@ -14,7 +8,6 @@ const McSkinView: React.FC = () => {
   const [skin, setSkin] = useState<FetchedSkin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const requestIdRef = useRef(0);
 
   const handleUsernameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setUsername(event.target.value);
@@ -27,25 +20,17 @@ const McSkinView: React.FC = () => {
       return;
     }
 
-    const requestId = ++requestIdRef.current;
     setError(null);
     setSkin(null);
     setLoading(true);
 
     try {
-      const fetchedSkin = await fetchSkin(username.trim());
-      if (requestId === requestIdRef.current) {
-        setSkin(fetchedSkin);
-      }
+      setSkin(await fetchSkin(username.trim()));
     } catch (err: unknown) {
-      if (requestId === requestIdRef.current) {
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
-        setSkin(null);
-      }
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+      setSkin(null);
     } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [username]);
 
