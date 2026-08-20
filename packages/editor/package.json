@@ -36,9 +36,6 @@
     "react-dom": "^18.2.0",
     "three": "^0.178.0"
   },
-  "dependencies": {
-    "dragula": "^3.7.3"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/PawelWielga/SkinCrafter.git",

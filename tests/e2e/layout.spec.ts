@@ -28,6 +28,22 @@ test('wardrobe layout fits desktop viewport and renders the preview', async ({ p
   }
 });
 
+test('layer drag handles are hidden only on mobile', async ({ page }, testInfo) => {
+  await page.goto('/');
+
+  const dragHandle = page.locator('.layer-order-handle').first();
+  const nudgeControl = page.locator('.layer-order-nudge').first();
+
+  await expect(dragHandle).toHaveCount(1);
+  await expect(nudgeControl).toBeVisible();
+
+  if (testInfo.project.name === 'chromium-mobile') {
+    await expect(dragHandle).toBeHidden();
+  } else {
+    await expect(dragHandle).toBeVisible();
+  }
+});
+
 test('mobile preview stays stable when resize fires while scrolled below it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile', 'mobile regression coverage');
 

@@ -15,6 +15,7 @@
     "test:consumer": "node ./scripts/verify-external-consumer.mjs",
     "test:e2e": "npm run build -w @pawelwielga/skincrafter-editor && npm run test:e2e -w @skincrafter/standalone",
     "lint": "eslint .",
+    "check:dead-code": "knip --dependencies --files",
     "preview": "npm run preview -w @skincrafter/standalone"
   },
   "devDependencies": {
@@ -22,7 +23,6 @@
     "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/dragula": "^3.7.5",
     "@types/node": "^20.19.39",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
@@ -34,6 +34,7 @@
     "eslint-plugin-react-refresh": "^0.4.26",
     "globals": "^15.15.0",
     "jsdom": "^26.1.0",
+    "knip": "^6.32.2",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.3.3",

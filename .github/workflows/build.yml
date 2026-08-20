@@ -18,6 +18,7 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
+      - run: npm run check:dead-code
       - run: npm test
       - run: npm run build
       - run: npm run test:consumer
