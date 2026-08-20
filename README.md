@@ -1,57 +1,34 @@
 # SkinCrafter
 
-SkinCrafter is a React + TypeScript Minecraft skin creator. The repository is now a small npm workspace with one authoritative reusable editor implementation and a standalone website that consumes it.
+SkinCrafter is a simple browser-based creator for making your own Minecraft skin without using a graphics editor.
 
-## Repository layout
+Choose the look of your character, combine available appearance elements, adjust colors and see the result immediately on a 3D model. When the skin looks the way you want, you can save it as a ready-to-use Minecraft skin file.
 
-```text
-SkinCrafter/
-├── packages/
-│   └── editor/       # @dihor/skincrafter-editor
-└── apps/
-    └── standalone/   # skincrafter.dihor.pl / GitHub Pages app
-```
+## Try SkinCrafter
 
-`packages/editor` owns the wardrobe UI, appearance model, texture composition, packaged texture assets, localization used by the editor, Three.js preview and the versioned state serialization/migration contract. `apps/standalone` owns routing, navbar/footer, persisted language, local wardrobe storage, PlayerDB skin lookup and deployment shell.
+**Open the live application:** [https://skincrafter.dihor.pl/](https://skincrafter.dihor.pl/)
 
-There is no second editor implementation in the standalone app.
+There is nothing to install. SkinCrafter runs directly in your web browser.
 
-## Local development
+## What can you do?
 
-Node 20 is the supported runtime.
+- create a Minecraft character from ready-made appearance elements,
+- choose and customize features such as body, hair, eyes, clothing and accessories,
+- change supported colors to create your own combinations,
+- arrange visual layers when several elements overlap,
+- preview changes live on an interactive 3D Minecraft model,
+- save the finished skin as a Minecraft-compatible PNG file,
+- use the built-in skin viewer to preview an existing player's skin by Minecraft username,
+- use the application in Polish or English.
 
-```bash
-npm install
-npm run dev
-```
+## Who is it for?
 
-The root `dev` command builds the reusable package first and then starts the standalone Vite app.
+SkinCrafter is meant for players who want a personalized Minecraft skin but do not want to draw every pixel by hand. It focuses on quickly combining and customizing ready-made elements while still showing exactly how the character will look in the game.
 
-## Validation
+It can also be used as a reusable skin editor inside other applications and projects.
 
-```bash
-npm run lint
-npm test
-npm run test:e2e
-npm run build
-npm run test:consumer
-```
+## For developers
 
-The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview. The consumer smoke test installs the real packed editor artifact in a clean external project.
+Development, repository structure, testing, package integration and release information are documented separately in [TECHNICAL.md](TECHNICAL.md).
 
-## Reusable editor package
-
-The public package is `@dihor/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, versioned state parse/serialize helpers, locale helpers and documented host contracts.
-
-See [`packages/editor/README.md`](packages/editor/README.md) for installation, callbacks, `Blob`/`File` skin output, controlled state, persistence adapters, schema migrations, localization, theming, asset handling and SemVer publishing.
-
-## Standalone routes
-
-- `/`: creator rendered by `SkinCrafterEditor` from the package.
-- `/mcskinview`: PlayerDB username lookup rendered with the package `SkinPreview`.
-
-The standalone application persists current wardrobe data under `skincrafterState` using the package's versioned serialization format. Existing `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys are migrated on load, and the aggregate legacy keys remain synchronized on save for backward compatibility. If an older standalone build later changes the synchronized aggregate keys, the next current build detects that valid divergence and migrates those newer user choices forward instead of overwriting them with stale `skincrafterState`. A `skincrafterState` written by an unsupported future schema is preserved byte-for-byte and persistence writes are suppressed until that record is removed or a compatible build is used. Storage ownership stays in the standalone host rather than the reusable package.
-
-## Distribution
-
-Editor releases use tags such as `editor-v0.1.0`. `.github/workflows/publish-editor.yml` verifies the tag/package version match, runs repository validation on the supported Node 20 baseline, attaches an npm-compatible `.tgz` to the GitHub release, and publishes the package to npm. npm Trusted Publishing (GitHub Actions OIDC) is the preferred authentication path and requires the npm package to trust `publish-editor.yml`; an `NPM_TOKEN` repository secret remains an optional fallback. The publication step uses a Trusted-Publishing-capable Node/npm runtime while normal project validation remains on Node 20. Consumers should pin released versions rather than repository source.
+Detailed documentation for the reusable editor package is available in [`packages/editor/README.md`](packages/editor/README.md).
