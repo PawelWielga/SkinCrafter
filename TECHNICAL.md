@@ -41,6 +41,12 @@ npm run test:consumer
 
 The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview. The consumer smoke test installs the real packed editor artifact in a clean external project.
 
+## Renderer parity
+
+The Three.js player preview is validated against the Minecraft Java player geometry and the canonical 64×64 skin atlas, including Classic/Slim arms, independent left/right limb regions, outer-layer dilation, pivot positions, alpha cutoff and pixel-perfect texture sampling.
+
+See [`RENDERER_PARITY.md`](RENDERER_PARITY.md) for the reference baseline, exact geometry/UV contract, diagnostic skins and regression-test strategy.
+
 ## Reusable editor package
 
 The public package is `@dihor/skincrafter-editor`. It exposes `SkinCrafterEditor`, `SkinPreview`, stable appearance/state/output types, versioned state parse/serialize helpers, locale helpers and documented host contracts.

@@ -20,19 +20,34 @@ export interface PoseOptions {
 
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
-const RIGHT_ARM_TPOSE_X = -10;
-const LEFT_ARM_TPOSE_X = 10;
-const ARM_TPOSE_Y = 16;
-const RIGHT_LEG_X = -2;
-const LEFT_LEG_X = 2;
+const RIGHT_ARM_PIVOT = new THREE.Vector3(-5, 16, 0);
+const LEFT_ARM_PIVOT = new THREE.Vector3(5, 16, 0);
+const RIGHT_LEG_X = -1.9;
+const LEFT_LEG_X = 1.9;
+const RIGHT_LEG_PIVOT = new THREE.Vector3(RIGHT_LEG_X, 6, 0);
+const LEFT_LEG_PIVOT = new THREE.Vector3(LEFT_LEG_X, 6, 0);
+
+function setRotatedAroundPivot(
+  part: THREE.Object3D | null,
+  center: THREE.Vector3,
+  pivot: THREE.Vector3,
+  rotation: THREE.Euler
+): void {
+  if (!part) return;
+
+  const rotatedCenter = center.clone().sub(pivot).applyEuler(rotation).add(pivot);
+  part.position.copy(rotatedCenter);
+  part.rotation.copy(rotation);
+}
 
 export default function applyPose(p: Pose, refs: References, options: PoseOptions = {}): void {
   const { armL, armR, legL, legR, armLOL, armROL, legLOL, legROL } = refs;
   const leftArmX = options.leftArmX ?? LEFT_ARM_X;
   const rightArmX = options.rightArmX ?? RIGHT_ARM_X;
-  const leftArmTposeX = options.leftArmX !== undefined ? options.leftArmX + 4 : LEFT_ARM_TPOSE_X;
-  const rightArmTposeX =
-    options.rightArmX !== undefined ? options.rightArmX - 4 : RIGHT_ARM_TPOSE_X;
+  const leftArmCenter = new THREE.Vector3(leftArmX, 12, 0);
+  const rightArmCenter = new THREE.Vector3(rightArmX, 12, 0);
+  const leftLegCenter = new THREE.Vector3(LEFT_LEG_X, 0, 0);
+  const rightLegCenter = new THREE.Vector3(RIGHT_LEG_X, 0, 0);
 
   if (!armL || !armR || !legL || !legR) return;
 
@@ -40,57 +55,41 @@ export default function applyPose(p: Pose, refs: References, options: PoseOption
     part?.rotation.set(0, 0, 0)
   );
 
-  armL.position.set(leftArmX, 12, 0);
-  armR.position.set(rightArmX, 12, 0);
-  legL.position.set(LEFT_LEG_X, 0, 0);
-  legR.position.set(RIGHT_LEG_X, 0, 0);
+  armL.position.copy(leftArmCenter);
+  armR.position.copy(rightArmCenter);
+  legL.position.copy(leftLegCenter);
+  legR.position.copy(rightLegCenter);
 
-  armLOL?.position.set(leftArmX, 12, 0);
-  armROL?.position.set(rightArmX, 12, 0);
-  legLOL?.position.set(LEFT_LEG_X, 0, 0);
-  legROL?.position.set(RIGHT_LEG_X, 0, 0);
+  armLOL?.position.copy(leftArmCenter);
+  armROL?.position.copy(rightArmCenter);
+  legLOL?.position.copy(leftLegCenter);
+  legROL?.position.copy(rightLegCenter);
 
   if (p === 'tpose') {
-    const z = Math.PI / 2;
-    armL.position.set(leftArmTposeX, ARM_TPOSE_Y, 0);
-    armR.position.set(rightArmTposeX, ARM_TPOSE_Y, 0);
-    armL.rotation.z = z;
-    armR.rotation.z = -z;
+    const leftRotation = new THREE.Euler(0, 0, Math.PI / 2);
+    const rightRotation = new THREE.Euler(0, 0, -Math.PI / 2);
 
-    armLOL?.position.set(leftArmTposeX, ARM_TPOSE_Y, 0);
-    armROL?.position.set(rightArmTposeX, ARM_TPOSE_Y, 0);
-    armLOL?.rotation.set(0, 0, z);
-    armROL?.rotation.set(0, 0, -z);
+    setRotatedAroundPivot(armL, leftArmCenter, LEFT_ARM_PIVOT, leftRotation);
+    setRotatedAroundPivot(armR, rightArmCenter, RIGHT_ARM_PIVOT, rightRotation);
+    setRotatedAroundPivot(armLOL, leftArmCenter, LEFT_ARM_PIVOT, leftRotation);
+    setRotatedAroundPivot(armROL, rightArmCenter, RIGHT_ARM_PIVOT, rightRotation);
   } else if (p === 'walking') {
     const forward = -Math.PI / 4;
     const backward = Math.PI / 4;
-    const raisedArmY = 13;
 
-    armL.rotation.x = forward;
-    armL.position.set(armL.position.x, raisedArmY, 3);
-    armR.rotation.x = backward;
-    armR.position.set(armR.position.x, raisedArmY, -3);
+    const leftArmRotation = new THREE.Euler(forward, 0, 0);
+    const rightArmRotation = new THREE.Euler(backward, 0, 0);
+    const leftLegRotation = new THREE.Euler(backward, 0, 0);
+    const rightLegRotation = new THREE.Euler(forward, 0, 0);
 
-    legL.rotation.x = backward;
-    legL.position.set(legL.position.x, 1, -4);
-    legR.rotation.x = forward;
-    legR.position.set(legR.position.x, 1, 4);
+    setRotatedAroundPivot(armL, leftArmCenter, LEFT_ARM_PIVOT, leftArmRotation);
+    setRotatedAroundPivot(armR, rightArmCenter, RIGHT_ARM_PIVOT, rightArmRotation);
+    setRotatedAroundPivot(legL, leftLegCenter, LEFT_LEG_PIVOT, leftLegRotation);
+    setRotatedAroundPivot(legR, rightLegCenter, RIGHT_LEG_PIVOT, rightLegRotation);
 
-    if (armLOL) {
-      armLOL.rotation.x = forward;
-      armLOL.position.set(armLOL.position.x, raisedArmY, 3);
-    }
-    if (armROL) {
-      armROL.rotation.x = backward;
-      armROL.position.set(armROL.position.x, raisedArmY, -3);
-    }
-    if (legLOL) {
-      legLOL.rotation.x = backward;
-      legLOL.position.set(legLOL.position.x, 1, -4);
-    }
-    if (legROL) {
-      legROL.rotation.x = forward;
-      legROL.position.set(legROL.position.x, 1, 4);
-    }
+    setRotatedAroundPivot(armLOL, leftArmCenter, LEFT_ARM_PIVOT, leftArmRotation);
+    setRotatedAroundPivot(armROL, rightArmCenter, RIGHT_ARM_PIVOT, rightArmRotation);
+    setRotatedAroundPivot(legLOL, leftLegCenter, LEFT_LEG_PIVOT, leftLegRotation);
+    setRotatedAroundPivot(legROL, rightLegCenter, RIGHT_LEG_PIVOT, rightLegRotation);
   }
 }

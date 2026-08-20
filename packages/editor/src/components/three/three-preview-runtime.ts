@@ -79,13 +79,14 @@ const CHARACTER_CAMERA_DISTANCE = 44;
 const MIN_CAMERA_DISTANCE = 24;
 const MAX_CAMERA_DISTANCE = 72;
 const WHEEL_ZOOM_SPEED = 0.04;
-const OVERLAY_EXPAND = 0.5;
+const HEAD_OVERLAY_EXPAND = 1;
+const BODY_OVERLAY_EXPAND = 0.5;
 const RIGHT_ARM_X = -6;
 const LEFT_ARM_X = 6;
 const SLIM_RIGHT_ARM_X = -5.5;
 const SLIM_LEFT_ARM_X = 5.5;
-const RIGHT_LEG_X = -2;
-const LEFT_LEG_X = 2;
+const RIGHT_LEG_X = -1.9;
+const LEFT_LEG_X = 1.9;
 
 const emptyModelParts = (): ModelParts => ({
   armL: null,
@@ -367,19 +368,38 @@ export class ThreePreviewRuntime {
     const rightArmOverlayTextureMap = isSlim ? slimArmOverlayMap : armOverlayMap;
     const leftArmOverlayTextureMap = isSlim ? slimLeftArmOverlayMap : leftArmOverlayMap;
 
-    const head = createBox(texture, 8, 8, 8, 0, 22, 0, headMap, { flipYFaces: ['bottom'] });
+    const head = createBox(texture, 8, 8, 8, 0, 22, 0, headMap);
     const body = createBox(texture, 8, 12, 4, 0, 12, 0, bodyMap);
     const armR = createBox(texture, armWidth, 12, 4, rightArmX, 12, 0, rightArmMap);
     const armL = createBox(texture, armWidth, 12, 4, leftArmX, 12, 0, leftArmTextureMap);
     const legR = createBox(texture, 4, 12, 4, RIGHT_LEG_X, 0, 0, legMap);
     const legL = createBox(texture, 4, 12, 4, LEFT_LEG_X, 0, 0, leftLegMap);
 
-    const overlayOptions = { transparent: true, expand: OVERLAY_EXPAND };
-    const headOL = createBox(texture, 8, 8, 8, 0, 22, 0, headOverlayMap, {
-      ...overlayOptions,
-      flipYFaces: ['bottom'],
-    });
-    const bodyOL = createBox(texture, 8, 12, 4, 0, 12, 0, bodyOverlayMap, overlayOptions);
+    const headOverlayOptions = { transparent: true, expand: HEAD_OVERLAY_EXPAND };
+    const bodyOverlayOptions = { transparent: true, expand: BODY_OVERLAY_EXPAND };
+
+    const headOL = createBox(
+      texture,
+      8,
+      8,
+      8,
+      0,
+      22,
+      0,
+      headOverlayMap,
+      headOverlayOptions
+    );
+    const bodyOL = createBox(
+      texture,
+      8,
+      12,
+      4,
+      0,
+      12,
+      0,
+      bodyOverlayMap,
+      bodyOverlayOptions
+    );
     const armROL = createBox(
       texture,
       armWidth,
@@ -389,7 +409,7 @@ export class ThreePreviewRuntime {
       12,
       0,
       rightArmOverlayTextureMap,
-      overlayOptions
+      bodyOverlayOptions
     );
     const armLOL = createBox(
       texture,
@@ -400,7 +420,7 @@ export class ThreePreviewRuntime {
       12,
       0,
       leftArmOverlayTextureMap,
-      overlayOptions
+      bodyOverlayOptions
     );
     const legROL = createBox(
       texture,
@@ -411,7 +431,7 @@ export class ThreePreviewRuntime {
       0,
       0,
       legOverlayMap,
-      overlayOptions
+      bodyOverlayOptions
     );
     const legLOL = createBox(
       texture,
@@ -422,7 +442,7 @@ export class ThreePreviewRuntime {
       0,
       0,
       leftLegOverlayMap,
-      overlayOptions
+      bodyOverlayOptions
     );
 
     this.parts = {
