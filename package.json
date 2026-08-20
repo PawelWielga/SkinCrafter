@@ -8,12 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run build -w @pawelwielga/skincrafter-editor && npm run dev -w @skincrafter/standalone",
-    "typecheck": "npm run build -w @pawelwielga/skincrafter-editor && npm run typecheck -w @skincrafter/standalone",
-    "build": "npm run build -w @pawelwielga/skincrafter-editor && npm run build -w @skincrafter/standalone",
-    "test": "npm run build -w @pawelwielga/skincrafter-editor && npm run test -w @pawelwielga/skincrafter-editor && npm run test -w @skincrafter/standalone",
+    "dev": "npm run build -w @dihor/skincrafter-editor && npm run dev -w @skincrafter/standalone",
+    "typecheck": "npm run build -w @dihor/skincrafter-editor && npm run typecheck -w @skincrafter/standalone",
+    "build": "npm run build -w @dihor/skincrafter-editor && npm run build -w @skincrafter/standalone",
+    "test": "npm run build -w @dihor/skincrafter-editor && npm run test -w @dihor/skincrafter-editor && npm run test -w @skincrafter/standalone",
     "test:consumer": "node ./scripts/verify-external-consumer.mjs",
-    "test:e2e": "npm run build -w @pawelwielga/skincrafter-editor && npm run test:e2e -w @skincrafter/standalone",
+    "test:e2e": "npm run build -w @dihor/skincrafter-editor && npm run test:e2e -w @skincrafter/standalone",
     "lint": "eslint .",
     "check:dead-code": "knip --dependencies --files",
     "preview": "npm run preview -w @skincrafter/standalone"
