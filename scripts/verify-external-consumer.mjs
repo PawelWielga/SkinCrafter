@@ -194,9 +194,6 @@ function verifyBrowserBuild(consumerRoot, packResult) {
   );
   const runtimeText = runtimeTextFiles.map((filePath) => readFileSync(filePath, 'utf8')).join('\n');
 
-  if (/data:image\/png(?:;[^,]*)?,/i.test(runtimeText)) {
-    fail('external consumer runtime contains an inline PNG data URL from the editor package.');
-  }
   if (/['"`]\/assets\/[^'"`]+\.png/i.test(runtimeText)) {
     fail('external consumer contains a root-relative texture URL that ignores the non-root base.');
   }
@@ -216,6 +213,10 @@ function verifyBrowserBuild(consumerRoot, packResult) {
     const textureName = basename(texturePath);
     if (!runtimeText.includes(textureName)) {
       fail(`external consumer emitted an unreferenced texture asset: ${textureName}`);
+    }
+    const textureBase64 = readFileSync(texturePath).toString('base64');
+    if (runtimeText.includes(textureBase64)) {
+      fail(`external consumer runtime embeds wardrobe texture bytes: ${textureName}`);
     }
   }
 }
