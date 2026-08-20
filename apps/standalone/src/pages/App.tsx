@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { SkinCrafterEditor } from '@pawelwielga/skincrafter-editor';
+import { SkinCrafterEditor } from '@dihor/skincrafter-editor';
 import AppShell from '../components/appShell';
 import { wardrobePersistence } from '../persistence/wardrobePersistence';
 import McSkinView from './McSkinView';
