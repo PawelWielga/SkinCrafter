@@ -80,7 +80,7 @@ describe('standalone wardrobe persistence', () => {
       appearance: { ...defaultAppearance, hat: 'Duck' },
       layerOrder: normalizeTextureLayerOrder(null),
     });
-    const newerLegacyAppearance = { ...defaultAppearance, hat: 'None', shirt: 'Superman' };
+    const newerLegacyAppearance = { ...defaultAppearance, hat: 'None', shirt: 'Hoodie' };
     const newerLegacyLayerOrder = ['pants', 'shirt', 'hat'];
 
     localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(staleVersioned));
@@ -96,7 +96,7 @@ describe('standalone wardrobe persistence', () => {
     const loaded = wardrobePersistence.load();
 
     expect(loaded?.appearance?.hat).toBe('None');
-    expect(loaded?.appearance?.shirt).toBe('Superman');
+    expect(loaded?.appearance?.shirt).toBe('Hoodie');
     expect(loaded?.layerOrder).toEqual(['pants', 'shirt', 'hat', 'shoes', 'accessory']);
 
     const rewritten = JSON.parse(
@@ -106,7 +106,7 @@ describe('standalone wardrobe persistence', () => {
       schemaVersion: 1,
       appearance: {
         hat: 'None',
-        shirt: 'Superman',
+        shirt: 'Hoodie',
       },
     });
   });
