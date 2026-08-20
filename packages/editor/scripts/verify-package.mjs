@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {
   existsSync,
@@ -11,6 +12,7 @@ const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const packageJsonPath = join(packageRoot, 'package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 const distRoot = join(packageRoot, 'dist');
+const sourceTextureRoot = join(packageRoot, 'src', 'assets', 'textures');
 
 function fail(message) {
   throw new Error(`[package verification] ${message}`);
@@ -41,6 +43,10 @@ function listFiles(directory) {
 
 function toPackagePath(filePath) {
   return relative(packageRoot, filePath).replaceAll('\\', '/');
+}
+
+function sha256(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
 if (packageJson.type !== 'module') {
@@ -99,13 +105,23 @@ for (const declarationPath of declarations) {
 
 const indexJsPath = join(distRoot, 'index.js');
 const indexJs = readFileSync(indexJsPath, 'utf8');
-if (/data:image\/png(?:;[^,]*)?,/i.test(indexJs)) {
-  fail('primary JavaScript bundle contains an inline PNG data URL.');
+const sourcePngFiles = listFiles(sourceTextureRoot).filter((filePath) => filePath.endsWith('.png'));
+const emittedPngFiles = distFiles.filter((filePath) => filePath.endsWith('.png'));
+if (sourcePngFiles.length === 0) {
+  fail('source wardrobe contains no PNG assets to verify.');
+}
+if (emittedPngFiles.length !== sourcePngFiles.length) {
+  fail(
+    `editor build emitted ${emittedPngFiles.length} PNG assets, ` +
+      `but ${sourcePngFiles.length} source wardrobe PNGs exist.`
+  );
 }
 
-const emittedPngFiles = distFiles.filter((filePath) => filePath.endsWith('.png'));
-if (emittedPngFiles.length === 0) {
-  fail('editor build emitted no PNG assets; wardrobe textures must remain separate files.');
+for (const sourcePath of sourcePngFiles) {
+  const sourceBase64 = readFileSync(sourcePath).toString('base64');
+  if (indexJs.includes(sourceBase64)) {
+    fail(`primary JavaScript bundle embeds wardrobe PNG bytes: ${toPackagePath(sourcePath)}`);
+  }
 }
 
 for (const assetPath of emittedPngFiles) {
@@ -113,6 +129,12 @@ for (const assetPath of emittedPngFiles) {
   if (!/^dist\/assets\/[^/]+-[A-Za-z0-9_-]+\.png$/.test(packagePath)) {
     fail(`wardrobe asset is not emitted as a cache-safe hashed file: ${packagePath}`);
   }
+}
+
+const sourceHashes = sourcePngFiles.map(sha256).sort();
+const emittedHashes = emittedPngFiles.map(sha256).sort();
+if (JSON.stringify(sourceHashes) !== JSON.stringify(emittedHashes)) {
+  fail('emitted wardrobe PNG bytes differ from the source texture set.');
 }
 
 const referencedPngAssets = new Set(
@@ -159,5 +181,5 @@ for (const packedFile of packResult.files) {
 
 console.log(
   `Verified ESM exports, ${declarations.length} declaration files, ` +
-    `${emittedPngFiles.length} emitted PNG assets and ${packResult.files.length} packed files.`
+    `${emittedPngFiles.length} byte-identical emitted PNG assets and ${packResult.files.length} packed files.`
 );
