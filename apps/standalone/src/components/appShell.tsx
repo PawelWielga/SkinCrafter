@@ -2,10 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   defaultLanguage,
   isLanguage,
-  translate,
   type Language,
-  type TranslationKey,
 } from '@dihor/skincrafter-editor';
+import { translateStandalone, type StandaloneTranslationKey } from '../i18n/translations';
 import MyFooter from './myFooter';
 import NBar from './nbar';
 
@@ -14,7 +13,7 @@ const LANGUAGE_STORAGE_KEY = 'skincrafterLanguage';
 interface AppShellContext {
   footerHeight: number;
   language: Language;
-  t: (key: TranslationKey) => string;
+  t: (key: StandaloneTranslationKey) => string;
 }
 
 interface AppShellProps {
@@ -32,7 +31,7 @@ export default function AppShell({ children }: AppShellProps): JSX.Element {
   const [footerHeight, setFooterHeight] = useState<number>(0);
 
   const t = useCallback(
-    (key: TranslationKey) => translate(language, key),
+    (key: StandaloneTranslationKey) => translateStandalone(language, key),
     [language]
   );
 

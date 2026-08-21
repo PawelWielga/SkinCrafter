@@ -1,12 +1,26 @@
 import React, { useCallback, useState, type ChangeEvent, type FormEvent } from 'react';
 import { SkinPreview } from '@dihor/skincrafter-editor';
-import fetchSkin, { type FetchedSkin } from '../api/fetchSkin';
+import fetchSkin, {
+  FetchSkinError,
+  type FetchSkinErrorCode,
+  type FetchedSkin,
+} from '../api/fetchSkin';
 import AppShell from '../components/appShell';
+import type { StandaloneTranslationKey } from '../i18n/translations';
+
+const fetchSkinErrorTranslationKeys: Record<FetchSkinErrorCode, StandaloneTranslationKey> = {
+  player_not_found: 'skinView.error.playerNotFound',
+  skin_texture_missing: 'skinView.error.skinTextureMissing',
+  rate_limited: 'skinView.error.rateLimited',
+  service_unavailable: 'skinView.error.serviceUnavailable',
+  network_error: 'skinView.error.network',
+  invalid_response: 'skinView.error.invalidResponse',
+};
 
 const McSkinView: React.FC = () => {
   const [username, setUsername] = useState('');
   const [skin, setSkin] = useState<FetchedSkin | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<StandaloneTranslationKey | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleUsernameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -16,18 +30,22 @@ const McSkinView: React.FC = () => {
   const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!username.trim()) {
-      setError('Please enter a username.');
+      setErrorKey('skinView.error.usernameRequired');
       return;
     }
 
-    setError(null);
+    setErrorKey(null);
     setSkin(null);
     setLoading(true);
 
     try {
       setSkin(await fetchSkin(username.trim()));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+      setErrorKey(
+        err instanceof FetchSkinError
+          ? fetchSkinErrorTranslationKeys[err.code]
+          : 'skinView.error.invalidResponse'
+      );
       setSkin(null);
     } finally {
       setLoading(false);
@@ -75,7 +93,14 @@ const McSkinView: React.FC = () => {
                     </button>
                   </form>
                 </div>
-                {error && <div className="option-card bg-red-50 text-red-700 shadow p-4 pixel-border">{error}</div>}
+                {errorKey && (
+                  <div
+                    role="alert"
+                    className="option-card bg-red-50 text-red-700 shadow p-4 pixel-border"
+                  >
+                    {t(errorKey)}
+                  </div>
+                )}
               </div>
             </section>
           </div>
