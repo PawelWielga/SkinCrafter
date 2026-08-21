@@ -82,30 +82,22 @@ CPU-side teardown is also covered by the normal `npm test` regression suite. `th
 
 ## Mount/unmount lifecycle finding
 
-The benchmark also performs 10 `Creator -> /mcskinview -> Creator` route cycles. Both routes intentionally own a Three.js preview canvas. The harness verifies that the previous route's canvas is disconnected and that the next route receives a different canvas.
+Issue #138 investigated the raw texture residual found by the original baseline. The original probe counted `createTexture` and `deleteTexture` calls globally, but that accounting did not model WebGL context destruction. A browser releases every GPU resource owned by a lost context even when it does not emit a matching JavaScript `deleteTexture` call for each object.
 
-Buffers, programs and vertex arrays return to the same live create/delete accounting after each mount. Texture accounting, however, grows by 8 for each preview mount, or 16 per complete route cycle:
+The renderer teardown now has two explicit stages. `ThreePreviewRuntime` first disposes package-owned textures, materials and geometries and calls `WebGLRenderer.dispose()` so Three.js can release its normal renderer caches. Because a route unmount permanently retires that renderer, it then calls `WebGLRenderer.forceContextLoss()` before removing the canvas. Normal in-place editor state changes do not use this path and continue to keep one persistent renderer/context.
 
-```text
-cycle 1:  viewer 17, editor 25
-cycle 2:  viewer 33, editor 41
-cycle 3:  viewer 49, editor 57
-...
-cycle 10: viewer 161, editor 169
-```
+The performance probe now records both views of the lifecycle:
 
-Final instrumentation totals were:
+- **raw live** remains `create - delete` and is retained only as historical diagnostics,
+- **context-aware live** counts resources belonging to contexts that have not been lost,
+- `contexts.created/lost/active` proves whether old preview contexts are actually retired,
+- `contextReleased` records resources that were still associated with a context when the browser context-loss event released the whole context.
 
-| Resource | Created | Deleted | Live by create/delete accounting |
-| --- | ---: | ---: | ---: |
-| Textures | 308 | 139 | 169 |
-| Buffers | 1008 | 960 | 48 |
-| Programs | 63 | 60 | 3 |
-| Vertex arrays | 378 | 360 | 18 |
+This distinction also explains why the old raw texture counter could grow while buffers/programs/vertex arrays appeared balanced. Three.js owns context-local fallback/default texture allocations in its WebGL renderer state in addition to application `THREE.Texture` objects. They are properties of the WebGL context rather than SkinCrafter texture clones, so raw `createTexture - deleteTexture` is not a valid retained-GPU-memory metric after the whole context has been released. The direct runtime unit tests continue to verify that SkinCrafter-owned source/cloned textures are disposed explicitly, including stale async loads.
 
-This finding is tracked separately in #138. The counter alone does not prove that 160 texture allocations remain resident in GPU memory because a browser can release an entire disconnected WebGL context without producing matching `deleteTexture` calls visible to this instrumentation. #138 therefore requires distinguishing a real package leak from renderer/browser context-lifetime behavior before changing production code.
+The route-cycle scenario remains 10 full `Creator -> /mcskinview -> Creator` cycles. It now asserts after every transition that exactly one preview context is active and that context-aware texture/buffer/program/vertex-array counts return to the one-preview baseline. The JSON artifact also keeps the raw counters and per-context-loss release totals, so future Three.js/browser changes remain observable without confusing context destruction with a leak.
 
-No renderer fix is included in #119. Keeping the baseline PR measurement-focused prevents an unverified optimization from being mixed with the evidence that motivated it.
+Exact measurements for the #138 implementation are recorded from its GitHub Actions Performance Baseline run in the PR validation evidence. The regression criterion is deliberately lifecycle-based rather than hard-coding the current number of renderer-internal fallback textures, because that implementation detail may change in a future Three.js release.
 
 ## Distribution size
 
