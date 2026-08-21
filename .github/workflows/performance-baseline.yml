@@ -1,0 +1,29 @@
+name: Performance Baseline
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/performance-baseline.yml'
+      - 'package.json'
+      - 'scripts/run-performance-baseline.mjs'
+      - 'tests/e2e/performance-baseline.spec.ts'
+
+jobs:
+  performance-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run test:performance
+      - name: Upload performance baseline
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: performance-baseline
+          path: test-results/performance-baseline.json
+          if-no-files-found: warn
