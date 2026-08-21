@@ -59,6 +59,7 @@ interface ImportLoadState {
 interface PersistenceInitialization {
   state: SkinCrafterState;
   writesBlocked: boolean;
+  error: SkinCrafterError | null;
 }
 
 function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null): SkinCrafterState {
@@ -68,22 +69,44 @@ function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null
   };
 }
 
+function persistenceErrorFrom(
+  operation: 'load' | 'save',
+  cause: unknown
+): SkinCrafterError {
+  return {
+    code: operation === 'load' ? 'persistence_load_failed' : 'persistence_save_failed',
+    category: 'persistence',
+    message: operation === 'load'
+      ? 'Failed to load persisted SkinCrafter state.'
+      : 'Failed to save SkinCrafter state.',
+    cause,
+  };
+}
+
 function initializePersistence(
   persistence?: SkinCrafterPersistenceAdapter
 ): PersistenceInitialization {
-  const loaded = persistence?.load() ?? null;
+  try {
+    const loaded = persistence?.load() ?? null;
 
-  if (loaded && 'status' in loaded) {
-    if (loaded.status === 'incompatible') {
-      return { state: normalizeState(null), writesBlocked: true };
+    if (loaded && 'status' in loaded) {
+      if (loaded.status === 'incompatible') {
+        return { state: normalizeState(null), writesBlocked: true, error: null };
+      }
+      if (loaded.status === 'empty') {
+        return { state: normalizeState(null), writesBlocked: false, error: null };
+      }
+      return { state: normalizeState(loaded.state), writesBlocked: false, error: null };
     }
-    if (loaded.status === 'empty') {
-      return { state: normalizeState(null), writesBlocked: false };
-    }
-    return { state: normalizeState(loaded.state), writesBlocked: false };
+
+    return { state: normalizeState(loaded), writesBlocked: false, error: null };
+  } catch (cause) {
+    return {
+      state: normalizeState(null),
+      writesBlocked: true,
+      error: persistenceErrorFrom('load', cause),
+    };
   }
-
-  return { state: normalizeState(loaded), writesBlocked: false };
 }
 
 function cloneState(state: SkinCrafterState): SkinCrafterState {
@@ -165,13 +188,16 @@ export default function SkinCrafterEditor({
   previewBottomOffset = 0,
 }: SkinCrafterEditorProps): React.JSX.Element {
   const [persistenceInitialization] = useState<PersistenceInitialization>(() => {
-    if (value) return { state: normalizeState(value), writesBlocked: false };
+    if (value) {
+      return { state: normalizeState(value), writesBlocked: false, error: null };
+    }
 
     const persisted = initializePersistence(persistence);
     if (initialSkin) {
       return {
         state: normalizeState(initialSkin),
         writesBlocked: persisted.writesBlocked,
+        error: persisted.error,
       };
     }
     return persisted;
@@ -202,6 +228,7 @@ export default function SkinCrafterEditor({
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
+  const initialPersistenceErrorReportedRef = useRef(false);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
@@ -244,6 +271,13 @@ export default function SkinCrafterEditor({
   useEffect(() => {
     onErrorRef.current = onError;
   }, [onError]);
+
+  useEffect(() => {
+    if (initialPersistenceErrorReportedRef.current || !persistenceInitialization.error) return;
+
+    initialPersistenceErrorReportedRef.current = true;
+    notifyHost(onErrorRef.current, persistenceInitialization.error);
+  }, [persistenceInitialization.error]);
 
   useEffect(() => {
     if (!initialImage) {
@@ -321,10 +355,18 @@ export default function SkinCrafterEditor({
       checkedPersistenceRef.current = persistence;
       persistenceWasCheckedRef.current = true;
       persistenceWritesBlockedRef.current = nextPersistenceInitialization.writesBlocked;
+      if (nextPersistenceInitialization.error) {
+        notifyHost(onErrorRef.current, nextPersistenceInitialization.error);
+      }
     }
 
-    if (!persistenceWritesBlockedRef.current) {
-      persistence?.save(serializeSkinCrafterState(state));
+    if (persistenceWritesBlockedRef.current || !persistence) return;
+
+    try {
+      persistence.save(serializeSkinCrafterState(state));
+    } catch (cause) {
+      persistenceWritesBlockedRef.current = true;
+      notifyHost(onErrorRef.current, persistenceErrorFrom('save', cause));
     }
   }, [persistence, state, value]);
 

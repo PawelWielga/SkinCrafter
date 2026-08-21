@@ -7,6 +7,8 @@ import {
   parseSkinCrafterState,
   serializeSkinCrafterState,
   type SkinCrafterEditorProps,
+  type SkinCrafterErrorCategory,
+  type SkinCrafterErrorCode,
   type SkinCrafterImportedInitialSkin,
   type SkinCrafterPersistenceAdapter,
   type SkinCrafterSerializedState,
@@ -24,6 +26,11 @@ if (!parsedState.success) {
 }
 
 document.documentElement.dataset.skinStateSchema = String(serializedState.schemaVersion);
+
+const persistenceErrorCode: SkinCrafterErrorCode = 'persistence_load_failed';
+const persistenceErrorCategory: SkinCrafterErrorCategory = 'persistence';
+document.documentElement.dataset.persistenceErrorCode = persistenceErrorCode;
+document.documentElement.dataset.persistenceErrorCategory = persistenceErrorCategory;
 
 const importedSkin: SkinCrafterImportedInitialSkin = {
   image: new Blob([new Uint8Array()], { type: 'image/png' }),

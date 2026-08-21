@@ -112,14 +112,21 @@ export interface SkinCrafterSkinOutput {
 
 export type SkinCrafterGenerationStatus = 'idle' | 'generating' | 'ready' | 'error';
 
-export type SkinCrafterErrorCategory = 'generation' | 'asset' | 'preview' | 'input';
+export type SkinCrafterErrorCategory =
+  | 'generation'
+  | 'asset'
+  | 'preview'
+  | 'input'
+  | 'persistence';
 
 export type SkinCrafterErrorCode =
   | 'generation_failed'
   | 'asset_load_failed'
   | 'invalid_initial_skin'
   | 'preview_texture_load_failed'
-  | 'preview_webgl_initialization_failed';
+  | 'preview_webgl_initialization_failed'
+  | 'persistence_load_failed'
+  | 'persistence_save_failed';
 
 export interface SkinCrafterError {
   code: SkinCrafterErrorCode;

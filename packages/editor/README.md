@@ -56,11 +56,11 @@ function CharacterEditor() {
 - `locale`: host-controlled `en` or `pl`. The package does not own a language selector.
 - `initialSkin`: initial semantic appearance/layer-order input, or an existing 64x64 Minecraft PNG supplied as `Blob` with explicit `classic`/`slim` model metadata.
 - `value` + `onStateChange`: fully host-controlled semantic editor state.
-- `persistence`: optional host storage adapter for semantic appearance/layer-order state. `load()` may explicitly report `loaded`, `empty` or `incompatible`; `incompatible` keeps the editor usable in memory while suppressing persistence writes for that mount. `save()` receives the current versioned serialized state. The package never reads or writes `localStorage` directly.
+- `persistence`: optional host storage adapter for semantic appearance/layer-order state. `load()` may explicitly report `loaded`, `empty` or `incompatible`; `incompatible` keeps the editor usable in memory while suppressing persistence writes for that mount. Exceptions from `load()` or `save()` are isolated from the editor lifecycle, reported through `onError`, and disable further writes to the affected adapter while it remains attached. `save()` receives the current versioned serialized state. The package never reads or writes `localStorage` directly.
 - `onSkinChange`: receives the current generated PNG as `Blob`, `File`, data URL and metadata after the current semantic/imported state has generated successfully.
 - `onSave`: called from the editor save/download action with the same upload-ready output. The action is unavailable while the current state is not `ready`.
 - `onStatusChange`: reports generation/import transitions such as `generating`, `ready` and `error`.
-- `onError`: reports structured initial-input, generation, asset and preview failures without exposing DOM, canvas or Three.js objects as public API.
+- `onError`: reports structured initial-input, generation, asset, preview and persistence failures without exposing DOM, canvas or Three.js objects as public API.
 - `assetBaseUrl`: optional host asset prefix for deployments that provide their own SkinCrafter asset set.
 - `className`, `style`, `theme`: host-shell integration without forking package CSS.
 - `previewBottomOffset`: lets a host reserve vertical space for its own shell/footer.
@@ -127,15 +127,17 @@ interface SkinCrafterError {
     | 'asset_load_failed'
     | 'invalid_initial_skin'
     | 'preview_texture_load_failed'
-    | 'preview_webgl_initialization_failed';
-  category: 'generation' | 'asset' | 'input' | 'preview';
+    | 'preview_webgl_initialization_failed'
+    | 'persistence_load_failed'
+    | 'persistence_save_failed';
+  category: 'generation' | 'asset' | 'input' | 'preview' | 'persistence';
   message: string;
   assetUrl?: string;
   cause?: unknown;
 }
 ```
 
-`invalid_initial_skin` reports malformed, unsupported-dimension or undecodable imported input through category `input`. Generation, asset and input failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. The editor displays a localized default error message for these failures; hosts may additionally use `onError` for telemetry or their own shell-level UI.
+`invalid_initial_skin` reports malformed, unsupported-dimension or undecodable imported input through category `input`. Generation, asset and input failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. Persistence failures are also reported separately: they disable the affected persistence adapter but do not change a successful skin generation to `error`, invalidate a valid PNG or disable the editor's in-memory state. The editor displays a localized default error message for generation/input failures; hosts may additionally use `onError` for telemetry or their own shell-level UI.
 
 Late async completions are ignored when they belong to an obsolete editor/import state. Hosts should therefore treat `onSkinChange` as the authoritative notification that the current state has produced a new upload-ready skin rather than caching and reusing a previous result after subsequent edits.
 
@@ -182,6 +184,16 @@ For versioned storage, return the explicit `SkinCrafterPersistenceLoadResult` fr
 - `{ status: 'incompatible' }` means a record exists but must not be replaced by this package version. The editor starts from defaults in memory and suppresses all calls to this adapter's `save()` for the lifetime of that mounted editor.
 
 Legacy adapters that return a semantic state directly or `null` remain supported for compatibility, but hosts that parse versioned records should use the explicit result so an unsupported future schema cannot be confused with a missing record. `SkinCrafterEditor` may call `save()` after mount for writable `loaded`/`empty` results, so `incompatible` is the required signal when the original record must be preserved. If the host later removes or upgrades the incompatible record, remount the editor so persistence compatibility is evaluated again.
+
+Persistence adapter failures are fail-safe and deterministic:
+
+- if `load()` throws, the editor reports `persistence_load_failed` through `onError`, keeps an explicit `initialSkin` when one was supplied (otherwise it uses normalized defaults), and continues entirely in memory,
+- a failed `load()` blocks `save()` calls to that adapter because the editor cannot prove what record may already exist and must not overwrite unreadable or future data,
+- if `save()` throws, the current editor state and generated PNG remain valid; the editor reports `persistence_save_failed` and stops retrying `save()` on every subsequent edit,
+- persistence is re-evaluated when a different adapter is attached or when the editor is remounted. This is the explicit retry boundary for a previously failed adapter,
+- exceptions thrown by the host's `onError` callback are also isolated and cannot turn a persistence problem into an editor crash.
+
+Persistence failures do not emit generation status `error`. `onStatusChange` continues to describe PNG/import generation, while `onError` is the structured channel for persistence telemetry.
 
 Use the exported helpers rather than duplicating parsing, normalization or migrations:
 

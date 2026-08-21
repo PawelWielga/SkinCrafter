@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import SkinCrafterEditor from './SkinCrafterEditor';
 import { defaultAppearance } from './data/appearance';
 import type {
@@ -18,6 +18,10 @@ vi.mock('./utils/combineTextures', async (importOriginal) => {
     ...actual,
     default: vi.fn().mockResolvedValue('data:image/png;base64,aGVsbG8='),
   };
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('SkinCrafterEditor persistence serialization', () => {
@@ -163,5 +167,157 @@ describe('SkinCrafterEditor persistence serialization', () => {
 
     expect(save).not.toHaveBeenCalled();
     expect(storedState).toEqual(futureState);
+  });
+
+  it('falls back to in-memory state and blocks writes when persistence load throws', async () => {
+    const cause = new Error('storage read blocked');
+    const load = vi.fn(() => {
+      throw cause;
+    });
+    const save = vi.fn();
+    const onError = vi.fn();
+    const persistence: SkinCrafterPersistenceAdapter = { load, save };
+
+    render(<SkinCrafterEditor persistence={persistence} onError={onError} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'persistence_load_failed',
+      category: 'persistence',
+      cause,
+    }));
+    expect(screen.getByRole('button', { name: 'Duck' })).toBeEnabled();
+  });
+
+  it('isolates an initial save failure and does not retry the broken adapter on every edit', async () => {
+    const cause = new Error('storage quota exceeded');
+    const save = vi.fn(() => {
+      throw cause;
+    });
+    const onError = vi.fn();
+    const persistence: SkinCrafterPersistenceAdapter = {
+      load: () => ({ status: 'empty' }),
+      save,
+    };
+
+    render(<SkinCrafterEditor persistence={persistence} onError={onError} />);
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+        code: 'persistence_save_failed',
+        category: 'persistence',
+        cause,
+      }));
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(save).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Duck' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Duck' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps generation healthy when a later persistence save fails', async () => {
+    const cause = new Error('storage became unavailable');
+    const save = vi.fn()
+      .mockImplementationOnce(() => undefined)
+      .mockImplementation(() => {
+        throw cause;
+      });
+    const onError = vi.fn();
+    const onStatusChange = vi.fn();
+    const persistence: SkinCrafterPersistenceAdapter = {
+      load: () => ({ status: 'empty' }),
+      save,
+    };
+
+    render(
+      <SkinCrafterEditor
+        persistence={persistence}
+        onError={onError}
+        onStatusChange={onStatusChange}
+      />
+    );
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duck' }));
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+        code: 'persistence_save_failed',
+        category: 'persistence',
+        cause,
+      }));
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(onStatusChange).not.toHaveBeenCalledWith('error');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hoodie' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not crash when the host error callback throws while reporting persistence failure', async () => {
+    const persistenceCause = new Error('storage read blocked');
+    const callbackCause = new Error('host telemetry failed');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const persistence: SkinCrafterPersistenceAdapter = {
+      load: () => {
+        throw persistenceCause;
+      },
+      save: vi.fn(),
+    };
+
+    render(
+      <SkinCrafterEditor
+        persistence={persistence}
+        onError={() => {
+          throw callbackCause;
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(consoleError).toHaveBeenCalledWith('SkinCrafter host callback failed', callbackCause);
   });
 });
