@@ -19,7 +19,10 @@ for relative in SOURCES:
     source_path = ROOT / relative
     image = Image.open(source_path).convert('RGBA')
     if image.size != (64, 64):
-        raise RuntimeError(f'{relative}: expected 64x64, got {image.size}')
+        if relative != 'race/template/none.png':
+            raise RuntimeError(f'{relative}: expected 64x64, got {image.size}')
+        image = image.resize((64, 64), Image.Resampling.NEAREST)
+        print(f'{relative}: normalized legacy {Image.open(source_path).size} atlas to 64x64')
 
     tintable = Image.new('RGBA', image.size, (0, 0, 0, 0))
     fixed = Image.new('RGBA', image.size, (0, 0, 0, 0))
