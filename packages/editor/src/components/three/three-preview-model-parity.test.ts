@@ -27,6 +27,7 @@ function createRuntime(model: 'classic' | 'slim' = 'classic'): ThreePreviewRunti
     setSize: vi.fn(),
     render: vi.fn(),
     dispose: vi.fn(),
+    forceContextLoss: vi.fn(),
   } as unknown as THREE.WebGLRenderer;
 
   const textureLoader = {

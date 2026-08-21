@@ -281,6 +281,7 @@ export class ThreePreviewRuntime {
     }
 
     this.renderer.dispose();
+    this.renderer.forceContextLoss();
     if (this.renderer.domElement.parentNode === this.container) {
       this.container.removeChild(this.renderer.domElement);
     }

@@ -17,6 +17,7 @@ interface RuntimeHarness {
   dependencies: ThreePreviewRuntimeDependencies;
   createRenderer: ReturnType<typeof vi.fn>;
   rendererDispose: ReturnType<typeof vi.fn>;
+  rendererForceContextLoss: ReturnType<typeof vi.fn>;
   rendererRender: ReturnType<typeof vi.fn>;
   cancelAnimationFrame: ReturnType<typeof vi.fn>;
   resizeDisconnect: ReturnType<typeof vi.fn>;
@@ -43,6 +44,7 @@ function createHarness(): RuntimeHarness {
   document.body.appendChild(container);
 
   const rendererDispose = vi.fn();
+  const rendererForceContextLoss = vi.fn();
   const rendererRender = vi.fn();
   const canvas = document.createElement('canvas');
   const renderer = {
@@ -54,6 +56,7 @@ function createHarness(): RuntimeHarness {
     setSize: vi.fn(),
     render: rendererRender,
     dispose: rendererDispose,
+    forceContextLoss: rendererForceContextLoss,
   } as unknown as THREE.WebGLRenderer;
   const createRenderer = vi.fn(() => renderer);
 
@@ -110,6 +113,7 @@ function createHarness(): RuntimeHarness {
     dependencies,
     createRenderer,
     rendererDispose,
+    rendererForceContextLoss,
     rendererRender,
     cancelAnimationFrame,
     resizeDisconnect,
@@ -255,6 +259,7 @@ describe('ThreePreviewRuntime', () => {
     expect(materialDispose).toHaveBeenCalledTimes(72);
     expect(textureDispose.mock.calls.length).toBeGreaterThanOrEqual(73);
     expect(harness.rendererDispose).toHaveBeenCalledTimes(1);
+    expect(harness.rendererForceContextLoss).toHaveBeenCalledTimes(1);
     expect(harness.cancelAnimationFrame).toHaveBeenCalledTimes(1);
     expect(harness.resizeDisconnect).toHaveBeenCalledTimes(1);
     expect(harness.removeWindowResizeListener).toHaveBeenCalledTimes(1);
