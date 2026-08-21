@@ -166,8 +166,15 @@ export default function SkinCrafterEditor({
 }: SkinCrafterEditorProps): React.JSX.Element {
   const [persistenceInitialization] = useState<PersistenceInitialization>(() => {
     if (value) return { state: normalizeState(value), writesBlocked: false };
-    if (initialSkin) return { state: normalizeState(initialSkin), writesBlocked: false };
-    return initializePersistence(persistence);
+
+    const persisted = initializePersistence(persistence);
+    if (initialSkin) {
+      return {
+        state: normalizeState(initialSkin),
+        writesBlocked: persisted.writesBlocked,
+      };
+    }
+    return persisted;
   });
   const [internalState, setInternalState] = useState<SkinCrafterState>(
     persistenceInitialization.state
