@@ -474,8 +474,10 @@ export default function SkinCrafterEditor({
     skinColor,
   ]);
 
+  const previewSkin = currentGeneratedSkin ?? generatedSkin;
   const skinOutput = currentGeneratedSkin?.output ?? null;
-  const combinedTexture = currentGeneratedSkin?.texture ?? null;
+  const combinedTexture = previewSkin?.texture ?? null;
+  const previewModel = previewSkin?.output.metadata.model ?? effectiveModel;
   const canSave = generationStatus === 'ready' && skinOutput !== null;
   const handleSave = onSave && canSave && skinOutput ? () => onSave(skinOutput) : undefined;
   const handlePreviewError = useCallback((error: SkinCrafterError): void => {
@@ -494,7 +496,7 @@ export default function SkinCrafterEditor({
         left={
           <PreviewArea
             texture={combinedTexture}
-            model={effectiveModel}
+            model={previewModel}
             footerHeight={previewBottomOffset}
             t={t}
             onSave={handleSave}
