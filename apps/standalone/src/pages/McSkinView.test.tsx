@@ -2,9 +2,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../api/fetchSkin', () => ({
-  default: vi.fn(),
-}));
+vi.mock('../api/fetchSkin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/fetchSkin')>();
+  return {
+    ...actual,
+    default: vi.fn(),
+  };
+});
 
 vi.mock('@dihor/skincrafter-editor', async () => {
   const actual = await vi.importActual<typeof import('@dihor/skincrafter-editor')>(
@@ -29,7 +33,7 @@ vi.mock('@dihor/skincrafter-editor', async () => {
   };
 });
 
-import fetchSkin from '../api/fetchSkin';
+import fetchSkin, { FetchSkinError } from '../api/fetchSkin';
 import McSkinView from './McSkinView';
 
 const renderSkinView = () =>
@@ -102,30 +106,99 @@ describe('McSkinView model integration', () => {
     expect(mockedFetchSkin).toHaveBeenNthCalledWith(2, 'Steve');
   });
 
-  it('clears the previous texture and model when a later lookup fails', async () => {
+  it('shows a localized validation error for an empty username in English', () => {
+    renderSkinView();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Please enter a Minecraft username.');
+    expect(mockedFetchSkin).not.toHaveBeenCalled();
+  });
+
+  it('shows a localized validation error for an empty username in Polish', () => {
+    localStorage.setItem('skincrafterLanguage', 'pl');
+    renderSkinView();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Podaj nazwe gracza Minecraft.');
+    expect(mockedFetchSkin).not.toHaveBeenCalled();
+  });
+
+  it('shows player-not-found in Polish and clears the previous skin', async () => {
+    localStorage.setItem('skincrafterLanguage', 'pl');
     mockedFetchSkin
       .mockResolvedValueOnce({
         texture: 'https://textures.minecraft.net/texture/alex',
         model: 'slim',
       })
-      .mockRejectedValueOnce(new Error('User not found'));
+      .mockRejectedValueOnce(new FetchSkinError('player_not_found'));
 
     renderSkinView();
 
-    const usernameInput = screen.getByLabelText('Minecraft username');
+    const usernameInput = screen.getByLabelText('Nazwa gracza Minecraft');
 
     fireEvent.change(usernameInput, { target: { value: 'Alex' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-model', 'slim');
     });
 
     fireEvent.change(usernameInput, { target: { value: 'MissingPlayer' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
 
-    expect(await screen.findByText('User not found')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nie znaleziono gracza Minecraft.');
     expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-texture', '');
     expect(screen.getByTestId('packaged-preview')).toHaveAttribute('data-model', 'classic');
+  });
+
+  it('shows service failure in Polish instead of claiming the player does not exist', async () => {
+    localStorage.setItem('skincrafterLanguage', 'pl');
+    mockedFetchSkin.mockRejectedValueOnce(new FetchSkinError('service_unavailable'));
+
+    renderSkinView();
+
+    fireEvent.change(screen.getByLabelText('Nazwa gracza Minecraft'), {
+      target: { value: 'Steve' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('PlayerDB jest chwilowo niedostepne. Sprobuj ponownie pozniej.');
+    expect(alert).not.toHaveTextContent('Nie znaleziono gracza Minecraft.');
+  });
+
+  it('shows a stable localized network error instead of a raw browser message', async () => {
+    localStorage.setItem('skincrafterLanguage', 'pl');
+    mockedFetchSkin.mockRejectedValueOnce(new FetchSkinError('network_error'));
+
+    renderSkinView();
+
+    fireEvent.change(screen.getByLabelText('Nazwa gracza Minecraft'), {
+      target: { value: 'Steve' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      'Nie udalo sie polaczyc z PlayerDB. Sprawdz polaczenie i sprobuj ponownie.'
+    );
+    expect(alert).not.toHaveTextContent('Failed to fetch');
+  });
+
+  it('falls back to a localized invalid-response message for unknown failures', async () => {
+    mockedFetchSkin.mockRejectedValueOnce(new Error('browser-specific message'));
+
+    renderSkinView();
+
+    fireEvent.change(screen.getByLabelText('Minecraft username'), {
+      target: { value: 'Steve' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load Skin' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('PlayerDB returned an unexpected response. Try again later.');
+    expect(alert).not.toHaveTextContent('browser-specific message');
   });
 });
