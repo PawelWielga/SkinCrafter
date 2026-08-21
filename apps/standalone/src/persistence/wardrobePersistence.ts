@@ -6,6 +6,11 @@ import {
   type SkinCrafterSerializedState,
   type SkinCrafterState,
 } from '@dihor/skincrafter-editor';
+import {
+  browserStorage,
+  type BrowserStorageReadResult,
+  type SafeBrowserStorage,
+} from './browserStorage';
 
 export const WARDROBE_STATE_STORAGE_KEY = 'skincrafterState';
 
@@ -22,8 +27,23 @@ type VersionedStateLoadResult =
   | { kind: 'unsupported' }
   | { kind: 'invalid' };
 
+type LegacyAggregateLoadResult =
+  | { kind: 'loaded'; value: LoadedState }
+  | { kind: 'missing' }
+  | { kind: 'unavailable' };
+
+type StorageReader = (key: string) => BrowserStorageReadResult;
+type StorageWriter = (key: string, value: string) => boolean;
+
 function readJson(raw: string): unknown {
   return JSON.parse(raw) as unknown;
+}
+
+function createDefaultState(): SkinCrafterState {
+  return {
+    appearance: { ...defaultAppearance },
+    layerOrder: normalizeTextureLayerOrder(null),
+  };
 }
 
 function parseLoadedState(value: unknown): LoadedState | null {
@@ -60,60 +80,71 @@ function loadVersionedState(raw: string): VersionedStateLoadResult {
   };
 }
 
-function loadLegacyAggregateState(): LoadedState | null {
-  const storedAppearance = localStorage.getItem(APPEARANCE_STORAGE_KEY);
-  const storedLayerOrder = localStorage.getItem(LAYER_ORDER_STORAGE_KEY);
-  if (storedAppearance === null || storedLayerOrder === null) return null;
+function loadLegacyAggregateState(read: StorageReader): LegacyAggregateLoadResult {
+  const storedAppearance = read(APPEARANCE_STORAGE_KEY);
+  if (storedAppearance.status === 'unavailable') return { kind: 'unavailable' };
+  if (storedAppearance.value === null) return { kind: 'missing' };
+
+  const storedLayerOrder = read(LAYER_ORDER_STORAGE_KEY);
+  if (storedLayerOrder.status === 'unavailable') return { kind: 'unavailable' };
+  if (storedLayerOrder.value === null) return { kind: 'missing' };
 
   try {
-    return parseLoadedState({
-      appearance: readJson(storedAppearance),
-      layerOrder: readJson(storedLayerOrder),
+    const loaded = parseLoadedState({
+      appearance: readJson(storedAppearance.value),
+      layerOrder: readJson(storedLayerOrder.value),
     });
+    return loaded ? { kind: 'loaded', value: loaded } : { kind: 'missing' };
   } catch {
-    return null;
+    return { kind: 'missing' };
   }
 }
 
-function loadLegacyState(): SkinCrafterState {
+function loadLegacyState(read: StorageReader, write: StorageWriter): SkinCrafterState {
+  const storedAppearance = read(APPEARANCE_STORAGE_KEY);
+  if (storedAppearance.status === 'unavailable') return createDefaultState();
+
   let appearance: unknown;
-  const storedAppearance = localStorage.getItem(APPEARANCE_STORAGE_KEY);
-  if (storedAppearance) {
+  if (storedAppearance.value) {
     try {
-      appearance = readJson(storedAppearance);
+      appearance = readJson(storedAppearance.value);
     } catch {
       appearance = { ...defaultAppearance };
     }
   } else {
+    const race = read('wardrobeRace');
+    const skinColor = read('wardrobeSkinColor');
+    const hat = read('wardrobeHat');
+    if (
+      race.status === 'unavailable'
+      || skinColor.status === 'unavailable'
+      || hat.status === 'unavailable'
+    ) {
+      return createDefaultState();
+    }
+
     appearance = {
-      race: localStorage.getItem('wardrobeRace') ?? defaultAppearance.race,
-      skinColor: localStorage.getItem('wardrobeSkinColor') ?? defaultAppearance.skinColor,
-      hat: localStorage.getItem('wardrobeHat') ?? defaultAppearance.hat,
+      race: race.value ?? defaultAppearance.race,
+      skinColor: skinColor.value ?? defaultAppearance.skinColor,
+      hat: hat.value ?? defaultAppearance.hat,
     };
   }
 
   let layerOrder: unknown = normalizeTextureLayerOrder(null);
-  const storedLayerOrder = localStorage.getItem(LAYER_ORDER_STORAGE_KEY);
-  if (storedLayerOrder) {
+  const storedLayerOrder = read(LAYER_ORDER_STORAGE_KEY);
+  if (storedLayerOrder.status === 'unavailable') return createDefaultState();
+  if (storedLayerOrder.value) {
     try {
-      layerOrder = readJson(storedLayerOrder);
+      layerOrder = readJson(storedLayerOrder.value);
     } catch {
       layerOrder = normalizeTextureLayerOrder(null);
     }
   }
 
   const parsed = parseLoadedState({ appearance, layerOrder });
-  if (!parsed) {
-    return {
-      appearance: { ...defaultAppearance },
-      layerOrder: normalizeTextureLayerOrder(null),
-    };
-  }
+  if (!parsed) return createDefaultState();
 
-  localStorage.setItem(
-    WARDROBE_STATE_STORAGE_KEY,
-    JSON.stringify(parsed.serializedState)
-  );
+  write(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(parsed.serializedState));
   return parsed.state;
 }
 
@@ -124,43 +155,70 @@ function serializedStatesEqual(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-export const wardrobePersistence = {
-  load: () => {
-    const storedState = localStorage.getItem(WARDROBE_STATE_STORAGE_KEY);
-    if (storedState === null) {
-      return { status: 'loaded' as const, state: loadLegacyState() };
-    }
+export function createWardrobePersistence(storage: SafeBrowserStorage = browserStorage) {
+  let writesEnabled = true;
 
-    const versioned = loadVersionedState(storedState);
-    if (versioned.kind === 'unsupported') {
-      return { status: 'incompatible' as const };
-    }
-    if (versioned.kind === 'invalid') {
-      return { status: 'empty' as const };
-    }
+  const read: StorageReader = (key) => {
+    const result = storage.read(key);
+    if (result.status === 'unavailable') writesEnabled = false;
+    return result;
+  };
 
-    const legacyAggregate = loadLegacyAggregateState();
-    if (
-      legacyAggregate
-      && !serializedStatesEqual(legacyAggregate.serializedState, versioned.value.serializedState)
-    ) {
-      // Older standalone releases know only the aggregate legacy keys. Because current saves keep
-      // those keys synchronized, a valid divergence means an older release changed the wardrobe
-      // after skincrafterState was written. Preserve that newer user edit and migrate it forward.
-      localStorage.setItem(
-        WARDROBE_STATE_STORAGE_KEY,
-        JSON.stringify(legacyAggregate.serializedState)
-      );
-      return { status: 'loaded' as const, state: legacyAggregate.state };
-    }
+  const write: StorageWriter = (key, value) => {
+    if (!writesEnabled) return false;
 
-    return { status: 'loaded' as const, state: versioned.value.state };
-  },
-  save: (state: SkinCrafterSerializedState) => {
-    localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(state));
+    const succeeded = storage.write(key, value);
+    if (!succeeded) writesEnabled = false;
+    return succeeded;
+  };
 
-    // Keep legacy keys synchronized for backward compatibility with older standalone builds.
-    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(state.appearance));
-    localStorage.setItem(LAYER_ORDER_STORAGE_KEY, JSON.stringify(state.layerOrder));
-  },
-} satisfies SkinCrafterPersistenceAdapter;
+  return {
+    load: () => {
+      writesEnabled = true;
+
+      const storedState = read(WARDROBE_STATE_STORAGE_KEY);
+      if (storedState.status === 'unavailable') {
+        return { status: 'empty' as const };
+      }
+      if (storedState.value === null) {
+        return { status: 'loaded' as const, state: loadLegacyState(read, write) };
+      }
+
+      const versioned = loadVersionedState(storedState.value);
+      if (versioned.kind === 'unsupported') {
+        writesEnabled = false;
+        return { status: 'incompatible' as const };
+      }
+      if (versioned.kind === 'invalid') {
+        return { status: 'empty' as const };
+      }
+
+      const legacyAggregate = loadLegacyAggregateState(read);
+      if (legacyAggregate.kind === 'loaded'
+        && !serializedStatesEqual(
+          legacyAggregate.value.serializedState,
+          versioned.value.serializedState
+        )) {
+        // Older standalone releases know only the aggregate legacy keys. Because current saves keep
+        // those keys synchronized, a valid divergence means an older release changed the wardrobe
+        // after skincrafterState was written. Preserve that newer user edit and migrate it forward.
+        write(
+          WARDROBE_STATE_STORAGE_KEY,
+          JSON.stringify(legacyAggregate.value.serializedState)
+        );
+        return { status: 'loaded' as const, state: legacyAggregate.value.state };
+      }
+
+      return { status: 'loaded' as const, state: versioned.value.state };
+    },
+    save: (state: SkinCrafterSerializedState) => {
+      if (!write(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(state))) return;
+
+      // Keep legacy keys synchronized for backward compatibility with older standalone builds.
+      if (!write(APPEARANCE_STORAGE_KEY, JSON.stringify(state.appearance))) return;
+      write(LAYER_ORDER_STORAGE_KEY, JSON.stringify(state.layerOrder));
+    },
+  } satisfies SkinCrafterPersistenceAdapter;
+}
+
+export const wardrobePersistence = createWardrobePersistence();

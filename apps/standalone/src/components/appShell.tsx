@@ -5,6 +5,7 @@ import {
   type Language,
 } from '@dihor/skincrafter-editor';
 import { translateStandalone, type StandaloneTranslationKey } from '../i18n/translations';
+import { browserStorage } from '../persistence/browserStorage';
 import MyFooter from './myFooter';
 import NBar from './nbar';
 
@@ -21,8 +22,10 @@ interface AppShellProps {
 }
 
 const readStoredLanguage = (): Language => {
-  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return isLanguage(stored) ? stored : defaultLanguage;
+  const stored = browserStorage.read(LANGUAGE_STORAGE_KEY);
+  return stored.status === 'available' && isLanguage(stored.value)
+    ? stored.value
+    : defaultLanguage;
 };
 
 export default function AppShell({ children }: AppShellProps): JSX.Element {
@@ -40,7 +43,7 @@ export default function AppShell({ children }: AppShellProps): JSX.Element {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    browserStorage.write(LANGUAGE_STORAGE_KEY, language);
   }, [language]);
 
   useEffect(() => {
