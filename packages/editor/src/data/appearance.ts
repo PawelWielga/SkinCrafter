@@ -1,8 +1,8 @@
-import { getHatTextureUrl, hats, type Hat } from './hatTextureMap';
-import { getPantsTextureUrl, pants, type Pants } from './pantsTextureMap';
+import { getHatTextureUrl, hats } from './hatTextureMap';
+import { getPantsTextureUrl, pants } from './pantsTextureMap';
 import { getAvailableSexes, getRaceTextureLayers, type Sex } from './raceTextureMap';
 import races, { type Race } from './races';
-import { getShirtTextureUrl, shirts, type Shirt } from './shirtTextureMap';
+import { getShirtTextureUrl, shirts } from './shirtTextureMap';
 import skinColorMap from './skinColorMap';
 import {
   defineTextureLayers,
