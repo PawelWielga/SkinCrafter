@@ -41,6 +41,10 @@ npm run test:consumer
 
 The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview. The consumer smoke test installs the real packed editor artifact in a clean external project.
 
+On GitHub, `.github/workflows/build.yml` runs install, both audit checks, lint, dead-code detection, unit/integration tests, the production build and the packed external-consumer test. `.github/workflows/test.yml` runs Playwright E2E independently. Both validation workflows use read-only repository permissions.
+
+A push to `main` is deployable only when both workflows have completed successfully for the exact same commit SHA. After a successful `Build` run on `main`, the already validated `apps/standalone/dist` directory is uploaded as a short-lived Actions artifact. `.github/workflows/gh-pages.yml` is triggered by completion of `Build` or `Test`, verifies that both required push runs for the same current `main` SHA succeeded, downloads that exact build artifact and only then publishes it to the `gh-pages` branch. Validation is therefore not repeated inside the deploy workflow, and an older completed SHA is skipped after `main` has advanced. Write permission is granted only to the deployment job.
+
 Performance/resource measurement is intentionally separate from the normal regression suite:
 
 ```bash
