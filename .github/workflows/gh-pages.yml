@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: github-pages-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions: {}
 
