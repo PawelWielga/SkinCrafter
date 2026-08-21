@@ -1,13 +1,14 @@
 import React, { useCallback, useState, type ChangeEvent, type FormEvent } from 'react';
-import { SkinPreview, type TranslationKey } from '@dihor/skincrafter-editor';
+import { SkinPreview } from '@dihor/skincrafter-editor';
 import fetchSkin, {
   FetchSkinError,
   type FetchSkinErrorCode,
   type FetchedSkin,
 } from '../api/fetchSkin';
 import AppShell from '../components/appShell';
+import type { StandaloneTranslationKey } from '../i18n/translations';
 
-const fetchSkinErrorTranslationKeys: Record<FetchSkinErrorCode, TranslationKey> = {
+const fetchSkinErrorTranslationKeys: Record<FetchSkinErrorCode, StandaloneTranslationKey> = {
   player_not_found: 'skinView.error.playerNotFound',
   skin_texture_missing: 'skinView.error.skinTextureMissing',
   rate_limited: 'skinView.error.rateLimited',
@@ -19,7 +20,7 @@ const fetchSkinErrorTranslationKeys: Record<FetchSkinErrorCode, TranslationKey> 
 const McSkinView: React.FC = () => {
   const [username, setUsername] = useState('');
   const [skin, setSkin] = useState<FetchedSkin | null>(null);
-  const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
+  const [errorKey, setErrorKey] = useState<StandaloneTranslationKey | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleUsernameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
