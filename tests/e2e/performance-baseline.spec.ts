@@ -25,6 +25,7 @@ interface ResourceCounter {
 interface WebGLContextCounter {
   created: number;
   lost: number;
+  lossEvents: number;
   active: number;
   peakActive: number;
 }
@@ -154,7 +155,7 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
           { created: 0, deleted: 0, live: 0, peakLive: 0, retained: 0, peakRetained: 0 },
         ])
       ) as Record<BrowserResourceKey, ResourceCounter>,
-      contexts: { created: 0, lost: 0, active: 0, peakActive: 0 } as WebGLContextCounter,
+      contexts: { created: 0, lost: 0, lossEvents: 0, active: 0, peakActive: 0 } as WebGLContextCounter,
       contextReleased: Object.fromEntries(resourceKeys.map((key) => [key, 0])) as Record<
         BrowserResourceKey,
         number
@@ -177,6 +178,20 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
     };
     globalWindow.__skincrafterPerformanceProbe = state;
 
+    const releaseContext = (registered: BrowserContextState): void => {
+      if (registered.lost) return;
+      registered.lost = true;
+      state.contexts.lost += 1;
+      state.contexts.active -= 1;
+
+      resourceKeys.forEach((key) => {
+        const released = registered.retained[key].size;
+        state.contextReleased[key] += released;
+        state.resources[key].retained -= released;
+        registered.retained[key].clear();
+      });
+    };
+
     const getContextState = (context: BrowserContext): BrowserContextState => {
       const existing = contextStates.get(context);
       if (existing) return existing;
@@ -196,23 +211,56 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       context.canvas.addEventListener(
         'webglcontextlost',
         () => {
-          if (registered.lost) return;
-          registered.lost = true;
-          state.contexts.lost += 1;
-          state.contexts.active -= 1;
-
-          resourceKeys.forEach((key) => {
-            const released = registered.retained[key].size;
-            state.contextReleased[key] += released;
-            state.resources[key].retained -= released;
-            registered.retained[key].clear();
-          });
+          state.contexts.lossEvents += 1;
+          releaseContext(registered);
         },
         { once: true }
       );
 
       return registered;
     };
+
+    const patchContextLossExtension = (prototype: object | undefined): void => {
+      if (!prototype) return;
+      const record = prototype as Record<string, unknown>;
+      const originalGetExtension = record.getExtension;
+      if (typeof originalGetExtension !== 'function') return;
+      if (Object.prototype.hasOwnProperty.call(originalGetExtension, '__skincrafterPerformanceWrapped')) {
+        return;
+      }
+
+      const wrappedGetExtension = function (this: BrowserContext, name: string): unknown {
+        const extension = Reflect.apply(originalGetExtension, this, [name]) as
+          | { loseContext?: () => void; restoreContext?: () => void }
+          | null;
+        if (name !== 'WEBGL_lose_context' || !extension || typeof extension.loseContext !== 'function') {
+          return extension;
+        }
+
+        const originalLoseContext = extension.loseContext;
+        const originalRestoreContext = extension.restoreContext;
+        return {
+          loseContext: () => {
+            const result = Reflect.apply(originalLoseContext, extension, []);
+            releaseContext(getContextState(this));
+            return result;
+          },
+          restoreContext:
+            typeof originalRestoreContext === 'function'
+              ? () => Reflect.apply(originalRestoreContext, extension, [])
+              : undefined,
+        };
+      };
+      Object.defineProperty(wrappedGetExtension, '__skincrafterPerformanceWrapped', { value: true });
+      record.getExtension = wrappedGetExtension;
+    };
+
+    for (const prototype of [
+      window.WebGLRenderingContext?.prototype,
+      window.WebGL2RenderingContext?.prototype,
+    ]) {
+      patchContextLossExtension(prototype);
+    }
 
     const patchPair = (
       prototype: object | undefined,

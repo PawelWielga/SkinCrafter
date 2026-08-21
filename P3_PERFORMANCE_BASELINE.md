@@ -90,8 +90,8 @@ The performance probe now records both views of the lifecycle:
 
 - **raw live** remains `create - delete` and is retained only as historical diagnostics,
 - **context-aware live** counts resources belonging to contexts that have not been lost,
-- `contexts.created/lost/active` proves whether old preview contexts are actually retired,
-- `contextReleased` records resources that were still associated with a context when the browser context-loss event released the whole context.
+- `contexts.created/lost/active` records the explicit `WEBGL_lose_context.loseContext()` release boundary used by Three.js, while `lossEvents` keeps the browser event as supplemental diagnostics,
+- `contextReleased` records resources still associated with the context at that release boundary, after SkinCrafter and `WebGLRenderer.dispose()` have completed their explicit cleanup.
 
 This distinction also explains why the old raw texture counter could grow while buffers/programs/vertex arrays appeared balanced. Three.js owns context-local fallback/default texture allocations in its WebGL renderer state in addition to application `THREE.Texture` objects. They are properties of the WebGL context rather than SkinCrafter texture clones, so raw `createTexture - deleteTexture` is not a valid retained-GPU-memory metric after the whole context has been released. The direct runtime unit tests continue to verify that SkinCrafter-owned source/cloned textures are disposed explicitly, including stale async loads.
 
