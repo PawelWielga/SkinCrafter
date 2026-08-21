@@ -41,6 +41,14 @@ npm run test:consumer
 
 The root commands validate both workspaces. The e2e suite proves that the standalone creator route renders the packaged editor and that `/mcskinview` uses the packaged preview. The consumer smoke test installs the real packed editor artifact in a clean external project.
 
+Performance/resource measurement is intentionally separate from the normal regression suite:
+
+```bash
+npm run test:performance
+```
+
+This command runs the reproducible desktop Chrome benchmark for first render, generation, rapid changes, long-session Three.js resources, mount/unmount lifecycle and real `npm pack` distribution size. Results are written to `test-results/performance-baseline.json`. See [`P3_PERFORMANCE_BASELINE.md`](P3_PERFORMANCE_BASELINE.md) for the pinned environment, procedure, current measurements and comparison rules.
+
 ## Renderer parity
 
 The Three.js player preview is validated against the Minecraft Java player geometry and the canonical 64×64 skin atlas, including Classic/Slim arms, independent left/right limb regions, outer-layer dilation, pivot positions, alpha cutoff and pixel-perfect texture sampling.
