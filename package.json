@@ -15,6 +15,7 @@
     "test:consumer": "node ./scripts/verify-external-consumer.mjs",
     "test:consumer:registry": "node ./scripts/verify-published-consumer.mjs",
     "test:e2e": "npm run build -w @dihor/skincrafter-editor && npm run test:e2e -w @skincrafter/standalone",
+    "test:performance": "npm run build -w @dihor/skincrafter-editor && node ./scripts/run-performance-baseline.mjs",
     "lint": "eslint .",
     "check:dead-code": "knip --dependencies --files",
     "preview": "npm run preview -w @skincrafter/standalone"
