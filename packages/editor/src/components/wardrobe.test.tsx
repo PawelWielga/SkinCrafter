@@ -43,21 +43,37 @@ function getRenderedLayerOrder(container: HTMLElement): TextureLayerCategoryId[]
   );
 }
 
-function mockCardRect(card: HTMLElement, top: number, height = 80): void {
-  vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
+function createRect(top: number, height: number, width = 320): DOMRect {
+  return {
     x: 0,
     y: top,
     top,
     left: 0,
-    right: 320,
+    right: width,
     bottom: top + height,
-    width: 320,
+    width,
     height,
     toJSON: () => ({}),
-  } as DOMRect);
+  } as DOMRect;
 }
 
-function mockDynamicLayerCardRects(container: HTMLElement): void {
+function mockCardRect(card: HTMLElement, top: number, height = 80): void {
+  vi.spyOn(card, 'getBoundingClientRect').mockReturnValue(createRect(top, height));
+}
+
+function mockDynamicLayerCardRects(
+  container: HTMLElement,
+  getListTop: () => number = () => 0
+): void {
+  const list = container.querySelector<HTMLElement>('.layer-order-list');
+  if (!list) {
+    throw new Error('Expected layer-order-list');
+  }
+
+  vi.spyOn(list, 'getBoundingClientRect').mockImplementation(() =>
+    createRect(getListTop(), 480)
+  );
+
   const cards = [
     ...container.querySelectorAll<HTMLElement>('.layer-order-list > [data-layer-id]'),
   ];
@@ -66,18 +82,8 @@ function mockDynamicLayerCardRects(container: HTMLElement): void {
       const currentCards = [
         ...container.querySelectorAll<HTMLElement>('.layer-order-list > [data-layer-id]'),
       ];
-      const top = currentCards.indexOf(card) * 100;
-      return {
-        x: 0,
-        y: top,
-        top,
-        left: 0,
-        right: 320,
-        bottom: top + 80,
-        width: 320,
-        height: 80,
-        toJSON: () => ({}),
-      } as DOMRect;
+      const top = getListTop() + currentCards.indexOf(card) * 100;
+      return createRect(top, 80);
     });
   });
 }
@@ -227,6 +233,46 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(onLayerOrderChange).not.toHaveBeenCalled();
 
     fireMouseDrag(layerList!, 'drop', dataTransfer, 170);
+
+    expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
+    expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
+  });
+
+  it('keeps stable logical drop zones aligned after the list scrolls during drag', () => {
+    const onLayerOrderChange = vi.fn();
+    const { container } = renderWardrobe(onLayerOrderChange);
+    const dataTransfer = createDataTransfer();
+    const dragHandle = screen.getByRole('button', { name: 'Drag layer Hat' });
+    const layerList = container.querySelector<HTMLElement>('.layer-order-list');
+    expect(layerList).not.toBeNull();
+
+    let listTop = 200;
+    mockDynamicLayerCardRects(container, () => listTop);
+
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 220);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, listTop + 170);
+
+    const previewOrder = [
+      'shirt',
+      'hat',
+      'pants',
+      'shoes',
+      'accessory',
+    ] satisfies TextureLayerCategoryId[];
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
+    ).toHaveClass('drop-after');
+
+    listTop = 20;
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, listTop + 170);
+
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
+    ).toHaveClass('drop-after');
+
+    fireMouseDrag(layerList!, 'drop', dataTransfer, listTop + 170);
 
     expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
     expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
