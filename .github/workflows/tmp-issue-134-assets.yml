@@ -1,0 +1,29 @@
+name: Temporary issue 134 asset migration
+
+on:
+  push:
+    branches:
+      - feat/134-explicit-texture-layers
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow==11.3.0
+      - run: python scripts/migrate-issue-134-textures.py
+      - name: Commit migrated binary assets
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add packages/editor/src/assets/textures
+          git commit -m "assets: split tintable and fixed texture layers"
+          git push
