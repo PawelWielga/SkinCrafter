@@ -32,6 +32,7 @@ export type {
   SkinCrafterImportedInitialSkin,
   SkinCrafterInitialSkin,
   SkinCrafterPersistenceAdapter,
+  SkinCrafterPersistenceLoadResult,
   SkinCrafterSemanticInitialSkin,
   SkinCrafterSerializedState,
   SkinCrafterSerializedStateV1,

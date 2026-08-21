@@ -19,6 +19,7 @@ import type {
   SkinCrafterError,
   SkinCrafterGenerationStatus,
   SkinCrafterInitialSkin,
+  SkinCrafterPersistenceAdapter,
   SkinCrafterSkinModel,
   SkinCrafterSkinOutput,
   SkinCrafterState,
@@ -55,11 +56,34 @@ interface ImportLoadState {
   error: SkinCrafterError | null;
 }
 
+interface PersistenceInitialization {
+  state: SkinCrafterState;
+  writesBlocked: boolean;
+}
+
 function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null): SkinCrafterState {
   return {
     appearance: normalizeAppearance(value?.appearance ?? null),
     layerOrder: normalizeTextureLayerOrder(value?.layerOrder),
   };
+}
+
+function initializePersistence(
+  persistence?: SkinCrafterPersistenceAdapter
+): PersistenceInitialization {
+  const loaded = persistence?.load() ?? null;
+
+  if (loaded && 'status' in loaded) {
+    if (loaded.status === 'incompatible') {
+      return { state: normalizeState(null), writesBlocked: true };
+    }
+    if (loaded.status === 'empty') {
+      return { state: normalizeState(null), writesBlocked: false };
+    }
+    return { state: normalizeState(loaded.state), writesBlocked: false };
+  }
+
+  return { state: normalizeState(loaded), writesBlocked: false };
 }
 
 function cloneState(state: SkinCrafterState): SkinCrafterState {
@@ -140,11 +164,21 @@ export default function SkinCrafterEditor({
   theme,
   previewBottomOffset = 0,
 }: SkinCrafterEditorProps): React.JSX.Element {
-  const [internalState, setInternalState] = useState<SkinCrafterState>(() => {
-    if (value) return normalizeState(value);
-    if (initialSkin) return normalizeState(initialSkin);
-    return normalizeState(persistence?.load() ?? null);
+  const [persistenceInitialization] = useState<PersistenceInitialization>(() => {
+    if (value) return { state: normalizeState(value), writesBlocked: false };
+
+    const persisted = initializePersistence(persistence);
+    if (initialSkin) {
+      return {
+        state: normalizeState(initialSkin),
+        writesBlocked: persisted.writesBlocked,
+      };
+    }
+    return persisted;
   });
+  const [internalState, setInternalState] = useState<SkinCrafterState>(
+    persistenceInitialization.state
+  );
   const [generatedSkin, setGeneratedSkin] = useState<GeneratedSkinResult | null>(null);
   const [generationState, setGenerationState] = useState<GenerationState>({
     key: null,
@@ -165,6 +199,9 @@ export default function SkinCrafterEditor({
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
   const lastGeneratedKeyRef = useRef<string | null>(null);
+  const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
+  const persistenceWasCheckedRef = useRef(!value);
+  const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
   const state = controlledState ?? internalState;
@@ -277,7 +314,18 @@ export default function SkinCrafterEditor({
   }, [initialImage, initialModel]);
 
   useEffect(() => {
-    if (!value) persistence?.save(serializeSkinCrafterState(state));
+    if (value) return;
+
+    if (!persistenceWasCheckedRef.current || checkedPersistenceRef.current !== persistence) {
+      const nextPersistenceInitialization = initializePersistence(persistence);
+      checkedPersistenceRef.current = persistence;
+      persistenceWasCheckedRef.current = true;
+      persistenceWritesBlockedRef.current = nextPersistenceInitialization.writesBlocked;
+    }
+
+    if (!persistenceWritesBlockedRef.current) {
+      persistence?.save(serializeSkinCrafterState(state));
+    }
   }, [persistence, state, value]);
 
   const importedLoadedCurrent = hasImportedRequest

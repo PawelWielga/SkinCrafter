@@ -77,8 +77,20 @@ export type SkinCrafterStateParseResult =
     error: SkinCrafterStateParseError;
   };
 
+export type SkinCrafterPersistenceLoadResult =
+  | { status: 'empty' }
+  | {
+    status: 'loaded';
+    state: SkinCrafterSemanticInitialSkin | SkinCrafterState;
+  }
+  | { status: 'incompatible' };
+
 export interface SkinCrafterPersistenceAdapter {
-  load: () => SkinCrafterSemanticInitialSkin | SkinCrafterState | null;
+  load: () =>
+    | SkinCrafterSemanticInitialSkin
+    | SkinCrafterState
+    | SkinCrafterPersistenceLoadResult
+    | null;
   save: (state: SkinCrafterSerializedState) => void;
 }
 

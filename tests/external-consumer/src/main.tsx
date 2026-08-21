@@ -8,6 +8,7 @@ import {
   serializeSkinCrafterState,
   type SkinCrafterEditorProps,
   type SkinCrafterImportedInitialSkin,
+  type SkinCrafterPersistenceAdapter,
   type SkinCrafterSerializedState,
   type SkinCrafterSkinOutput,
 } from '@dihor/skincrafter-editor';
@@ -31,9 +32,15 @@ const importedSkin: SkinCrafterImportedInitialSkin = {
   layerOrder: parsedState.state.layerOrder,
 };
 
+const persistence: SkinCrafterPersistenceAdapter = {
+  load: () => ({ status: 'incompatible' }),
+  save: () => undefined,
+};
+
 const editorProps: SkinCrafterEditorProps = {
   locale: 'en',
   initialSkin: importedSkin,
+  persistence,
   onSkinChange: (skin: SkinCrafterSkinOutput) => {
     document.documentElement.dataset.skinModel = skin.metadata.model;
   },
