@@ -23,7 +23,7 @@
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit",
     "build": "vite build && tsc -p tsconfig.build.json && node ./scripts/normalize-declarations.mjs && npm run verify:package",
-    "verify:package": "tsc -p tsconfig.consumer-bundler.json && tsc -p tsconfig.consumer-nodenext.json && node ./scripts/verify-package.mjs && npm run verify:style",
+    "verify:package": "node ./scripts/verify-texture-atlases.mjs && tsc -p tsconfig.consumer-bundler.json && tsc -p tsconfig.consumer-nodenext.json && node ./scripts/verify-package.mjs && npm run verify:style",
     "verify:style": "node ./scripts/verify-style-isolation.mjs",
     "test": "vitest run"
   },

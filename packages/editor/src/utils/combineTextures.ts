@@ -1,10 +1,21 @@
-export interface TextureLayerInput {
+export type TextureLayerRole = 'tintable' | 'fixed';
+
+export interface TintableTextureLayerInput {
   url: string | null;
-  tint?: string;
+  role: 'tintable';
+  tint: string;
 }
+
+export interface FixedTextureLayerInput {
+  url: string | null;
+  role: 'fixed';
+}
+
+export type TextureLayerInput = TintableTextureLayerInput | FixedTextureLayerInput;
 
 export interface TextureLayer {
   url: string;
+  role: TextureLayerRole;
   tint?: string;
 }
 
@@ -29,25 +40,17 @@ export class TextureLoadError extends Error {
   }
 }
 
-const MINECRAFT_SKIN_SIZE = 64;
-
-/**
- * Maximum RGB channel spread that is still considered authored grayscale.
- * A tolerance of 4/255 absorbs tiny export noise without tinting visibly chromatic details.
- */
-export const GRAYSCALE_TINT_TOLERANCE = 4;
+export const MINECRAFT_SKIN_SIZE = 64;
 
 const normalizeLayer = (layer: TextureInput): TextureLayer | null => {
   if (!layer) return null;
   if (typeof layer === 'string') {
-    return { url: layer };
+    return { url: layer, role: 'fixed' };
   }
-  return layer.url
-    ? {
-        url: layer.url,
-        tint: layer.tint,
-      }
-    : null;
+  if (!layer.url) return null;
+  return layer.role === 'tintable'
+    ? { url: layer.url, role: 'tintable', tint: layer.tint }
+    : { url: layer.url, role: 'fixed' };
 };
 
 export function hexToPixel(hex: string): RgbaPixel {
@@ -67,44 +70,35 @@ export function hexToPixel(hex: string): RgbaPixel {
   };
 }
 
-function isProtectedBlackOrWhite(pixel: RgbaPixel): boolean {
-  const isBlack = pixel.r === 0 && pixel.g === 0 && pixel.b === 0;
-  const isWhite = pixel.r === 255 && pixel.g === 255 && pixel.b === 255;
-  return isBlack || isWhite;
+export function isMinecraftSkinAtlasSize(width: number, height: number): boolean {
+  return width === MINECRAFT_SKIN_SIZE && height === MINECRAFT_SKIN_SIZE;
 }
 
-export function isTintableGrayscalePixel(pixel: RgbaPixel): boolean {
-  if (pixel.a === 0 || isProtectedBlackOrWhite(pixel)) {
-    return false;
-  }
+/**
+ * Applies the selected color to an explicitly tintable pixel while preserving
+ * the source pixel's intensity and alpha. RGB values never decide whether a
+ * pixel is tintable; that semantic belongs to the texture layer itself.
+ */
+export function tintTexturePixel(base: RgbaPixel, tint: RgbaPixel): RgbaPixel {
+  if (base.a === 0) return base;
 
-  const darkest = Math.min(pixel.r, pixel.g, pixel.b);
-  const lightest = Math.max(pixel.r, pixel.g, pixel.b);
-  return lightest - darkest <= GRAYSCALE_TINT_TOLERANCE;
-}
-
-export function tintGrayscalePixel(base: RgbaPixel, tint: RgbaPixel): RgbaPixel {
-  if (!isTintableGrayscalePixel(base)) {
-    return base;
-  }
-
-  const grayscaleIntensity = (base.r + base.g + base.b) / (3 * 255);
+  const sourceIntensity = (base.r + base.g + base.b) / (3 * 255);
   return {
-    r: Math.round(tint.r * grayscaleIntensity),
-    g: Math.round(tint.g * grayscaleIntensity),
-    b: Math.round(tint.b * grayscaleIntensity),
+    r: Math.round(tint.r * sourceIntensity),
+    g: Math.round(tint.g * sourceIntensity),
+    b: Math.round(tint.b * sourceIntensity),
     a: base.a,
   };
 }
 
-export function tintGrayscalePixelBuffer(
+export function tintTexturePixelBuffer(
   source: Uint8ClampedArray,
   tint: RgbaPixel
 ): Uint8ClampedArray {
   const result = new Uint8ClampedArray(source);
 
   for (let index = 0; index < result.length; index += 4) {
-    const next = tintGrayscalePixel(
+    const next = tintTexturePixel(
       {
         r: source[index],
         g: source[index + 1],
@@ -125,24 +119,21 @@ export function tintGrayscalePixelBuffer(
 const drawTintedLayer = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
-  tint: string,
-  width: number,
-  height: number
+  tint: string
 ): void => {
   const layerCanvas = document.createElement('canvas');
-  layerCanvas.width = width;
-  layerCanvas.height = height;
+  layerCanvas.width = MINECRAFT_SKIN_SIZE;
+  layerCanvas.height = MINECRAFT_SKIN_SIZE;
   const layerCtx = layerCanvas.getContext('2d', { willReadFrequently: true });
   if (!layerCtx) {
-    ctx.drawImage(img, 0, 0, width, height);
-    return;
+    throw new Error('Could not create a 2D canvas context for tintable skin composition.');
   }
 
   layerCtx.imageSmoothingEnabled = false;
-  layerCtx.drawImage(img, 0, 0, width, height);
+  layerCtx.drawImage(img, 0, 0);
 
-  const imageData = layerCtx.getImageData(0, 0, width, height);
-  imageData.data.set(tintGrayscalePixelBuffer(imageData.data, hexToPixel(tint)));
+  const imageData = layerCtx.getImageData(0, 0, MINECRAFT_SKIN_SIZE, MINECRAFT_SKIN_SIZE);
+  imageData.data.set(tintTexturePixelBuffer(imageData.data, hexToPixel(tint)));
   layerCtx.putImageData(imageData, 0, 0);
   ctx.drawImage(layerCanvas, 0, 0);
 };
@@ -150,37 +141,47 @@ const drawTintedLayer = (
 const drawLayer = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
-  tint: string | undefined,
-  width: number,
-  height: number
+  layer: TextureLayer
 ): void => {
-  if (!tint) {
-    ctx.drawImage(img, 0, 0, width, height);
+  if (layer.role === 'fixed') {
+    ctx.drawImage(img, 0, 0);
     return;
   }
 
-  drawTintedLayer(ctx, img, tint, width, height);
+  drawTintedLayer(ctx, img, layer.tint ?? '#FFFFFF');
 };
+
+const loadTexture = (src: string): Promise<HTMLImageElement> =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+      if (!isMinecraftSkinAtlasSize(width, height)) {
+        reject(
+          new TextureLoadError(
+            src,
+            new Error(
+              `Skin texture atlas must be ${MINECRAFT_SKIN_SIZE}x${MINECRAFT_SKIN_SIZE}; got ${width}x${height}.`
+            )
+          )
+        );
+        return;
+      }
+      resolve(img);
+    };
+    img.onerror = (cause) => reject(new TextureLoadError(src, cause));
+    img.src = src;
+  });
 
 export default async function combineTextures(inputs: TextureInput[]): Promise<string> {
   const layers = inputs.map(normalizeLayer).filter((layer): layer is TextureLayer => !!layer);
-  const valid = layers.map((layer) => layer.url);
-  if (valid.length === 0) {
+  if (layers.length === 0) {
     throw new Error('No texture assets were available for skin composition.');
   }
 
-  const images = await Promise.all(
-    valid.map(
-      (src) =>
-        new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => resolve(img);
-          img.onerror = (cause) => reject(new TextureLoadError(src, cause));
-          img.src = src;
-        })
-    )
-  );
+  const images = await Promise.all(layers.map((layer) => loadTexture(layer.url)));
 
   const canvas = document.createElement('canvas');
   canvas.width = MINECRAFT_SKIN_SIZE;
@@ -191,10 +192,7 @@ export default async function combineTextures(inputs: TextureInput[]): Promise<s
   }
   ctx.imageSmoothingEnabled = false;
 
-  images.forEach((img, index) => {
-    const layer = layers[index];
-    drawLayer(ctx, img, layer.tint, canvas.width, canvas.height);
-  });
+  images.forEach((img, index) => drawLayer(ctx, img, layers[index]));
 
   return canvas.toDataURL('image/png');
 }

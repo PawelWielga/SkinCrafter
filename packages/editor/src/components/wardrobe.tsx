@@ -11,6 +11,7 @@ import PanelSection from './panelSection';
 import {
   appearanceCategories,
   getOptions,
+  isColorControlEffective,
   textureLayerCategories,
   type AppearanceCategoryId,
   type AppearanceCategory,
@@ -63,16 +64,20 @@ export default function Wardrobe({
   const layerDropZonesRef = useRef<LayerDropZone[]>([]);
   const previousLayerPositionsRef = useRef(new Map<TextureLayerCategoryId, number>());
 
-  const { categoriesById, fixedCategories } = useMemo(() => {
-    const categoriesById = new Map<AppearanceCategoryId, AppearanceCategory>(
+  const categoriesById = useMemo(
+    () => new Map<AppearanceCategoryId, AppearanceCategory>(
       appearanceCategories.map((category) => [category.id, category])
-    );
-    const fixedCategories = appearanceCategories.filter(
-      (category) => !isTextureLayerCategory(category.id)
-    );
-
-    return { categoriesById, fixedCategories };
-  }, []);
+    ),
+    []
+  );
+  const fixedCategories = useMemo(
+    () => appearanceCategories.filter(
+      (category) =>
+        !isTextureLayerCategory(category.id)
+        && isColorControlEffective(category.id, appearance, assetBaseUrl)
+    ),
+    [appearance, assetBaseUrl]
+  );
 
   const renderedLayerOrder =
     draggingLayer && previewLayerOrder ? previewLayerOrder : textureLayerOrder;
