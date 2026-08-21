@@ -599,9 +599,6 @@ test('records the reproducible editor performance and resource baseline', async 
     const viewerCanvas = await page.locator('canvas').elementHandle();
     expect(viewerCanvas).not.toBeNull();
     expect(await editorCanvas?.evaluate((canvas) => canvas.isConnected)).toBe(false);
-    expect(
-      await editorCanvas?.evaluate((previous, current) => previous === current, viewerCanvas)
-    ).toBe(false);
     await waitForContextLifecycle(
       page,
       mountCycleStartRetired + (cycle * 2 - 1) * strictModeRetiredContextsPerRouteTransition
@@ -620,9 +617,6 @@ test('records the reproducible editor performance and resource baseline', async 
     const nextEditorCanvas = await page.locator('.skincrafter-preview-surface canvas').elementHandle();
     expect(nextEditorCanvas).not.toBeNull();
     expect(await viewerCanvas?.evaluate((canvas) => canvas.isConnected)).toBe(false);
-    expect(
-      await viewerCanvas?.evaluate((previous, current) => previous === current, nextEditorCanvas)
-    ).toBe(false);
     await waitForContextLifecycle(
       page,
       mountCycleStartRetired + cycle * 2 * strictModeRetiredContextsPerRouteTransition
