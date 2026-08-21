@@ -124,29 +124,19 @@ function serializedStatesEqual(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function hasUnsupportedFutureState(): boolean {
-  const storedState = localStorage.getItem(WARDROBE_STATE_STORAGE_KEY);
-  if (storedState === null) return false;
-
-  return loadVersionedState(storedState).kind === 'unsupported';
-}
-
-export const wardrobePersistence: SkinCrafterPersistenceAdapter = {
+export const wardrobePersistence = {
   load: () => {
     const storedState = localStorage.getItem(WARDROBE_STATE_STORAGE_KEY);
     if (storedState === null) {
-      return loadLegacyState();
+      return { status: 'loaded' as const, state: loadLegacyState() };
     }
 
     const versioned = loadVersionedState(storedState);
     if (versioned.kind === 'unsupported') {
-      // An older standalone must never downgrade or overwrite state written by a newer schema.
-      // Returning null lets the editor render with its normal defaults while save() remains blocked
-      // for as long as the unsupported record is still present.
-      return null;
+      return { status: 'incompatible' as const };
     }
     if (versioned.kind === 'invalid') {
-      return null;
+      return { status: 'empty' as const };
     }
 
     const legacyAggregate = loadLegacyAggregateState();
@@ -161,20 +151,16 @@ export const wardrobePersistence: SkinCrafterPersistenceAdapter = {
         WARDROBE_STATE_STORAGE_KEY,
         JSON.stringify(legacyAggregate.serializedState)
       );
-      return legacyAggregate.state;
+      return { status: 'loaded' as const, state: legacyAggregate.state };
     }
 
-    return versioned.value.state;
+    return { status: 'loaded' as const, state: versioned.value.state };
   },
-  save: (state) => {
-    if (hasUnsupportedFutureState()) {
-      return;
-    }
-
+  save: (state: SkinCrafterSerializedState) => {
     localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(state));
 
     // Keep legacy keys synchronized for backward compatibility with older standalone builds.
     localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(state.appearance));
     localStorage.setItem(LAYER_ORDER_STORAGE_KEY, JSON.stringify(state.layerOrder));
   },
-};
+} satisfies SkinCrafterPersistenceAdapter;
