@@ -173,8 +173,10 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       retained: Record<BrowserResourceKey, Set<BrowserResource>>;
     }
     const contextStates = new WeakMap<BrowserContext, BrowserContextState>();
+    const trackedContexts: Array<{ context: BrowserContext; state: BrowserContextState }> = [];
     const globalWindow = window as Window & {
       __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
+      __skincrafterRefreshContextLosses?: () => void;
     };
     globalWindow.__skincrafterPerformanceProbe = state;
 
@@ -192,6 +194,14 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       });
     };
 
+    globalWindow.__skincrafterRefreshContextLosses = () => {
+      for (const tracked of trackedContexts) {
+        if (!tracked.state.lost && tracked.context.isContextLost()) {
+          releaseContext(tracked.state);
+        }
+      }
+    };
+
     const getContextState = (context: BrowserContext): BrowserContextState => {
       const existing = contextStates.get(context);
       if (existing) return existing;
@@ -204,6 +214,7 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
         >,
       };
       contextStates.set(context, registered);
+      trackedContexts.push({ context, state: registered });
       state.contexts.created += 1;
       state.contexts.active += 1;
       state.contexts.peakActive = Math.max(state.contexts.peakActive, state.contexts.active);
@@ -364,7 +375,9 @@ async function readProbe(page: Page): Promise<PerformanceProbeSnapshot> {
   return page.evaluate(() => {
     const globalWindow = window as Window & {
       __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
+      __skincrafterRefreshContextLosses?: () => void;
     };
+    globalWindow.__skincrafterRefreshContextLosses?.();
     const probe = globalWindow.__skincrafterPerformanceProbe;
     if (!probe) throw new Error('Performance probe is not installed.');
     return JSON.parse(JSON.stringify(probe)) as PerformanceProbeSnapshot;
@@ -438,13 +451,19 @@ async function waitForEditorReady(page: Page): Promise<void> {
 }
 
 async function waitForContextLifecycle(page: Page, expectedLost: number): Promise<void> {
-  await page.waitForFunction((lost) => {
-    const globalWindow = window as Window & {
-      __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
-    };
-    const contexts = globalWindow.__skincrafterPerformanceProbe?.contexts;
-    return contexts?.lost === lost && contexts.active === 1;
-  }, expectedLost);
+  await page.waitForFunction(
+    (lost) => {
+      const globalWindow = window as Window & {
+        __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
+        __skincrafterRefreshContextLosses?: () => void;
+      };
+      globalWindow.__skincrafterRefreshContextLosses?.();
+      const contexts = globalWindow.__skincrafterPerformanceProbe?.contexts;
+      return contexts?.lost === lost && contexts.active === 1;
+    },
+    expectedLost,
+    { timeout: 5_000 }
+  );
 }
 
 async function measureColdFirstRender(browser: Browser): Promise<number[]> {
