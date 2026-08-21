@@ -1,4 +1,4 @@
-import fetchSkin from './fetchSkin';
+import fetchSkin, { FetchSkinError } from './fetchSkin';
 
 describe('fetchSkin', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
@@ -18,6 +18,7 @@ describe('fetchSkin', () => {
   it('returns the direct skin texture as a classic model when metadata is unavailable', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: () =>
         Promise.resolve({
           success: true,
@@ -41,6 +42,7 @@ describe('fetchSkin', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: () =>
         Promise.resolve({
           success: true,
@@ -75,6 +77,7 @@ describe('fetchSkin', () => {
   it('treats decoded skin metadata without slim as classic', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: () =>
         Promise.resolve({
           success: true,
@@ -108,6 +111,7 @@ describe('fetchSkin', () => {
   it('reads model metadata even when player.skin_texture is also present', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: () =>
         Promise.resolve({
           success: true,
@@ -143,6 +147,7 @@ describe('fetchSkin', () => {
   it('uses player.skin_texture as a URL fallback without losing decoded model metadata', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: () =>
         Promise.resolve({
           success: true,
@@ -174,24 +179,107 @@ describe('fetchSkin', () => {
     });
   });
 
-  it('throws when user not found', async () => {
+  it('classifies HTTP 404 as player_not_found', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+    await expect(fetchSkin('MissingPlayer')).rejects.toMatchObject({
+      code: 'player_not_found',
+      status: 404,
+    });
+  });
+
+  it('classifies an authoritative success=false payload as player_not_found', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: () => Promise.resolve({ success: false }),
     });
 
-    await expect(fetchSkin('unknown')).rejects.toThrow('User not found');
+    await expect(fetchSkin('unknown')).rejects.toMatchObject({
+      code: 'player_not_found',
+      status: 200,
+    });
   });
 
-  it('throws when profile fetch fails', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false });
+  it('classifies HTTP 429 as rate_limited', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 429 });
 
-    await expect(fetchSkin('Steve')).rejects.toThrow('User not found');
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({
+      code: 'rate_limited',
+      status: 429,
+    });
   });
 
-  it('throws when texture missing', async () => {
+  it.each([500, 503])('classifies HTTP %s as service_unavailable', async (status) => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status });
+
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({
+      code: 'service_unavailable',
+      status,
+    });
+  });
+
+  it('classifies fetch rejection as network_error and preserves the cause', async () => {
+    const cause = new TypeError('Failed to fetch');
+    mockFetch.mockRejectedValueOnce(cause);
+
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({
+      code: 'network_error',
+      cause,
+    });
+  });
+
+  it('classifies invalid JSON as invalid_response and preserves the parser failure', async () => {
+    const cause = new SyntaxError('Unexpected token');
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
+      json: () => Promise.reject(cause),
+    });
+
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({
+      code: 'invalid_response',
+      status: 200,
+      cause,
+    });
+  });
+
+  it('classifies an unexpected success payload as invalid_response', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: {} }),
+    });
+
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({
+      code: 'invalid_response',
+    });
+  });
+
+  it('classifies a malformed textures property as invalid_response', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            player: {
+              skin_texture: 'https://textures.minecraft.net/texture/fallback123',
+              properties: [{ name: 'textures', value: 'not-json-base64' }],
+            },
+          },
+        }),
+    });
+
+    await expect(fetchSkin('Steve')).rejects.toBeInstanceOf(FetchSkinError);
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  it('classifies a successful profile without a skin texture as skin_texture_missing', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
       json: () =>
         Promise.resolve({
           success: true,
@@ -203,6 +291,9 @@ describe('fetchSkin', () => {
         }),
     });
 
-    await expect(fetchSkin('Steve')).rejects.toThrow('Skin texture not found');
+    await expect(fetchSkin('Steve')).rejects.toMatchObject({
+      code: 'skin_texture_missing',
+      status: 200,
+    });
   });
 });
