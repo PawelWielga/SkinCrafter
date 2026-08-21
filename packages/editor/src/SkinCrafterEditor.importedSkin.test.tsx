@@ -118,7 +118,10 @@ describe('SkinCrafterEditor imported skin contract', () => {
     const compositionInputs = mockedCombineTextures.mock.calls[0][0];
     expect(compositionInputs).toHaveLength(2);
     expect(compositionInputs[0]).toBe(IMPORTED_DATA_URL);
-    expect(compositionInputs[1]).toEqual(expect.any(String));
+    expect(compositionInputs[1]).toEqual({
+      url: expect.any(String),
+      role: 'fixed',
+    });
     expect(outputs[1].dataUrl).toBe(EDITED_DATA_URL);
     expect(outputs[1].metadata.model).toBe('slim');
   });
