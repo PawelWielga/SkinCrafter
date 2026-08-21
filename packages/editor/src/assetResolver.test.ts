@@ -15,8 +15,8 @@ describe('resolveAssetUrl', () => {
     }
   });
 
-  it('keeps the default preview on the same packaged manifest entry', () => {
-    expect(defaultPreviewTextureUrl).toBe(resolveAssetUrl('textures/race/human/male.png'));
+  it('keeps the default preview on the dedicated packaged preview manifest entry', () => {
+    expect(defaultPreviewTextureUrl).toBe(resolveAssetUrl('textures/preview/default.png'));
   });
 
   it('supports a host asset base below a non-root route', () => {

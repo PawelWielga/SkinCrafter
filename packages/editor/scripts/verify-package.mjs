@@ -108,33 +108,35 @@ const indexJs = readFileSync(indexJsPath, 'utf8');
 const sourcePngFiles = listFiles(sourceTextureRoot).filter((filePath) => filePath.endsWith('.png'));
 const emittedPngFiles = distFiles.filter((filePath) => filePath.endsWith('.png'));
 if (sourcePngFiles.length === 0) {
-  fail('source wardrobe contains no PNG assets to verify.');
-}
-if (emittedPngFiles.length !== sourcePngFiles.length) {
-  fail(
-    `editor build emitted ${emittedPngFiles.length} PNG assets, ` +
-      `but ${sourcePngFiles.length} source wardrobe PNGs exist.`
-  );
+  fail('source texture set contains no PNG assets to verify.');
 }
 
 for (const sourcePath of sourcePngFiles) {
   const sourceBase64 = readFileSync(sourcePath).toString('base64');
   if (indexJs.includes(sourceBase64)) {
-    fail(`primary JavaScript bundle embeds wardrobe PNG bytes: ${toPackagePath(sourcePath)}`);
+    fail(`primary JavaScript bundle embeds texture PNG bytes: ${toPackagePath(sourcePath)}`);
   }
 }
 
 for (const assetPath of emittedPngFiles) {
   const packagePath = toPackagePath(assetPath);
   if (!/^dist\/assets\/[^/]+-[A-Za-z0-9_-]+\.png$/.test(packagePath)) {
-    fail(`wardrobe asset is not emitted as a cache-safe hashed file: ${packagePath}`);
+    fail(`texture asset is not emitted as a cache-safe hashed file: ${packagePath}`);
   }
 }
 
-const sourceHashes = sourcePngFiles.map(sha256).sort();
+// Vite content-deduplicates identical source assets. Multiple logical texture
+// paths may therefore legitimately resolve to one emitted hashed PNG.
+const sourceHashes = [...new Set(sourcePngFiles.map(sha256))].sort();
 const emittedHashes = emittedPngFiles.map(sha256).sort();
+if (emittedPngFiles.length !== sourceHashes.length) {
+  fail(
+    `editor build emitted ${emittedPngFiles.length} PNG assets, ` +
+      `but ${sourceHashes.length} unique source texture contents exist across ${sourcePngFiles.length} files.`
+  );
+}
 if (JSON.stringify(sourceHashes) !== JSON.stringify(emittedHashes)) {
-  fail('emitted wardrobe PNG bytes differ from the source texture set.');
+  fail('emitted texture PNG bytes differ from the unique source texture contents.');
 }
 
 const referencedPngAssets = new Set(
@@ -171,7 +173,7 @@ for (const target of exportedTargets) {
 for (const assetPath of emittedPngFiles) {
   const packedPath = toPackagePath(assetPath);
   if (!packedPaths.has(packedPath)) {
-    fail(`emitted wardrobe asset is missing from npm pack output: ${packedPath}`);
+    fail(`emitted texture asset is missing from npm pack output: ${packedPath}`);
   }
 }
 
@@ -185,5 +187,6 @@ for (const packedFile of packResult.files) {
 
 console.log(
   `Verified ESM exports, ${declarations.length} declaration files, ` +
-    `${emittedPngFiles.length} byte-identical emitted PNG assets and ${packResult.files.length} packed files.`
+    `${emittedPngFiles.length} byte-identical emitted PNG assets from ${sourcePngFiles.length} source paths ` +
+    `and ${packResult.files.length} packed files.`
 );
