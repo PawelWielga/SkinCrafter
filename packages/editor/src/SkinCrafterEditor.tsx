@@ -199,6 +199,8 @@ export default function SkinCrafterEditor({
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
   const lastGeneratedKeyRef = useRef<string | null>(null);
+  const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
+  const persistenceWasCheckedRef = useRef(!value);
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
@@ -312,7 +314,16 @@ export default function SkinCrafterEditor({
   }, [initialImage, initialModel]);
 
   useEffect(() => {
-    if (!value && !persistenceWritesBlockedRef.current) {
+    if (value) return;
+
+    if (!persistenceWasCheckedRef.current || checkedPersistenceRef.current !== persistence) {
+      const nextPersistenceInitialization = initializePersistence(persistence);
+      checkedPersistenceRef.current = persistence;
+      persistenceWasCheckedRef.current = true;
+      persistenceWritesBlockedRef.current = nextPersistenceInitialization.writesBlocked;
+    }
+
+    if (!persistenceWritesBlockedRef.current) {
       persistence?.save(serializeSkinCrafterState(state));
     }
   }, [persistence, state, value]);
