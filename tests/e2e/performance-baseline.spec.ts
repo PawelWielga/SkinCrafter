@@ -24,8 +24,8 @@ interface ResourceCounter {
 
 interface WebGLContextCounter {
   created: number;
+  retired: number;
   lost: number;
-  collected: number;
   lossEvents: number;
   active: number;
   peakActive: number;
@@ -39,7 +39,7 @@ interface StatusTransition {
 interface PerformanceProbeSnapshot {
   resources: Record<ResourceKey, ResourceCounter>;
   contexts: WebGLContextCounter;
-  contextReleased: Record<ResourceKey, number>;
+  retiredOutstanding: Record<ResourceKey, number>;
   canvasCreations: number;
   canvasRemovals: number;
   statusTransitions: StatusTransition[];
@@ -67,6 +67,10 @@ interface Summary {
 const repetitions = 10;
 const longSessionChanges = 100;
 const mountCycles = 10;
+const strictModeRetiredContextsPerRouteTransition = 2;
+const threeFallbackTexturesPerContext = 4;
+const expectedRawTextureResidualPerRouteTransition =
+  strictModeRetiredContextsPerRouteTransition * threeFallbackTexturesPerContext;
 const viewport = { width: 1280, height: 720 };
 const deviceScaleFactor = 1;
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -151,8 +155,8 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
     type BrowserContext = WebGLRenderingContext | WebGL2RenderingContext;
 
     interface BrowserContextState {
-      released: boolean;
-      retained: Record<BrowserResourceKey, number>;
+      retired: boolean;
+      outstanding: Record<BrowserResourceKey, number>;
     }
 
     const state = {
@@ -164,13 +168,13 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       ) as Record<BrowserResourceKey, ResourceCounter>,
       contexts: {
         created: 0,
+        retired: 0,
         lost: 0,
-        collected: 0,
         lossEvents: 0,
         active: 0,
         peakActive: 0,
       } as WebGLContextCounter,
-      contextReleased: Object.fromEntries(resourceKeys.map((key) => [key, 0])) as Record<
+      retiredOutstanding: Object.fromEntries(resourceKeys.map((key) => [key, 0])) as Record<
         BrowserResourceKey,
         number
       >,
@@ -183,43 +187,23 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
     ) as Record<BrowserResourceKey, WeakSet<BrowserResource>>;
     const resourceOwners = new WeakMap<BrowserResource, BrowserContextState>();
     const contextStates = new WeakMap<BrowserContext, BrowserContextState>();
-    const trackedContexts: Array<{
-      context: WeakRef<BrowserContext>;
-      state: BrowserContextState;
-    }> = [];
+    const canvasContexts = new WeakMap<HTMLCanvasElement, BrowserContextState>();
     const globalWindow = window as Window & {
       __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
-      __skincrafterRefreshContextLifecycle?: () => void;
     };
     globalWindow.__skincrafterPerformanceProbe = state;
 
-    const releaseContext = (
-      registered: BrowserContextState,
-      reason: 'lost' | 'collected'
-    ): void => {
-      if (registered.released) return;
-      registered.released = true;
-      state.contexts[reason] += 1;
+    const retireContext = (registered: BrowserContextState): void => {
+      if (registered.retired) return;
+      registered.retired = true;
+      state.contexts.retired += 1;
       state.contexts.active -= 1;
 
       resourceKeys.forEach((key) => {
-        const released = registered.retained[key];
-        state.contextReleased[key] += released;
-        state.resources[key].retained -= released;
-        registered.retained[key] = 0;
+        const outstanding = registered.outstanding[key];
+        state.resources[key].retained -= outstanding;
+        state.retiredOutstanding[key] += outstanding;
       });
-    };
-
-    globalWindow.__skincrafterRefreshContextLifecycle = () => {
-      for (const trackedContext of trackedContexts) {
-        if (trackedContext.state.released) continue;
-        const currentContext = trackedContext.context.deref();
-        if (!currentContext) {
-          releaseContext(trackedContext.state, 'collected');
-        } else if (currentContext.isContextLost()) {
-          releaseContext(trackedContext.state, 'lost');
-        }
-      }
     };
 
     const getContextState = (context: BrowserContext): BrowserContextState => {
@@ -227,14 +211,16 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       if (existing) return existing;
 
       const registered: BrowserContextState = {
-        released: false,
-        retained: Object.fromEntries(resourceKeys.map((key) => [key, 0])) as Record<
+        retired: false,
+        outstanding: Object.fromEntries(resourceKeys.map((key) => [key, 0])) as Record<
           BrowserResourceKey,
           number
         >,
       };
       contextStates.set(context, registered);
-      trackedContexts.push({ context: new WeakRef(context), state: registered });
+      if (context.canvas instanceof HTMLCanvasElement) {
+        canvasContexts.set(context.canvas, registered);
+      }
       state.contexts.created += 1;
       state.contexts.active += 1;
       state.contexts.peakActive = Math.max(state.contexts.peakActive, state.contexts.active);
@@ -243,7 +229,7 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
         'webglcontextlost',
         () => {
           state.contexts.lossEvents += 1;
-          releaseContext(registered, 'lost');
+          state.contexts.lost += 1;
         },
         { once: true }
       );
@@ -272,13 +258,17 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
           tracked[key].add(resource);
           const contextState = getContextState(this as BrowserContext);
           resourceOwners.set(resource, contextState);
-          contextState.retained[key] += 1;
+          contextState.outstanding[key] += 1;
           const counter = state.resources[key];
           counter.created += 1;
           counter.live += 1;
-          counter.retained += 1;
+          if (contextState.retired) {
+            state.retiredOutstanding[key] += 1;
+          } else {
+            counter.retained += 1;
+            counter.peakRetained = Math.max(counter.peakRetained, counter.retained);
+          }
           counter.peakLive = Math.max(counter.peakLive, counter.live);
-          counter.peakRetained = Math.max(counter.peakRetained, counter.retained);
         }
         return resource;
       };
@@ -292,9 +282,13 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
           counter.deleted += 1;
           counter.live -= 1;
           const contextState = resourceOwners.get(resource);
-          if (contextState && !contextState.released && contextState.retained[key] > 0) {
-            contextState.retained[key] -= 1;
-            counter.retained -= 1;
+          if (contextState && contextState.outstanding[key] > 0) {
+            contextState.outstanding[key] -= 1;
+            if (contextState.retired) {
+              state.retiredOutstanding[key] -= 1;
+            } else {
+              counter.retained -= 1;
+            }
           }
         }
         return Reflect.apply(originalDelete, this, [resource]);
@@ -313,10 +307,10 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       patchPair(prototype, 'createVertexArray', 'deleteVertexArray', 'vertexArrays');
     }
 
-    const countCanvases = (node: Node): number => {
-      if (node instanceof HTMLCanvasElement) return 1;
-      if (node instanceof Element) return node.querySelectorAll('canvas').length;
-      return 0;
+    const canvasesInNode = (node: Node): HTMLCanvasElement[] => {
+      if (node instanceof HTMLCanvasElement) return [node];
+      if (node instanceof Element) return Array.from(node.querySelectorAll('canvas'));
+      return [];
     };
     const recordStatus = (element: Element): void => {
       if (!element.matches('[data-testid="skincrafter-editor"]')) return;
@@ -332,14 +326,20 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
           continue;
         }
         for (const node of record.addedNodes) {
-          state.canvasCreations += countCanvases(node);
+          const canvases = canvasesInNode(node);
+          state.canvasCreations += canvases.length;
           if (node instanceof Element) {
             recordStatus(node);
             node.querySelectorAll('[data-testid="skincrafter-editor"]').forEach(recordStatus);
           }
         }
         for (const node of record.removedNodes) {
-          state.canvasRemovals += countCanvases(node);
+          const canvases = canvasesInNode(node);
+          state.canvasRemovals += canvases.length;
+          canvases.forEach((canvas) => {
+            const contextState = canvasContexts.get(canvas);
+            if (contextState) retireContext(contextState);
+          });
         }
       }
     }).observe(document, {
@@ -355,9 +355,7 @@ async function readProbe(page: Page): Promise<PerformanceProbeSnapshot> {
   return page.evaluate(() => {
     const globalWindow = window as Window & {
       __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
-      __skincrafterRefreshContextLifecycle?: () => void;
     };
-    globalWindow.__skincrafterRefreshContextLifecycle?.();
     const probe = globalWindow.__skincrafterPerformanceProbe;
     if (!probe) throw new Error('Performance probe is not installed.');
     return JSON.parse(JSON.stringify(probe)) as PerformanceProbeSnapshot;
@@ -435,13 +433,9 @@ async function waitForContextLifecycle(page: Page, expectedRetired: number): Pro
     (retired) => {
       const globalWindow = window as Window & {
         __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
-        __skincrafterRefreshContextLifecycle?: () => void;
       };
-      globalWindow.__skincrafterRefreshContextLifecycle?.();
       const contexts = globalWindow.__skincrafterPerformanceProbe?.contexts;
-      return contexts
-        ? contexts.lost + contexts.collected === retired && contexts.active === 1
-        : false;
+      return contexts?.retired === retired && contexts.active === 1;
     },
     expectedRetired,
     { timeout: 5_000 }
@@ -493,6 +487,12 @@ function resourceDelta(
   };
 }
 
+function expectRetiredNonTextureResourcesToBeZero(snapshot: PerformanceProbeSnapshot): void {
+  expect(snapshot.retiredOutstanding.buffers).toBe(0);
+  expect(snapshot.retiredOutstanding.programs).toBe(0);
+  expect(snapshot.retiredOutstanding.vertexArrays).toBe(0);
+}
+
 test.skip(
   process.env.SKINCRAFTER_PERFORMANCE_BASELINE !== '1',
   'Run explicitly with npm run test:performance.'
@@ -511,7 +511,6 @@ test('records the reproducible editor performance and resource baseline', async 
   const context = await browser.newContext({ viewport, deviceScaleFactor });
   await installPerformanceProbe(context);
   const page = await context.newPage();
-  const cdp = await context.newCDPSession(page);
   await page.goto('/');
   await waitForEditorReady(page);
 
@@ -570,10 +569,14 @@ test('records the reproducible editor performance and resource baseline', async 
 
   const mountCycleStart = await readProbe(page);
   const mountCycleStartLive = resourceLive(mountCycleStart);
+  const mountCycleStartRawLive = resourceRawLive(mountCycleStart);
   const mountCycleStartContexts = mountCycleStart.contexts;
-  const mountCycleStartRetired =
-    mountCycleStartContexts.lost + mountCycleStartContexts.collected;
+  const mountCycleStartRetired = mountCycleStartContexts.retired;
+  const mountCycleStartRetiredOutstanding = mountCycleStart.retiredOutstanding;
   expect(mountCycleStartContexts.active).toBe(1);
+  expect(mountCycleStartRetiredOutstanding.textures).toBe(threeFallbackTexturesPerContext);
+  expectRetiredNonTextureResourcesToBeZero(mountCycleStart);
+
   const mountCycleSnapshots: Array<{
     cycle: number;
     viewerLive: Record<ResourceKey, number>;
@@ -582,8 +585,8 @@ test('records the reproducible editor performance and resource baseline', async 
     editorRawLive: Record<ResourceKey, number>;
     viewerContexts: WebGLContextCounter;
     editorContexts: WebGLContextCounter;
-    viewerContextReleased: Record<ResourceKey, number>;
-    editorContextReleased: Record<ResourceKey, number>;
+    viewerRetiredOutstanding: Record<ResourceKey, number>;
+    editorRetiredOutstanding: Record<ResourceKey, number>;
   }> = [];
 
   for (let cycle = 1; cycle <= mountCycles; cycle += 1) {
@@ -599,11 +602,17 @@ test('records the reproducible editor performance and resource baseline', async 
     expect(
       await editorCanvas?.evaluate((previous, current) => previous === current, viewerCanvas)
     ).toBe(false);
-    await editorCanvas?.dispose();
-    await cdp.send('HeapProfiler.collectGarbage');
-    await waitForContextLifecycle(page, mountCycleStartRetired + cycle * 2 - 1);
+    await waitForContextLifecycle(
+      page,
+      mountCycleStartRetired + (cycle * 2 - 1) * strictModeRetiredContextsPerRouteTransition
+    );
     const viewerSnapshot = await readProbe(page);
     expect(resourceLive(viewerSnapshot)).toEqual(mountCycleStartLive);
+    expect(viewerSnapshot.retiredOutstanding.textures).toBe(
+      mountCycleStartRetiredOutstanding.textures +
+        (cycle * 2 - 1) * expectedRawTextureResidualPerRouteTransition
+    );
+    expectRetiredNonTextureResourcesToBeZero(viewerSnapshot);
 
     await page.getByRole('link', { name: 'Wardrobe' }).click();
     await expect(page).toHaveURL(/\/$/);
@@ -614,11 +623,17 @@ test('records the reproducible editor performance and resource baseline', async 
     expect(
       await viewerCanvas?.evaluate((previous, current) => previous === current, nextEditorCanvas)
     ).toBe(false);
-    await viewerCanvas?.dispose();
-    await cdp.send('HeapProfiler.collectGarbage');
-    await waitForContextLifecycle(page, mountCycleStartRetired + cycle * 2);
+    await waitForContextLifecycle(
+      page,
+      mountCycleStartRetired + cycle * 2 * strictModeRetiredContextsPerRouteTransition
+    );
     const editorSnapshot = await readProbe(page);
     expect(resourceLive(editorSnapshot)).toEqual(mountCycleStartLive);
+    expect(editorSnapshot.retiredOutstanding.textures).toBe(
+      mountCycleStartRetiredOutstanding.textures +
+        cycle * 2 * expectedRawTextureResidualPerRouteTransition
+    );
+    expectRetiredNonTextureResourcesToBeZero(editorSnapshot);
 
     mountCycleSnapshots.push({
       cycle,
@@ -628,21 +643,30 @@ test('records the reproducible editor performance and resource baseline', async 
       editorRawLive: resourceRawLive(editorSnapshot),
       viewerContexts: viewerSnapshot.contexts,
       editorContexts: editorSnapshot.contexts,
-      viewerContextReleased: viewerSnapshot.contextReleased,
-      editorContextReleased: editorSnapshot.contextReleased,
+      viewerRetiredOutstanding: viewerSnapshot.retiredOutstanding,
+      editorRetiredOutstanding: editorSnapshot.retiredOutstanding,
     });
 
+    await editorCanvas?.dispose();
+    await viewerCanvas?.dispose();
     await nextEditorCanvas?.dispose();
   }
 
   const finalProbe = await readProbe(page);
   await expect(page.locator('canvas')).toHaveCount(1);
   expect(finalProbe.contexts.active).toBe(1);
-  expect(finalProbe.contexts.lost + finalProbe.contexts.collected).toBe(
-    mountCycleStartRetired + mountCycles * 2
+  expect(finalProbe.contexts.retired).toBe(
+    mountCycleStartRetired + mountCycles * 2 * strictModeRetiredContextsPerRouteTransition
   );
   expect(resourceLive(finalProbe)).toEqual(mountCycleStartLive);
-  await cdp.detach();
+  expect(finalProbe.retiredOutstanding.textures).toBe(
+    mountCycleStartRetiredOutstanding.textures +
+      mountCycles * 2 * expectedRawTextureResidualPerRouteTransition
+  );
+  expectRetiredNonTextureResourcesToBeZero(finalProbe);
+  expect(resourceRawLive(finalProbe).textures - mountCycleStartRawLive.textures).toBe(
+    mountCycles * 2 * expectedRawTextureResidualPerRouteTransition
+  );
   await context.close();
 
   const packageSize = measurePackage();
@@ -681,9 +705,12 @@ test('records the reproducible editor performance and resource baseline', async 
       },
       resources: {
         instrumentation:
-          'WebGL create/delete calls plus weak context-aware retention, explicit browser GC collection checks, context-loss release accounting, and DOM canvas lifecycle',
+          'WebGL create/delete calls partitioned by active versus retired preview contexts, plus context-loss and DOM canvas lifecycle diagnostics',
+        strictModeRetiredContextsPerRouteTransition,
+        threeFallbackTexturesPerContext,
+        expectedRawTextureResidualPerRouteTransition,
         contexts: finalProbe.contexts,
-        contextReleased: finalProbe.contextReleased,
+        retiredOutstanding: finalProbe.retiredOutstanding,
         longSessionChanges,
         startLive: resourceLive(longSessionStart),
         endLive: resourceLive(longSessionEnd),
@@ -691,7 +718,9 @@ test('records the reproducible editor performance and resource baseline', async 
         everyTenChanges: longSessionSnapshots,
         mountCycles,
         mountCycleStartLive,
+        mountCycleStartRawLive,
         mountCycleStartContexts,
+        mountCycleStartRetiredOutstanding,
         mountCycleSnapshots,
         finalLive: resourceLive(finalProbe),
         rawFinalLive: resourceRawLive(finalProbe),
