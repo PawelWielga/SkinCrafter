@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SkinCrafterEditor from './SkinCrafterEditor';
 import { defaultAppearance } from './data/appearance';
@@ -297,6 +298,89 @@ describe('SkinCrafterEditor persistence serialization', () => {
       expect(screen.getByRole('button', { name: 'Hoodie' })).toHaveAttribute('aria-pressed', 'true');
     });
     expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('latches a load failure across host rerenders that recreate the adapter prop', async () => {
+    const cause = new Error('storage read blocked');
+    const save = vi.fn();
+    let loadCalls = 0;
+
+    function Host(): React.JSX.Element {
+      const [errorCount, setErrorCount] = useState(0);
+      const persistence: SkinCrafterPersistenceAdapter = {
+        load: () => {
+          loadCalls += 1;
+          throw cause;
+        },
+        save,
+      };
+
+      return (
+        <>
+          <span data-testid="persistence-error-count">{errorCount}</span>
+          <SkinCrafterEditor
+            persistence={persistence}
+            onError={() => setErrorCount((current) => current + 1)}
+          />
+        </>
+      );
+    }
+
+    render(<Host />);
+
+    await waitFor(() => expect(screen.getByTestId('persistence-error-count')).toHaveTextContent('1'));
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(loadCalls).toBe(1);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('latches a save failure across host rerenders that recreate the adapter prop', async () => {
+    const cause = new Error('storage quota exceeded');
+    let loadCalls = 0;
+    let saveCalls = 0;
+
+    function Host(): React.JSX.Element {
+      const [errorCount, setErrorCount] = useState(0);
+      const persistence: SkinCrafterPersistenceAdapter = {
+        load: () => {
+          loadCalls += 1;
+          return { status: 'empty' };
+        },
+        save: () => {
+          saveCalls += 1;
+          throw cause;
+        },
+      };
+
+      return (
+        <>
+          <span data-testid="persistence-error-count">{errorCount}</span>
+          <SkinCrafterEditor
+            persistence={persistence}
+            onError={() => setErrorCount((current) => current + 1)}
+          />
+        </>
+      );
+    }
+
+    render(<Host />);
+
+    await waitFor(() => expect(screen.getByTestId('persistence-error-count')).toHaveTextContent('1'));
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+
+    expect(loadCalls).toBe(1);
+    expect(saveCalls).toBe(1);
   });
 
   it('does not crash when the host error callback throws while reporting persistence failure', async () => {

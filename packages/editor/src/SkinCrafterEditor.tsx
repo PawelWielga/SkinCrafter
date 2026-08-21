@@ -228,6 +228,7 @@ export default function SkinCrafterEditor({
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
+  const persistenceFailureLatchedRef = useRef(persistenceInitialization.error !== null);
   const initialPersistenceErrorReportedRef = useRef(false);
 
   const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
@@ -348,7 +349,7 @@ export default function SkinCrafterEditor({
   }, [initialImage, initialModel]);
 
   useEffect(() => {
-    if (value) return;
+    if (value || persistenceFailureLatchedRef.current) return;
 
     if (!persistenceWasCheckedRef.current || checkedPersistenceRef.current !== persistence) {
       const nextPersistenceInitialization = initializePersistence(persistence);
@@ -356,7 +357,9 @@ export default function SkinCrafterEditor({
       persistenceWasCheckedRef.current = true;
       persistenceWritesBlockedRef.current = nextPersistenceInitialization.writesBlocked;
       if (nextPersistenceInitialization.error) {
+        persistenceFailureLatchedRef.current = true;
         notifyHost(onErrorRef.current, nextPersistenceInitialization.error);
+        return;
       }
     }
 
@@ -366,6 +369,7 @@ export default function SkinCrafterEditor({
       persistence.save(serializeSkinCrafterState(state));
     } catch (cause) {
       persistenceWritesBlockedRef.current = true;
+      persistenceFailureLatchedRef.current = true;
       notifyHost(onErrorRef.current, persistenceErrorFrom('save', cause));
     }
   }, [persistence, state, value]);
