@@ -1,24 +1,106 @@
-name: Build and Deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
-  push:
+  workflow_run:
+    workflows: [Build, Test]
     branches: [main]
+    types: [completed]
 
-permissions:
-  contents: write
+concurrency:
+  group: github-pages-production
+  cancel-in-progress: false
+
+permissions: {}
 
 jobs:
-  build-and-deploy:
+  gate:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      ready: ${{ steps.validation.outputs.ready }}
+      build_run_id: ${{ steps.validation.outputs.build_run_id }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - name: Verify full validation for the same main SHA
+        id: validation
+        uses: actions/github-script@v9
         with:
-          node-version: 20
-          package-manager-cache: false
-      - run: npm ci
-      - run: npm run build
-      - uses: peaceiris/actions-gh-pages@v4
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const { owner, repo } = context.repo;
+
+            const { data: mainBranch } = await github.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: 'main',
+            });
+
+            if (mainBranch.commit.sha !== sha) {
+              core.info(`Skipping ${sha}: main has already advanced to ${mainBranch.commit.sha}.`);
+              core.setOutput('ready', 'false');
+              return;
+            }
+
+            const requiredWorkflows = ['build.yml', 'test.yml'];
+            const successfulRuns = new Map();
+
+            for (const workflow_id of requiredWorkflows) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id,
+                branch: 'main',
+                event: 'push',
+                head_sha: sha,
+                per_page: 10,
+              });
+
+              const run = data.workflow_runs
+                .filter(candidate =>
+                  candidate.head_sha === sha &&
+                  candidate.head_branch === 'main' &&
+                  candidate.event === 'push'
+                )
+                .sort((left, right) => new Date(right.updated_at) - new Date(left.updated_at))[0];
+
+              if (!run) {
+                core.info(`${workflow_id}: no push run found for ${sha}.`);
+                core.setOutput('ready', 'false');
+                return;
+              }
+
+              core.info(`${workflow_id}: ${run.status}/${run.conclusion} (run ${run.id}).`);
+
+              if (run.status !== 'completed' || run.conclusion !== 'success') {
+                core.setOutput('ready', 'false');
+                return;
+              }
+
+              successfulRuns.set(workflow_id, run);
+            }
+
+            core.setOutput('ready', 'true');
+            core.setOutput('build_run_id', String(successfulRuns.get('build.yml').id));
+
+  deploy:
+    needs: gate
+    if: needs.gate.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download validated standalone site
+        uses: actions/download-artifact@v8
+        with:
+          name: standalone-pages-${{ github.event.workflow_run.head_sha }}
+          path: apps/standalone/dist
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.gate.outputs.build_run_id }}
+      - name: Deploy validated standalone site
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apps/standalone/dist
+          full_commit_message: "deploy: ${{ github.event.workflow_run.head_sha }}"

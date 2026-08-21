@@ -5,6 +5,9 @@ on:
     branches: ['**']
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,3 +33,11 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run test:consumer
+      - name: Upload validated standalone site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: standalone-pages-${{ github.sha }}
+          path: apps/standalone/dist
+          if-no-files-found: error
+          retention-days: 1
