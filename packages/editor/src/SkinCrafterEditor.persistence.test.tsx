@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SkinCrafterEditor from './SkinCrafterEditor';
 import { defaultAppearance } from './data/appearance';
 import type {
@@ -7,6 +7,7 @@ import type {
   SkinCrafterSerializedState,
 } from './publicTypes';
 import { parseSkinCrafterState } from './stateSerialization';
+import combineTextures from './utils/combineTextures';
 
 vi.mock('./components/three/three-preview', () => ({
   default: () => <div data-testid="three-preview" />,
@@ -16,8 +17,15 @@ vi.mock('./utils/combineTextures', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./utils/combineTextures')>();
   return {
     ...actual,
-    default: vi.fn().mockResolvedValue('data:image/png;base64,aGVsbG8='),
+    default: vi.fn(),
   };
+});
+
+const mockedCombineTextures = vi.mocked(combineTextures);
+
+beforeEach(() => {
+  mockedCombineTextures.mockReset();
+  mockedCombineTextures.mockResolvedValue('data:image/png;base64,aGVsbG8=');
 });
 
 afterEach(() => {
