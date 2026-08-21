@@ -49,6 +49,12 @@ npm run test:performance
 
 This command runs the reproducible desktop Chrome benchmark for first render, generation, rapid changes, long-session Three.js resources, mount/unmount lifecycle and real `npm pack` distribution size. Results are written to `test-results/performance-baseline.json`. See [`P3_PERFORMANCE_BASELINE.md`](P3_PERFORMANCE_BASELINE.md) for the pinned environment, procedure, current measurements and comparison rules.
 
+## Wardrobe content development
+
+Use [`CONTENT_WORKFLOW.md`](CONTENT_WORKFLOW.md) when adding or changing appearance categories, options or texture assets. It defines the explicit `tintable` + `fixed` authoring model, skin-atlas versus preview-asset validation, alpha rules, Classic/Slim checks, localization requirements, package/`assetBaseUrl` safety, preview/export parity, performance comparison and the required validation sequence.
+
+Routine content changes do not change the editor package version automatically. A public API/schema change or a release still requires a separate explicit compatibility/version decision.
+
 ## Renderer parity
 
 The Three.js player preview is validated against the Minecraft Java player geometry and the canonical 64×64 skin atlas, including Classic/Slim arms, independent left/right limb regions, outer-layer dilation, pivot positions, alpha cutoff and pixel-perfect texture sampling.
