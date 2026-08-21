@@ -78,6 +78,8 @@ Live create/delete accounting remained exactly stable at every 10-change checkpo
 
 This gives a repeatable baseline that normal in-place customization does not recreate the renderer or cause unbounded GPU resource growth in the measured scenario.
 
+CPU-side teardown is also covered by the normal `npm test` regression suite. `three-preview-runtime.test.ts` verifies that a disposed preview releases all 12 model `BoxGeometry` instances, all 72 `MeshBasicMaterial` instances, at least the 72 face-map textures plus the source texture, the renderer, pending animation frame, resize observer and window listener. The same suite verifies that a stale asynchronous texture load is disposed instead of being retained or applied. The browser benchmark complements those direct object-lifecycle assertions with real WebGL allocation behavior over a longer session.
+
 ## Mount/unmount lifecycle finding
 
 The benchmark also performs 10 `Creator -> /mcskinview -> Creator` route cycles. Both routes intentionally own a Three.js preview canvas. The harness verifies that the previous route's canvas is disconnected and that the next route receives a different canvas.
@@ -141,6 +143,7 @@ No performance budget is introduced by #119. A future budget should be added onl
 
 - first render, single generation and rapid-change timing now have repeatable 10-run samples with median and p95,
 - 100 in-place state changes show no WebGL create/delete growth in the measured resource classes,
+- direct unit coverage confirms geometry, material, texture, renderer and stale-async cleanup behavior,
 - 10 route remount cycles exposed a texture-lifecycle question tracked by #138,
 - packed distribution size is recorded from the same SHA,
 - no optimization was introduced without measurement evidence.
