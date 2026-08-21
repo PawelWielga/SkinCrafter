@@ -20,6 +20,7 @@ function createDependencies(requests: TextureRequest[]): ThreePreviewRuntimeDepe
     setSize: vi.fn(),
     render: vi.fn(),
     dispose: vi.fn(),
+    forceContextLoss: vi.fn(),
   } as unknown as THREE.WebGLRenderer;
 
   const textureLoader = {
