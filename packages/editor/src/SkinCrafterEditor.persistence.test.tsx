@@ -91,6 +91,36 @@ describe('SkinCrafterEditor persistence serialization', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it('re-checks compatibility before saving to a replacement persistence adapter', async () => {
+    const firstSave = vi.fn();
+    const firstPersistence: SkinCrafterPersistenceAdapter = {
+      load: () => ({ status: 'empty' }),
+      save: firstSave,
+    };
+    const replacementLoad = vi.fn(() => ({ status: 'incompatible' as const }));
+    const replacementSave = vi.fn();
+    const replacementPersistence: SkinCrafterPersistenceAdapter = {
+      load: replacementLoad,
+      save: replacementSave,
+    };
+
+    const { rerender } = render(<SkinCrafterEditor persistence={firstPersistence} />);
+
+    await waitFor(() => expect(firstSave).toHaveBeenCalled());
+
+    rerender(<SkinCrafterEditor persistence={replacementPersistence} />);
+
+    await waitFor(() => expect(replacementLoad).toHaveBeenCalledTimes(1));
+    expect(replacementSave).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duck' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Duck' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    expect(replacementSave).not.toHaveBeenCalled();
+  });
+
   it('preserves an unsupported future schema on mount and after user edits', async () => {
     const futureState = {
       schemaVersion: 2,
