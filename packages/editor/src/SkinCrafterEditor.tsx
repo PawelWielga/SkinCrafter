@@ -69,6 +69,15 @@ function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null
   };
 }
 
+function areStatesEqual(left: SkinCrafterState, right: SkinCrafterState): boolean {
+  if (left.layerOrder.length !== right.layerOrder.length) return false;
+  if (left.layerOrder.some((category, index) => category !== right.layerOrder[index])) return false;
+
+  return appearanceCategories.every(
+    ({ id }) => left.appearance[id] === right.appearance[id]
+  );
+}
+
 function persistenceErrorFrom(
   operation: 'load' | 'save',
   cause: unknown
@@ -239,6 +248,14 @@ export default function SkinCrafterEditor({
   const initialImage = initialSkin?.image ?? null;
   const initialModel = initialSkin?.model ?? null;
   const hasImportedRequest = initialImage !== null;
+
+  useEffect(() => {
+    if (!controlledState) return;
+
+    setInternalState((current) => (
+      areStatesEqual(current, controlledState) ? current : controlledState
+    ));
+  }, [controlledState]);
 
   const publishState = useCallback((next: SkinCrafterState) => {
     if (!value) setInternalState(next);
