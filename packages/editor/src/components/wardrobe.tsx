@@ -1,6 +1,11 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import SkinCrafterIcon from './icon';
-import { createLayerPreviewOrder, type LayerDropPosition } from './layerDrag';
+import {
+  createLayerPreviewOrder,
+  findLayerDropHint,
+  type LayerDropHint,
+  type LayerDropZone,
+} from './layerDrag';
 import OptionCard from './optionCard';
 import PanelSection from './panelSection';
 import {
@@ -21,11 +26,6 @@ interface WardrobeProps {
   onLayerOrderChange: (layerOrder: TextureLayerCategoryId[]) => void;
   t: (key: TranslationKey) => string;
   assetBaseUrl?: string;
-}
-
-interface LayerDropHint {
-  targetLayer: TextureLayerCategoryId;
-  position: LayerDropPosition;
 }
 
 interface LayerDragGhost {
@@ -60,6 +60,7 @@ export default function Wardrobe({
   const previewLayerOrderRef = useRef<TextureLayerCategoryId[] | null>(null);
   const touchPointerIdRef = useRef<number | null>(null);
   const layerListRef = useRef<HTMLDivElement | null>(null);
+  const layerDropZonesRef = useRef<LayerDropZone[]>([]);
   const previousLayerPositionsRef = useRef(new Map<TextureLayerCategoryId, number>());
 
   const { categoriesById, fixedCategories } = useMemo(() => {
@@ -123,10 +124,39 @@ export default function Wardrobe({
     previousLayerPositionsRef.current = nextPositions;
   }, [renderedLayerOrder]);
 
+  const captureLayerDropZones = (sourceLayer: TextureLayerCategoryId): LayerDropZone[] => {
+    const list = layerListRef.current;
+    if (!list) return [];
+
+    const listTop = list.getBoundingClientRect().top;
+    return [...list.querySelectorAll<HTMLElement>('[data-layer-id]')].flatMap((card) => {
+      const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
+      if (
+        !rawLayer ||
+        !isTextureLayerCategory(rawLayer) ||
+        rawLayer === sourceLayer
+      ) {
+        return [];
+      }
+
+      const rect = card.getBoundingClientRect();
+      return [{ layer: rawLayer, top: rect.top - listTop, bottom: rect.bottom - listTop }];
+    });
+  };
+
+  const findCurrentLayerDropHint = (clientY: number): LayerDropHint | null => {
+    const list = layerListRef.current;
+    if (!list) return null;
+
+    const relativeY = clientY - list.getBoundingClientRect().top;
+    return findLayerDropHint(layerDropZonesRef.current, relativeY);
+  };
+
   const clearLayerDrag = (): void => {
     draggingLayerRef.current = null;
     previewLayerOrderRef.current = null;
     touchPointerIdRef.current = null;
+    layerDropZonesRef.current = [];
     setDraggingLayer(null);
     setPreviewLayerOrder(null);
     setDropHint(null);
@@ -135,6 +165,7 @@ export default function Wardrobe({
 
   const beginLayerDrag = (layer: TextureLayerCategoryId, ghost: LayerDragGhost): void => {
     const initialPreview = [...textureLayerOrder];
+    layerDropZonesRef.current = captureLayerDropZones(layer);
     draggingLayerRef.current = layer;
     previewLayerOrderRef.current = initialPreview;
     setDraggingLayer(layer);
@@ -145,7 +176,7 @@ export default function Wardrobe({
 
   const updateLayerPreview = (
     targetLayer: TextureLayerCategoryId,
-    position: LayerDropPosition
+    position: LayerDropHint['position']
   ): void => {
     const sourceLayer = draggingLayerRef.current;
     if (!sourceLayer) return;
@@ -214,64 +245,20 @@ export default function Wardrobe({
     }
   };
 
-  const allowLayerDrop = (
-    event: React.DragEvent<HTMLDivElement>,
-    targetLayer: TextureLayerCategoryId
-  ): void => {
+  const allowLayerDrop = (event: React.DragEvent<HTMLDivElement>): void => {
     if (!draggingLayerRef.current) return;
 
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    const rect = event.currentTarget.getBoundingClientRect();
-    const position: LayerDropPosition =
-      event.clientY >= rect.top + rect.height / 2 ? 'after' : 'before';
-    updateLayerPreview(targetLayer, position);
+    const hint = findCurrentLayerDropHint(event.clientY);
+    if (hint) {
+      updateLayerPreview(hint.targetLayer, hint.position);
+    }
   };
 
   const dropLayer = (event: React.DragEvent<HTMLDivElement>): void => {
     event.preventDefault();
     commitLayerDrag();
-  };
-
-  const findTouchDropHint = (clientY: number): LayerDropHint | null => {
-    const list = layerListRef.current;
-    if (!list) return null;
-
-    const cards = [...list.querySelectorAll<HTMLElement>('[data-layer-id]')];
-    if (cards.length === 0) return null;
-
-    for (const card of cards) {
-      const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
-      if (
-        !rawLayer ||
-        !isTextureLayerCategory(rawLayer) ||
-        rawLayer === draggingLayerRef.current
-      ) {
-        continue;
-      }
-
-      const rect = card.getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) {
-        return { targetLayer: rawLayer, position: 'before' };
-      }
-
-      if (clientY <= rect.bottom) {
-        return { targetLayer: rawLayer, position: 'after' };
-      }
-    }
-
-    const lastCard = cards.findLast((card) => {
-      const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
-      return Boolean(
-        rawLayer &&
-          isTextureLayerCategory(rawLayer) &&
-          rawLayer !== draggingLayerRef.current
-      );
-    });
-    const lastLayer = lastCard?.dataset.layerId as AppearanceCategoryId | undefined;
-    return lastLayer && isTextureLayerCategory(lastLayer)
-      ? { targetLayer: lastLayer, position: 'after' }
-      : null;
   };
 
   const startTouchLayerDrag = (
@@ -298,7 +285,7 @@ export default function Wardrobe({
 
     event.preventDefault();
     setDragGhost({ x: event.clientX, y: event.clientY, pointerType: 'touch' });
-    const hint = findTouchDropHint(event.clientY);
+    const hint = findCurrentLayerDropHint(event.clientY);
     if (hint) {
       updateLayerPreview(hint.targetLayer, hint.position);
     }
@@ -338,10 +325,6 @@ export default function Wardrobe({
           layerCategory === draggingLayer ? 'is-dragging' : ''
         } ${isDropTarget ? `drop-${dropHint.position}` : ''}`}
         data-layer-id={layerCategory ?? undefined}
-        onDragOver={
-          layerCategory ? (event) => allowLayerDrop(event, layerCategory) : undefined
-        }
-        onDrop={layerCategory ? dropLayer : undefined}
         onPointerDown={
           layerCategory ? (event) => startTouchLayerDrag(event, layerCategory) : undefined
         }
@@ -446,7 +429,12 @@ export default function Wardrobe({
     >
       <div className="space-y-1.5 options-container md:flex-1 md:min-h-0">
         {fixedCategories.map(renderCategory)}
-        <div ref={layerListRef} className="layer-order-list space-y-1.5">
+        <div
+          ref={layerListRef}
+          className="layer-order-list space-y-1.5"
+          onDragOver={allowLayerDrop}
+          onDrop={dropLayer}
+        >
           {layerCategories.map(renderCategory)}
         </div>
       </div>

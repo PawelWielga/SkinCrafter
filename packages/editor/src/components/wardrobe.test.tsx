@@ -43,18 +43,66 @@ function getRenderedLayerOrder(container: HTMLElement): TextureLayerCategoryId[]
   );
 }
 
-function mockCardRect(card: HTMLElement, top: number, height = 80): void {
-  vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
+function createRect(top: number, height: number, width = 320): DOMRect {
+  return {
     x: 0,
     y: top,
     top,
     left: 0,
-    right: 320,
+    right: width,
     bottom: top + height,
-    width: 320,
+    width,
     height,
     toJSON: () => ({}),
-  } as DOMRect);
+  } as DOMRect;
+}
+
+function mockCardRect(card: HTMLElement, top: number, height = 80): void {
+  vi.spyOn(card, 'getBoundingClientRect').mockReturnValue(createRect(top, height));
+}
+
+function mockDynamicLayerCardRects(
+  container: HTMLElement,
+  getListTop: () => number = () => 0
+): void {
+  const list = container.querySelector<HTMLElement>('.layer-order-list');
+  if (!list) {
+    throw new Error('Expected layer-order-list');
+  }
+
+  vi.spyOn(list, 'getBoundingClientRect').mockImplementation(() =>
+    createRect(getListTop(), 480)
+  );
+
+  const cards = [
+    ...container.querySelectorAll<HTMLElement>('.layer-order-list > [data-layer-id]'),
+  ];
+  cards.forEach((card) => {
+    vi.spyOn(card, 'getBoundingClientRect').mockImplementation(() => {
+      const currentCards = [
+        ...container.querySelectorAll<HTMLElement>('.layer-order-list > [data-layer-id]'),
+      ];
+      const top = getListTop() + currentCards.indexOf(card) * 100;
+      return createRect(top, 80);
+    });
+  });
+}
+
+function fireMouseDrag(
+  target: Element,
+  type: 'dragstart' | 'dragover' | 'drop' | 'dragend',
+  dataTransfer: DataTransfer,
+  clientY: number,
+  clientX = 40
+): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX,
+    clientY,
+  });
+  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+  fireEvent(target, event);
 }
 
 function fireTouchPointer(
@@ -118,20 +166,14 @@ describe('Wardrobe host isolation and layer ordering', () => {
     const { container } = renderWardrobe(onLayerOrderChange);
     const dataTransfer = createDataTransfer();
     const dragHandle = screen.getByRole('button', { name: 'Drag layer Hat' });
-
-    fireEvent.dragStart(dragHandle, {
-      dataTransfer,
-      clientX: 40,
-      clientY: 220,
-    });
-
     const pantsCard = screen
       .getByRole('heading', { name: 'Pants' })
       .closest<HTMLElement>('[data-layer-id="pants"]');
     expect(pantsCard).not.toBeNull();
     mockCardRect(pantsCard!, 100);
 
-    fireEvent.dragOver(pantsCard!, { dataTransfer, clientY: 110 });
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 220);
+    fireMouseDrag(pantsCard!, 'dragover', dataTransfer, 110);
 
     expect(onLayerOrderChange).not.toHaveBeenCalled();
     expect(getRenderedLayerOrder(container)).toEqual([
@@ -144,7 +186,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(pantsCard).toHaveClass('drop-before');
     expect(screen.getByTestId('layer-drag-ghost')).toBeInTheDocument();
 
-    fireEvent.drop(pantsCard!, { dataTransfer, clientY: 110 });
+    fireMouseDrag(pantsCard!, 'drop', dataTransfer, 110);
 
     expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
     expect(onLayerOrderChange).toHaveBeenCalledWith([
@@ -157,25 +199,164 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(screen.queryByTestId('layer-drag-ghost')).not.toBeInTheDocument();
   });
 
+  it('keeps the mouse preview and marker stable when reordered DOM moves under the pointer', () => {
+    const onLayerOrderChange = vi.fn();
+    const { container } = renderWardrobe(onLayerOrderChange);
+    const dataTransfer = createDataTransfer();
+    const dragHandle = screen.getByRole('button', { name: 'Drag layer Hat' });
+    const layerList = container.querySelector<HTMLElement>('.layer-order-list');
+    expect(layerList).not.toBeNull();
+    mockDynamicLayerCardRects(container);
+
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 20);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
+
+    const previewOrder = [
+      'shirt',
+      'hat',
+      'pants',
+      'shoes',
+      'accessory',
+    ] satisfies TextureLayerCategoryId[];
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
+    ).toHaveClass('drop-after');
+
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
+
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
+    ).toHaveClass('drop-after');
+    expect(onLayerOrderChange).not.toHaveBeenCalled();
+
+    fireMouseDrag(layerList!, 'drop', dataTransfer, 170);
+
+    expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
+    expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
+  });
+
+  it('keeps stable logical drop zones aligned after the list scrolls during drag', () => {
+    const onLayerOrderChange = vi.fn();
+    const { container } = renderWardrobe(onLayerOrderChange);
+    const dataTransfer = createDataTransfer();
+    const dragHandle = screen.getByRole('button', { name: 'Drag layer Hat' });
+    const layerList = container.querySelector<HTMLElement>('.layer-order-list');
+    expect(layerList).not.toBeNull();
+
+    let listTop = 200;
+    mockDynamicLayerCardRects(container, () => listTop);
+
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 220);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, listTop + 170);
+
+    const previewOrder = [
+      'shirt',
+      'hat',
+      'pants',
+      'shoes',
+      'accessory',
+    ] satisfies TextureLayerCategoryId[];
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
+    ).toHaveClass('drop-after');
+
+    listTop = 20;
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, listTop + 170);
+
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
+    ).toHaveClass('drop-after');
+
+    fireMouseDrag(layerList!, 'drop', dataTransfer, listTop + 170);
+
+    expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
+    expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
+  });
+
+  it('handles rapid downward desktop drag changes deterministically', () => {
+    const onLayerOrderChange = vi.fn();
+    const { container } = renderWardrobe(onLayerOrderChange);
+    const dataTransfer = createDataTransfer();
+    const dragHandle = screen.getByRole('button', { name: 'Drag layer Hat' });
+    const layerList = container.querySelector<HTMLElement>('.layer-order-list');
+    expect(layerList).not.toBeNull();
+    mockDynamicLayerCardRects(container);
+
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 20);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 270);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 370);
+
+    const previewOrder = [
+      'shirt',
+      'pants',
+      'shoes',
+      'hat',
+      'accessory',
+    ] satisfies TextureLayerCategoryId[];
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Shoes' }).closest('[data-layer-id="shoes"]')
+    ).toHaveClass('drop-after');
+
+    fireMouseDrag(layerList!, 'drop', dataTransfer, 370);
+
+    expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
+  });
+
+  it('handles upward desktop drag without oscillating the destination', () => {
+    const onLayerOrderChange = vi.fn();
+    const { container } = renderWardrobe(onLayerOrderChange);
+    const dataTransfer = createDataTransfer();
+    const dragHandle = screen.getByRole('button', { name: 'Drag layer Accessory' });
+    const layerList = container.querySelector<HTMLElement>('.layer-order-list');
+    expect(layerList).not.toBeNull();
+    mockDynamicLayerCardRects(container);
+
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 420);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 30);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 30);
+
+    const previewOrder = [
+      'accessory',
+      'hat',
+      'shirt',
+      'pants',
+      'shoes',
+    ] satisfies TextureLayerCategoryId[];
+    expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
+    expect(
+      screen.getByRole('heading', { name: 'Hat' }).closest('[data-layer-id="hat"]')
+    ).toHaveClass('drop-before');
+
+    fireMouseDrag(layerList!, 'drop', dataTransfer, 30);
+
+    expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
+  });
+
   it('restores the original order when a mouse drag is cancelled', () => {
     const onLayerOrderChange = vi.fn();
     const { container, layerOrder } = renderWardrobe(onLayerOrderChange);
     const dataTransfer = createDataTransfer();
     const dragHandle = screen.getByRole('button', { name: 'Drag layer Hat' });
-
-    fireEvent.dragStart(dragHandle, { dataTransfer, clientX: 40, clientY: 220 });
-
     const shoesCard = screen
       .getByRole('heading', { name: 'Shoes' })
       .closest<HTMLElement>('[data-layer-id="shoes"]');
     expect(shoesCard).not.toBeNull();
     mockCardRect(shoesCard!, 300);
-    fireEvent.dragOver(shoesCard!, { dataTransfer, clientY: 370 });
+
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 220);
+    fireMouseDrag(shoesCard!, 'dragover', dataTransfer, 370);
 
     expect(getRenderedLayerOrder(container)).not.toEqual(layerOrder);
     expect(onLayerOrderChange).not.toHaveBeenCalled();
 
-    fireEvent.dragEnd(dragHandle, { dataTransfer });
+    fireMouseDrag(dragHandle, 'dragend', dataTransfer, 370);
 
     expect(getRenderedLayerOrder(container)).toEqual(layerOrder);
     expect(onLayerOrderChange).not.toHaveBeenCalled();
