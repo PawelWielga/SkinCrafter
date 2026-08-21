@@ -82,6 +82,23 @@ function mockDynamicLayerCardRects(container: HTMLElement): void {
   });
 }
 
+function fireMouseDrag(
+  target: Element,
+  type: 'dragstart' | 'dragover' | 'drop' | 'dragend',
+  dataTransfer: DataTransfer,
+  clientY: number,
+  clientX = 40
+): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX,
+    clientY,
+  });
+  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+  fireEvent(target, event);
+}
+
 function fireTouchPointer(
   target: Element,
   type: 'pointerdown' | 'pointermove' | 'pointerup',
@@ -149,13 +166,8 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(pantsCard).not.toBeNull();
     mockCardRect(pantsCard!, 100);
 
-    fireEvent.dragStart(dragHandle, {
-      dataTransfer,
-      clientX: 40,
-      clientY: 220,
-    });
-
-    fireEvent.dragOver(pantsCard!, { dataTransfer, clientY: 110 });
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 220);
+    fireMouseDrag(pantsCard!, 'dragover', dataTransfer, 110);
 
     expect(onLayerOrderChange).not.toHaveBeenCalled();
     expect(getRenderedLayerOrder(container)).toEqual([
@@ -168,7 +180,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(pantsCard).toHaveClass('drop-before');
     expect(screen.getByTestId('layer-drag-ghost')).toBeInTheDocument();
 
-    fireEvent.drop(pantsCard!, { dataTransfer, clientY: 110 });
+    fireMouseDrag(pantsCard!, 'drop', dataTransfer, 110);
 
     expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
     expect(onLayerOrderChange).toHaveBeenCalledWith([
@@ -190,8 +202,8 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(layerList).not.toBeNull();
     mockDynamicLayerCardRects(container);
 
-    fireEvent.dragStart(dragHandle, { dataTransfer, clientX: 40, clientY: 20 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 170 });
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 20);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
 
     const previewOrder = [
       'shirt',
@@ -205,8 +217,8 @@ describe('Wardrobe host isolation and layer ordering', () => {
       screen.getByRole('heading', { name: 'Shirt' }).closest('[data-layer-id="shirt"]')
     ).toHaveClass('drop-after');
 
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 170 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 170 });
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
 
     expect(getRenderedLayerOrder(container)).toEqual(previewOrder);
     expect(
@@ -214,7 +226,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
     ).toHaveClass('drop-after');
     expect(onLayerOrderChange).not.toHaveBeenCalled();
 
-    fireEvent.drop(layerList!, { dataTransfer, clientY: 170 });
+    fireMouseDrag(layerList!, 'drop', dataTransfer, 170);
 
     expect(onLayerOrderChange).toHaveBeenCalledTimes(1);
     expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
@@ -229,10 +241,10 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(layerList).not.toBeNull();
     mockDynamicLayerCardRects(container);
 
-    fireEvent.dragStart(dragHandle, { dataTransfer, clientX: 40, clientY: 20 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 170 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 270 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 370 });
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 20);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 170);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 270);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 370);
 
     const previewOrder = [
       'shirt',
@@ -246,7 +258,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
       screen.getByRole('heading', { name: 'Shoes' }).closest('[data-layer-id="shoes"]')
     ).toHaveClass('drop-after');
 
-    fireEvent.drop(layerList!, { dataTransfer, clientY: 370 });
+    fireMouseDrag(layerList!, 'drop', dataTransfer, 370);
 
     expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
   });
@@ -260,9 +272,9 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(layerList).not.toBeNull();
     mockDynamicLayerCardRects(container);
 
-    fireEvent.dragStart(dragHandle, { dataTransfer, clientX: 40, clientY: 420 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 30 });
-    fireEvent.dragOver(layerList!, { dataTransfer, clientY: 30 });
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 420);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 30);
+    fireMouseDrag(layerList!, 'dragover', dataTransfer, 30);
 
     const previewOrder = [
       'accessory',
@@ -276,7 +288,7 @@ describe('Wardrobe host isolation and layer ordering', () => {
       screen.getByRole('heading', { name: 'Hat' }).closest('[data-layer-id="hat"]')
     ).toHaveClass('drop-before');
 
-    fireEvent.drop(layerList!, { dataTransfer, clientY: 30 });
+    fireMouseDrag(layerList!, 'drop', dataTransfer, 30);
 
     expect(onLayerOrderChange).toHaveBeenCalledWith(previewOrder);
   });
@@ -292,13 +304,13 @@ describe('Wardrobe host isolation and layer ordering', () => {
     expect(shoesCard).not.toBeNull();
     mockCardRect(shoesCard!, 300);
 
-    fireEvent.dragStart(dragHandle, { dataTransfer, clientX: 40, clientY: 220 });
-    fireEvent.dragOver(shoesCard!, { dataTransfer, clientY: 370 });
+    fireMouseDrag(dragHandle, 'dragstart', dataTransfer, 220);
+    fireMouseDrag(shoesCard!, 'dragover', dataTransfer, 370);
 
     expect(getRenderedLayerOrder(container)).not.toEqual(layerOrder);
     expect(onLayerOrderChange).not.toHaveBeenCalled();
 
-    fireEvent.dragEnd(dragHandle, { dataTransfer });
+    fireMouseDrag(dragHandle, 'dragend', dataTransfer, 370);
 
     expect(getRenderedLayerOrder(container)).toEqual(layerOrder);
     expect(onLayerOrderChange).not.toHaveBeenCalled();
