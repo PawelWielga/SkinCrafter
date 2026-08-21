@@ -128,6 +128,7 @@ export default function Wardrobe({
     const list = layerListRef.current;
     if (!list) return [];
 
+    const listTop = list.getBoundingClientRect().top;
     return [...list.querySelectorAll<HTMLElement>('[data-layer-id]')].flatMap((card) => {
       const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
       if (
@@ -139,8 +140,16 @@ export default function Wardrobe({
       }
 
       const rect = card.getBoundingClientRect();
-      return [{ layer: rawLayer, top: rect.top, bottom: rect.bottom }];
+      return [{ layer: rawLayer, top: rect.top - listTop, bottom: rect.bottom - listTop }];
     });
+  };
+
+  const findCurrentLayerDropHint = (clientY: number): LayerDropHint | null => {
+    const list = layerListRef.current;
+    if (!list) return null;
+
+    const relativeY = clientY - list.getBoundingClientRect().top;
+    return findLayerDropHint(layerDropZonesRef.current, relativeY);
   };
 
   const clearLayerDrag = (): void => {
@@ -241,7 +250,7 @@ export default function Wardrobe({
 
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    const hint = findLayerDropHint(layerDropZonesRef.current, event.clientY);
+    const hint = findCurrentLayerDropHint(event.clientY);
     if (hint) {
       updateLayerPreview(hint.targetLayer, hint.position);
     }
@@ -276,7 +285,7 @@ export default function Wardrobe({
 
     event.preventDefault();
     setDragGhost({ x: event.clientX, y: event.clientY, pointerType: 'touch' });
-    const hint = findLayerDropHint(layerDropZonesRef.current, event.clientY);
+    const hint = findCurrentLayerDropHint(event.clientY);
     if (hint) {
       updateLayerPreview(hint.targetLayer, hint.position);
     }
