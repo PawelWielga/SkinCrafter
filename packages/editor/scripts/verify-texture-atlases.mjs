@@ -1,9 +1,9 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectPngBytes } from './png-validation.mjs';
 
 const textureRoot = fileURLToPath(new URL('../src/assets/textures', import.meta.url));
-const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const MINECRAFT_SKIN_SIZE = 64;
 
 function fail(message) {
@@ -23,23 +23,12 @@ function logicalTexturePath(texturePath) {
 }
 
 function inspectPng(texturePath) {
-  const bytes = readFileSync(texturePath);
-  if (bytes.length < 26 || !bytes.subarray(0, 8).equals(pngSignature)) {
-    fail(`${logicalTexturePath(texturePath)} is not a valid PNG file.`);
+  const path = logicalTexturePath(texturePath);
+  try {
+    return inspectPngBytes(readFileSync(texturePath), path);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
   }
-  if (bytes.toString('ascii', 12, 16) !== 'IHDR') {
-    fail(`${logicalTexturePath(texturePath)} is missing the PNG IHDR header.`);
-  }
-
-  const width = bytes.readUInt32BE(16);
-  const height = bytes.readUInt32BE(20);
-  const bitDepth = bytes.readUInt8(24);
-  const colorType = bytes.readUInt8(25);
-  if (width === 0 || height === 0) {
-    fail(`${logicalTexturePath(texturePath)} has invalid ${width}x${height} dimensions.`);
-  }
-
-  return { width, height, bitDepth, colorType };
 }
 
 function isRuntimeSkinAtlas(path) {
@@ -114,7 +103,7 @@ for (const [stem, pair] of splitLayerPairs) {
 }
 
 console.log(
-  `Verified ${skinAtlases.length} runtime skin atlas PNGs are 64x64 with explicit alpha, ` +
+  `Verified ${skinAtlases.length} runtime skin atlas PNGs are fully decodable, 64x64 and use explicit alpha; ` +
     `${splitLayerPairs.size} explicit tintable/fixed atlas definitions are dimension-compatible, ` +
-    `and ${nonAtlasAssets.length} non-atlas preview PNG asset(s) are valid PNGs without a forced skin-atlas size.`
+    `and ${nonAtlasAssets.length} non-atlas preview PNG asset(s) are fully decodable without a forced skin-atlas size.`
 );
