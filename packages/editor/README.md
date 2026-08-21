@@ -56,7 +56,7 @@ function CharacterEditor() {
 - `locale`: host-controlled `en` or `pl`. The package does not own a language selector.
 - `initialSkin`: initial semantic appearance/layer-order input, or an existing 64x64 Minecraft PNG supplied as `Blob` with explicit `classic`/`slim` model metadata.
 - `value` + `onStateChange`: fully host-controlled semantic editor state.
-- `persistence`: optional host storage adapter for semantic appearance/layer-order state. `load()` returns runtime/legacy semantic state and `save()` receives the current versioned serialized state. The package never reads or writes `localStorage` directly.
+- `persistence`: optional host storage adapter for semantic appearance/layer-order state. `load()` may explicitly report `loaded`, `empty` or `incompatible`; `incompatible` keeps the editor usable in memory while suppressing persistence writes for that mount. `save()` receives the current versioned serialized state. The package never reads or writes `localStorage` directly.
 - `onSkinChange`: receives the current generated PNG as `Blob`, `File`, data URL and metadata after the current semantic/imported state has generated successfully.
 - `onSave`: called from the editor save/download action with the same upload-ready output. The action is unavailable while the current state is not `ready`.
 - `onStatusChange`: reports generation/import transitions such as `generating`, `ready` and `error`.
@@ -163,7 +163,7 @@ The host can append `file` directly to `FormData`. DOM/canvas scraping is not pa
 
 ## Persistence and schema compatibility
 
-Persistence storage belongs to the host, while the persisted semantic format and migration rules belong to the package.
+Persistence storage belongs to the host, while the persisted semantic format, migration rules and safe compatibility signal belong to the package.
 
 The current wire format is `SkinCrafterSerializedStateV1`:
 
@@ -175,7 +175,16 @@ interface SkinCrafterSerializedStateV1 {
 }
 ```
 
+For versioned storage, return the explicit `SkinCrafterPersistenceLoadResult` from `load()`:
+
+- `{ status: 'loaded', state }` means a compatible runtime/legacy state was loaded and persistence writes are allowed,
+- `{ status: 'empty' }` means there is no usable saved state; the editor starts from defaults and persistence writes are allowed,
+- `{ status: 'incompatible' }` means a record exists but must not be replaced by this package version. The editor starts from defaults in memory and suppresses all calls to this adapter's `save()` for the lifetime of that mounted editor.
+
+Legacy adapters that return a semantic state directly or `null` remain supported for compatibility, but hosts that parse versioned records should use the explicit result so an unsupported future schema cannot be confused with a missing record. `SkinCrafterEditor` may call `save()` after mount for writable `loaded`/`empty` results, so `incompatible` is the required signal when the original record must be preserved. If the host later removes or upgrades the incompatible record, remount the editor so persistence compatibility is evaluated again.
+
 Use the exported helpers rather than duplicating parsing, normalization or migrations:
+
 ```ts
 import {
   parseSkinCrafterState,
@@ -188,23 +197,24 @@ const STORAGE_KEY = 'my-editor-state';
 const persistence: SkinCrafterPersistenceAdapter = {
   load: () => {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return { status: 'empty' };
 
     let value: unknown;
     try {
       value = JSON.parse(raw) as unknown;
     } catch {
-      return null;
+      return { status: 'empty' };
     }
 
     const parsed = parseSkinCrafterState(value);
     if (!parsed.success) {
-      // In particular, do not reinterpret an unknown future schema as the current format.
       console.error(parsed.error.code, parsed.error.message);
-      return null;
+      return parsed.error.code === 'unsupported_schema_version'
+        ? { status: 'incompatible' }
+        : { status: 'empty' };
     }
 
-    return parsed.state;
+    return { status: 'loaded', state: parsed.state };
   },
   save: (state) => {
     // `state` is already the current SkinCrafterSerializedState.
@@ -227,9 +237,9 @@ const persistence: SkinCrafterPersistenceAdapter = {
 
 A successful parse includes `sourceSchemaVersion`, `migrated`, `notices`, the runtime `state`, and the canonical current `serializedState`. Hosts can therefore distinguish a clean current-schema load from a migration or fallback instead of guessing whether a default value was intentional.
 
-When a future release changes the persisted semantic model incompatibly, the package will advance `schemaVersion` and add deterministic migrations. Storage/database selection remains a host concern. Hosts that encounter `unsupported_schema_version` should preserve the original record rather than replacing it with defaults from an older package release.
+When a future release changes the persisted semantic model incompatibly, the package will advance `schemaVersion` and add deterministic migrations. Storage/database selection remains a host concern. Hosts that encounter `unsupported_schema_version` should return `incompatible` and preserve the original record rather than replacing it with defaults from an older package release.
 
-The standalone SkinCrafter site migrates its historical `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys into the versioned `skincrafterState` entry. Current saves keep the aggregate legacy keys synchronized for backward compatibility with older standalone builds. If those valid aggregate keys later diverge from `skincrafterState`, the standalone treats the divergence as a newer edit made by an older compatible build and migrates those user choices forward into the current schema. If `skincrafterState` uses an unsupported future schema, the standalone renders with normal in-memory defaults but preserves that record and suppresses persistence writes until the incompatible record is removed or a compatible build is used, preventing an older build from downgrading newer persisted data.
+The standalone SkinCrafter site migrates its historical `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys into the versioned `skincrafterState` entry. Current saves keep the aggregate legacy keys synchronized for backward compatibility with older standalone builds. If those valid aggregate keys later diverge from `skincrafterState`, the standalone treats the divergence as a newer edit made by an older compatible build and migrates those user choices forward into the current schema. If `skincrafterState` uses an unsupported future schema, the standalone returns the package-defined `incompatible` result, renders with normal in-memory defaults and relies on the editor's public persistence contract to suppress writes for that mount, preventing an older build from downgrading newer persisted data.
 
 ## Localization
 
