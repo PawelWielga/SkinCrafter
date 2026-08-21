@@ -272,8 +272,9 @@ describe('fetchSkin', () => {
         }),
     });
 
-    await expect(fetchSkin('Steve')).rejects.toBeInstanceOf(FetchSkinError);
-    await expect(fetchSkin('Steve')).rejects.toMatchObject({ code: 'invalid_response' });
+    const error = await fetchSkin('Steve').catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(FetchSkinError);
+    expect(error).toMatchObject({ code: 'invalid_response' });
   });
 
   it('classifies a successful profile without a skin texture as skin_texture_missing', async () => {
