@@ -169,7 +169,9 @@ The packed `.tgz` is the artifact that matters. Workspace symlink success is not
 
 Breaking public API changes require a major SemVer release. Additive public API normally requires a minor release. Contract-preserving fixes normally require a patch release.
 
-Do not bump package version merely because implementation work touched the package unless the task includes preparing a release/version change.
+Do not bump package version merely because implementation work touched the package or because changes are merged into `main`. Changes on `main` do not imply a new package version or release.
+
+Package version bumps, release tags, GitHub Releases, and npm publication must happen only when the user explicitly and consciously requests a release/version change. Agents must never infer a release from SemVer impact, merged changes, accumulated commits, milestone completion, or release-ready status. SemVer rules describe which version would be appropriate once a release is explicitly requested; they do not authorize changing the version.
 
 ## 8. State and persistence
 
@@ -444,6 +446,8 @@ Do not document a future implementation as though it already exists. Roadmap int
 ## 21. Release and distribution
 
 `packages/editor/package.json` is the source of truth for the editor SemVer version.
+
+Do not change this version as part of ordinary implementation work, merges to `main`, documentation updates, fixes, features, maintenance, or dependency changes. Version changes and releases are owner-triggered actions and require an explicit user instruction for that specific task.
 
 Editor release tags use:
 
