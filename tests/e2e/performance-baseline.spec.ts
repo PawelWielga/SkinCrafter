@@ -231,48 +231,6 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       return registered;
     };
 
-    const patchContextLossExtension = (prototype: object | undefined): void => {
-      if (!prototype) return;
-      const record = prototype as Record<string, unknown>;
-      const originalGetExtension = record.getExtension;
-      if (typeof originalGetExtension !== 'function') return;
-      if (Object.prototype.hasOwnProperty.call(originalGetExtension, '__skincrafterPerformanceWrapped')) {
-        return;
-      }
-
-      const wrappedGetExtension = function (this: BrowserContext, name: string): unknown {
-        const extension = Reflect.apply(originalGetExtension, this, [name]) as
-          | { loseContext?: () => void; restoreContext?: () => void }
-          | null;
-        if (name !== 'WEBGL_lose_context' || !extension || typeof extension.loseContext !== 'function') {
-          return extension;
-        }
-
-        const originalLoseContext = extension.loseContext;
-        const originalRestoreContext = extension.restoreContext;
-        return {
-          loseContext: () => {
-            const result = Reflect.apply(originalLoseContext, extension, []);
-            releaseContext(getContextState(this));
-            return result;
-          },
-          restoreContext:
-            typeof originalRestoreContext === 'function'
-              ? () => Reflect.apply(originalRestoreContext, extension, [])
-              : undefined,
-        };
-      };
-      Object.defineProperty(wrappedGetExtension, '__skincrafterPerformanceWrapped', { value: true });
-      record.getExtension = wrappedGetExtension;
-    };
-
-    for (const prototype of [
-      window.WebGLRenderingContext?.prototype,
-      window.WebGL2RenderingContext?.prototype,
-    ]) {
-      patchContextLossExtension(prototype);
-    }
-
     const patchPair = (
       prototype: object | undefined,
       createName: string,
@@ -587,6 +545,8 @@ test('records the reproducible editor performance and resource baseline', async 
 
   const mountCycleStart = await readProbe(page);
   const mountCycleStartLive = resourceLive(mountCycleStart);
+  const mountCycleStartContexts = mountCycleStart.contexts;
+  expect(mountCycleStartContexts.active).toBe(1);
   const mountCycleSnapshots: Array<{
     cycle: number;
     viewerLive: Record<ResourceKey, number>;
@@ -612,7 +572,7 @@ test('records the reproducible editor performance and resource baseline', async 
     expect(
       await editorCanvas?.evaluate((previous, current) => previous === current, viewerCanvas)
     ).toBe(false);
-    await waitForContextLifecycle(page, cycle * 2 - 1);
+    await waitForContextLifecycle(page, mountCycleStartContexts.lost + cycle * 2 - 1);
     const viewerSnapshot = await readProbe(page);
     expect(resourceLive(viewerSnapshot)).toEqual(mountCycleStartLive);
 
@@ -625,7 +585,7 @@ test('records the reproducible editor performance and resource baseline', async 
     expect(
       await viewerCanvas?.evaluate((previous, current) => previous === current, nextEditorCanvas)
     ).toBe(false);
-    await waitForContextLifecycle(page, cycle * 2);
+    await waitForContextLifecycle(page, mountCycleStartContexts.lost + cycle * 2);
     const editorSnapshot = await readProbe(page);
     expect(resourceLive(editorSnapshot)).toEqual(mountCycleStartLive);
 
@@ -649,7 +609,7 @@ test('records the reproducible editor performance and resource baseline', async 
   const finalProbe = await readProbe(page);
   await expect(page.locator('canvas')).toHaveCount(1);
   expect(finalProbe.contexts.active).toBe(1);
-  expect(finalProbe.contexts.lost).toBe(mountCycles * 2);
+  expect(finalProbe.contexts.lost).toBe(mountCycleStartContexts.lost + mountCycles * 2);
   expect(resourceLive(finalProbe)).toEqual(mountCycleStartLive);
   await context.close();
 
@@ -699,6 +659,7 @@ test('records the reproducible editor performance and resource baseline', async 
         everyTenChanges: longSessionSnapshots,
         mountCycles,
         mountCycleStartLive,
+        mountCycleStartContexts,
         mountCycleSnapshots,
         finalLive: resourceLive(finalProbe),
         rawFinalLive: resourceRawLive(finalProbe),

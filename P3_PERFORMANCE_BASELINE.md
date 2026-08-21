@@ -90,12 +90,12 @@ The performance probe now records both views of the lifecycle:
 
 - **raw live** remains `create - delete` and is retained only as historical diagnostics,
 - **context-aware live** counts resources belonging to contexts that have not been lost,
-- `contexts.created/lost/active` records the explicit `WEBGL_lose_context.loseContext()` release boundary used by Three.js, while `lossEvents` keeps the browser event as supplemental diagnostics,
-- `contextReleased` records resources still associated with the context at that release boundary, after SkinCrafter and `WebGLRenderer.dispose()` have completed their explicit cleanup.
+- `contexts.created/lost/active` tracks actual browser context state through `WebGLRenderingContext.isContextLost()`, while `lossEvents` keeps the browser event as supplemental diagnostics,
+- `contextReleased` records resources still associated with a context when the browser reports that context as lost, after SkinCrafter and `WebGLRenderer.dispose()` have completed their explicit cleanup.
 
 This distinction also explains why the old raw texture counter could grow while buffers/programs/vertex arrays appeared balanced. Three.js owns context-local fallback/default texture allocations in its WebGL renderer state in addition to application `THREE.Texture` objects. They are properties of the WebGL context rather than SkinCrafter texture clones, so raw `createTexture - deleteTexture` is not a valid retained-GPU-memory metric after the whole context has been released. The direct runtime unit tests continue to verify that SkinCrafter-owned source/cloned textures are disposed explicitly, including stale async loads.
 
-The route-cycle scenario remains 10 full `Creator -> /mcskinview -> Creator` cycles. It now asserts after every transition that exactly one preview context is active and that context-aware texture/buffer/program/vertex-array counts return to the one-preview baseline. The JSON artifact also keeps the raw counters and per-context-loss release totals, so future Three.js/browser changes remain observable without confusing context destruction with a leak.
+The route-cycle scenario remains 10 full `Creator -> /mcskinview -> Creator` cycles. It captures the starting context counters first, then asserts after every transition that the lost-context count advances by exactly one, exactly one preview context remains active, and context-aware texture/buffer/program/vertex-array counts return to the one-preview baseline. The JSON artifact also keeps the raw counters and per-context-loss release totals, so future Three.js/browser changes remain observable without confusing context destruction with a leak.
 
 Exact measurements for the #138 implementation are recorded from its GitHub Actions Performance Baseline run in the PR validation evidence. The regression criterion is deliberately lifecycle-based rather than hard-coding the current number of renderer-internal fallback textures, because that implementation detail may change in a future Three.js release.
 
