@@ -67,6 +67,30 @@ describe('SkinCrafterEditor persistence serialization', () => {
     expect(saved[0].appearance).toEqual(defaultAppearance);
   });
 
+  it('keeps persistence blocked when initialSkin overrides an incompatible stored record', async () => {
+    const save = vi.fn();
+    const persistence: SkinCrafterPersistenceAdapter = {
+      load: () => ({ status: 'incompatible' }),
+      save,
+    };
+
+    render(
+      <SkinCrafterEditor
+        initialSkin={{ appearance: { ...defaultAppearance, hat: 'Duck' } }}
+        persistence={persistence}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Duck' })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => {
+      expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
+        'data-skincrafter-generation-status',
+        'ready'
+      );
+    });
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('preserves an unsupported future schema on mount and after user edits', async () => {
     const futureState = {
       schemaVersion: 2,
