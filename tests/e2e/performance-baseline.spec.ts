@@ -2,7 +2,14 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, test, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 
 type ResourceKey = 'textures' | 'buffers' | 'programs' | 'vertexArrays';
 
@@ -35,7 +42,6 @@ interface PackageMetadata {
   version: string;
   size: number;
   unpackedSize: number;
-  filename: string;
   files: PackageFileMetadata[];
 }
 
@@ -50,14 +56,8 @@ const longSessionChanges = 100;
 const mountCycles = 10;
 const viewport = { width: 1280, height: 720 };
 const deviceScaleFactor = 1;
-
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const gitCommand = process.platform === 'win32' ? 'git.exe' : 'git';
-
-function percentile(sorted: number[], percentileValue: number): number {
-  const index = Math.max(0, Math.ceil(sorted.length * percentileValue) - 1);
-  return sorted[index] ?? 0;
-}
 
 function summarize(samples: number[]): Summary {
   const sorted = [...samples].sort((left, right) => left - right);
@@ -66,11 +66,12 @@ function summarize(samples: number[]): Summary {
     sorted.length % 2 === 0
       ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
       : (sorted[middle] ?? 0);
+  const p95Index = Math.max(0, Math.ceil(sorted.length * 0.95) - 1);
 
   return {
     samples: samples.map((value) => Number(value.toFixed(2))),
     median: Number(median.toFixed(2)),
-    p95: Number(percentile(sorted, 0.95).toFixed(2)),
+    p95: Number((sorted[p95Index] ?? 0).toFixed(2)),
   };
 }
 
@@ -104,14 +105,9 @@ function measurePackage(): {
       '--pack-destination',
       destination,
     ]);
-    const packages = JSON.parse(output) as PackageMetadata[];
-    const packed = packages[0];
-    if (!packed) {
-      throw new Error('npm pack did not return package metadata.');
-    }
+    const packed = (JSON.parse(output) as PackageMetadata[])[0];
+    if (!packed) throw new Error('npm pack did not return package metadata.');
 
-    const jsBytes = packed.files.find((file) => file.path === 'dist/index.js')?.size ?? 0;
-    const cssBytes = packed.files.find((file) => file.path === 'dist/style.css')?.size ?? 0;
     const pngAssets = packed.files.filter(
       (file) => file.path.startsWith('dist/assets/') && file.path.endsWith('.png')
     );
@@ -121,8 +117,8 @@ function measurePackage(): {
       version: packed.version,
       tarballBytes: packed.size,
       unpackedBytes: packed.unpackedSize,
-      jsBytes,
-      cssBytes,
+      jsBytes: packed.files.find((file) => file.path === 'dist/index.js')?.size ?? 0,
+      cssBytes: packed.files.find((file) => file.path === 'dist/style.css')?.size ?? 0,
       pngAssetCount: pngAssets.length,
       pngAssetBytes: pngAssets.reduce((total, file) => total + file.size, 0),
       largestPngAssets: [...pngAssets]
@@ -148,11 +144,9 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       canvasRemovals: 0,
       statusTransitions: [] as StatusTransition[],
     };
-
     const tracked = Object.fromEntries(
       resourceKeys.map((key) => [key, new WeakSet<BrowserResource>()])
     ) as Record<BrowserResourceKey, WeakSet<BrowserResource>>;
-
     const globalWindow = window as Window & {
       __skincrafterPerformanceProbe?: PerformanceProbeSnapshot;
     };
@@ -165,7 +159,6 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       key: BrowserResourceKey
     ): void => {
       if (!prototype) return;
-
       const record = prototype as Record<string, unknown>;
       const originalCreate = record[createName];
       const originalDelete = record[deleteName];
@@ -201,12 +194,10 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       record[deleteName] = wrappedDelete;
     };
 
-    const webGlPrototypes = [
+    for (const prototype of [
       window.WebGLRenderingContext?.prototype,
       window.WebGL2RenderingContext?.prototype,
-    ];
-
-    for (const prototype of webGlPrototypes) {
+    ]) {
       patchPair(prototype, 'createTexture', 'deleteTexture', 'textures');
       patchPair(prototype, 'createBuffer', 'deleteBuffer', 'buffers');
       patchPair(prototype, 'createProgram', 'deleteProgram', 'programs');
@@ -218,23 +209,19 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
       if (node instanceof Element) return node.querySelectorAll('canvas').length;
       return 0;
     };
-
     const recordStatus = (element: Element): void => {
       if (!element.matches('[data-testid="skincrafter-editor"]')) return;
       const status = element.getAttribute('data-skincrafter-generation-status');
-      if (!status) return;
-      const previous = state.statusTransitions.at(-1);
-      if (previous?.status === status) return;
+      if (!status || state.statusTransitions.at(-1)?.status === status) return;
       state.statusTransitions.push({ at: performance.now(), status });
     };
 
-    const observer = new MutationObserver((records) => {
+    new MutationObserver((records) => {
       for (const record of records) {
         if (record.type === 'attributes' && record.target instanceof Element) {
           recordStatus(record.target);
           continue;
         }
-
         for (const node of record.addedNodes) {
           state.canvasCreations += countCanvases(node);
           if (node instanceof Element) {
@@ -246,9 +233,7 @@ async function installPerformanceProbe(context: BrowserContext): Promise<void> {
           state.canvasRemovals += countCanvases(node);
         }
       }
-    });
-
-    observer.observe(document, {
+    }).observe(document, {
       attributes: true,
       attributeFilter: ['data-skincrafter-generation-status'],
       childList: true,
@@ -308,9 +293,7 @@ async function waitForGenerationWindow(page: Page, startIndex: number): Promise<
     const ready = transitions
       .slice(lastGeneratingIndex + 1)
       .find((transition) => transition.status === 'ready');
-    if (!firstGenerating || !ready) {
-      throw new Error('Generation transition window was incomplete.');
-    }
+    if (!firstGenerating || !ready) throw new Error('Generation transition window was incomplete.');
     return ready.at - firstGenerating.at;
   }, startIndex);
 }
@@ -338,7 +321,6 @@ async function waitForEditorReady(page: Page): Promise<void> {
 
 async function measureColdFirstRender(browser: Browser): Promise<number[]> {
   const samples: number[] = [];
-
   for (let iteration = 0; iteration < repetitions; iteration += 1) {
     const context = await browser.newContext({ viewport, deviceScaleFactor });
     const page = await context.newPage();
@@ -347,7 +329,6 @@ async function measureColdFirstRender(browser: Browser): Promise<number[]> {
     samples.push(await page.evaluate(() => performance.now()));
     await context.close();
   }
-
   return samples;
 }
 
@@ -405,17 +386,19 @@ test('records the reproducible editor performance and resource baseline', async 
 
   const generationSamples: number[] = [];
   for (let iteration = 0; iteration < repetitions; iteration += 1) {
-    const target = iteration % 2 === 0 ? small : big;
-    generationSamples.push(await measureSingleChange(page, target));
+    generationSamples.push(await measureSingleChange(page, iteration % 2 === 0 ? small : big));
   }
 
   const rapidSamples: number[] = [];
   for (let iteration = 0; iteration < repetitions; iteration += 1) {
-    const sequence =
-      iteration % 2 === 0
-        ? [classic, small, big, classic, small]
-        : [big, classic, small, big, classic];
-    rapidSamples.push(await measureRapidChanges(page, sequence));
+    rapidSamples.push(
+      await measureRapidChanges(
+        page,
+        iteration % 2 === 0
+          ? [classic, small, big, classic, small]
+          : [big, classic, small, big, classic]
+      )
+    );
   }
 
   for (const option of eyeOptions) {
@@ -423,6 +406,7 @@ test('records the reproducible editor performance and resource baseline', async 
       await measureSingleChange(page, option);
     }
   }
+
   const longSessionStart = await readProbe(page);
   const longSessionSnapshots: Array<{
     changes: number;
@@ -437,35 +421,55 @@ test('records the reproducible editor performance and resource baseline', async 
     await measureSingleChange(page, target);
 
     if (change % 10 === 0) {
-      const snapshot = await readProbe(page);
-      longSessionSnapshots.push({ changes: change, live: resourceLive(snapshot) });
+      longSessionSnapshots.push({
+        changes: change,
+        live: resourceLive(await readProbe(page)),
+      });
     }
   }
-
   const longSessionEnd = await readProbe(page);
 
   const mountCycleSnapshots: Array<{
     cycle: number;
-    afterUnmount: Record<ResourceKey, number>;
-    afterRemount: Record<ResourceKey, number>;
+    viewerLive: Record<ResourceKey, number>;
+    editorLive: Record<ResourceKey, number>;
   }> = [];
 
   for (let cycle = 1; cycle <= mountCycles; cycle += 1) {
+    const editorCanvas = await page.locator('.skincrafter-preview-surface canvas').elementHandle();
+    expect(editorCanvas).not.toBeNull();
+
     await page.getByRole('link', { name: 'Skin View' }).click();
     await expect(page).toHaveURL(/\/mcskinview$/);
-    await expect(page.locator('canvas')).toHaveCount(0);
-    const afterUnmount = await readProbe(page);
+    await expect(page.locator('canvas')).toHaveCount(1);
+    const viewerCanvas = await page.locator('canvas').elementHandle();
+    expect(viewerCanvas).not.toBeNull();
+    expect(await editorCanvas?.evaluate((canvas) => canvas.isConnected)).toBe(false);
+    expect(
+      await editorCanvas?.evaluate((previous, current) => previous === current, viewerCanvas)
+    ).toBe(false);
+    const viewerSnapshot = await readProbe(page);
 
     await page.getByRole('link', { name: 'Wardrobe' }).click();
     await expect(page).toHaveURL(/\/$/);
     await waitForEditorReady(page);
-    const afterRemount = await readProbe(page);
+    const nextEditorCanvas = await page.locator('.skincrafter-preview-surface canvas').elementHandle();
+    expect(nextEditorCanvas).not.toBeNull();
+    expect(await viewerCanvas?.evaluate((canvas) => canvas.isConnected)).toBe(false);
+    expect(
+      await viewerCanvas?.evaluate((previous, current) => previous === current, nextEditorCanvas)
+    ).toBe(false);
+    const editorSnapshot = await readProbe(page);
 
     mountCycleSnapshots.push({
       cycle,
-      afterUnmount: resourceLive(afterUnmount),
-      afterRemount: resourceLive(afterRemount),
+      viewerLive: resourceLive(viewerSnapshot),
+      editorLive: resourceLive(editorSnapshot),
     });
+
+    await editorCanvas?.dispose();
+    await viewerCanvas?.dispose();
+    await nextEditorCanvas?.dispose();
   }
 
   const finalProbe = await readProbe(page);
@@ -477,6 +481,7 @@ test('records the reproducible editor performance and resource baseline', async 
     measuredAt: new Date().toISOString(),
     gitSha,
     packageVersion,
+    baselineLabel: 'post-P2 unreleased SHA; package.json remains 1.0.1',
     environment: {
       node: process.version,
       npm: npmVersion,
@@ -548,6 +553,5 @@ test('records the reproducible editor performance and resource baseline', async 
     body: Buffer.from(JSON.stringify(result, null, 2)),
     contentType: 'application/json',
   });
-
   console.log(`SKINCRAFTER_PERFORMANCE_BASELINE=${JSON.stringify(result)}`);
 });
