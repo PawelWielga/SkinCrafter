@@ -2,6 +2,39 @@ import type { TextureLayerCategoryId } from '../data/appearance';
 
 export type LayerDropPosition = 'before' | 'after';
 
+export interface LayerDropHint {
+  targetLayer: TextureLayerCategoryId;
+  position: LayerDropPosition;
+}
+
+export interface LayerDropZone {
+  layer: TextureLayerCategoryId;
+  top: number;
+  bottom: number;
+}
+
+export function findLayerDropHint(
+  dropZones: LayerDropZone[],
+  clientY: number
+): LayerDropHint | null {
+  if (dropZones.length === 0) {
+    return null;
+  }
+
+  for (const zone of dropZones) {
+    const midpoint = zone.top + (zone.bottom - zone.top) / 2;
+    if (clientY < midpoint) {
+      return { targetLayer: zone.layer, position: 'before' };
+    }
+
+    if (clientY <= zone.bottom) {
+      return { targetLayer: zone.layer, position: 'after' };
+    }
+  }
+
+  return { targetLayer: dropZones[dropZones.length - 1].layer, position: 'after' };
+}
+
 export function createLayerPreviewOrder(
   layerOrder: TextureLayerCategoryId[],
   sourceLayer: TextureLayerCategoryId,
