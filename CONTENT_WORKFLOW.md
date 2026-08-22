@@ -9,7 +9,7 @@ The goal is to make content work routine without bypassing package isolation, Mi
 SkinCrafter already has the two small registries needed at the current content scale:
 
 1. `packages/editor/src/assetResolver.ts` is the typed logical-path -> packaged-URL manifest. Every package-owned runtime asset used by code must be registered there and imported with `?url&no-inline`.
-2. The files below `packages/editor/src/data/` map semantic appearance choices to those typed logical paths.
+2. The files below `packages/editor/src/data/` map semantic appearance choices to those typed logical paths. Texture-backed wardrobe items additionally use `WardrobeItemDefinition`, which requires one explicit `skinModel: 'classic' | 'slim'` for the whole logical item.
 
 A second schema/manifest system is not justified today. It would duplicate the runtime mapping while the content set is still small and statically typed. `verify-texture-atlases.mjs`, TypeScript, unit tests, package verification and the external-consumer smoke test provide the required automated checks without introducing a new architecture.
 
@@ -44,6 +44,8 @@ At least one layer is required. Supported combinations are:
 
 For mixed artwork, prefer matching names such as `item.tintable.png` and `item.fixed.png`. Both files represent one logical option and one reorderable category layer. They are not independent wardrobe items.
 
+For wardrobe content, the `skinModel` metadata is also attached once to that logical item, never independently to its tintable/fixed halves. All authored layers of one wardrobe item therefore target the same Classic or Slim geometry.
+
 Gray, white, black and chromatic pixels may exist in either authored layer. Their RGB value has no semantic meaning. If a gray or black detail must never change color, put it in `fixed`; do not add grayscale detection or magic-color heuristics.
 
 A fixed-only option must not expose an apparently effective color selector. Existing color controls use `isColorControlEffective()` and the presence of a real tintable layer to decide whether the control is useful.
@@ -55,15 +57,31 @@ A fixed-only option must not expose an apparently effective color selector. Exis
 3. If the option is mixed, split recolorable and authored-color pixels into complementary `*.tintable.png` and `*.fixed.png` files with the same UV layout.
 4. Put the file below `packages/editor/src/assets/textures/` in the appropriate semantic directory.
 5. Add a `?url&no-inline` import and stable logical `textures/...` entry to `packages/editor/src/assetResolver.ts`. Never use root-relative `/textures/...` paths.
-6. Reference only the typed logical asset path from the appropriate data mapping. Use `defineTextureLayers()` for tintable/fixed definitions.
+6. Reference only the typed logical asset path from the appropriate data mapping. Use `defineTextureLayers()` for tintable/fixed definitions. For wardrobe items wrap those layers in `defineWardrobeItem({ skinModel, textureLayers })`; the model is mandatory and has no fallback.
 7. Run package validation. The source validator checks the atlas contract before build packaging; `verify-package.mjs` then proves emitted PNG bytes are unchanged, hashed/cache-safe, referenced by the bundle and present in `npm pack` output.
 8. Verify the normal package and external-consumer scenarios so the same logical path works with emitted package URLs and with `assetBaseUrl` below a non-root host route.
 
 ### Classic and Slim
 
-Every runtime layer uses the full 64×64 Minecraft atlas. If artwork touches UV regions whose geometry differs between Classic and Slim, author and select the correct model-specific variant rather than resampling or reinterpreting the pixels at runtime.
+Every runtime layer uses the full 64×64 Minecraft atlas. If artwork touches UV regions whose geometry differs between Classic and Slim, author the correct model-specific variant rather than resampling or reinterpreting the pixels at runtime.
 
-A content change that affects arms, outer arm layers or model-dependent UVs must exercise both model paths and preserve the contract in `RENDERER_PARITY.md`. Existing Human Male/Female race variants demonstrate model-specific selection. If a new category needs model-specific mapping that the current data model cannot express, treat that as a focused implementation/API issue rather than encoding a host-specific exception.
+Every texture-backed wardrobe definition must declare exactly one model for the whole item:
+
+```ts
+defineWardrobeItem({
+  skinModel: 'classic', // or 'slim'
+  textureLayers: defineTextureLayers({
+    tintable: 'textures/top/example.tintable.png',
+    fixed: 'textures/top/example.fixed.png',
+  }),
+});
+```
+
+Missing or unsupported model metadata is invalid; runtime validation must reject it rather than silently assuming Classic. The wardrobe UI exposes only definitions compatible with the active model, normalization removes incompatible selections after a model change, and the compositor independently filters incompatible definitions as a final correctness boundary.
+
+If one visual design supports both models, create two explicit model-specific wardrobe definitions. Assets that touch arms or outer-arm layers must use the correct Classic/Slim UV positions. A genuinely model-independent fixed asset may be referenced from both definitions, but the compatibility decision still belongs to each whole logical item.
+
+A content change that affects arms, outer arm layers or model-dependent UVs must exercise both model paths and preserve the contract in `RENDERER_PARITY.md`. Existing Human Male/Female race variants demonstrate model-specific base-skin selection. Current packaged `Duck`, `Hoodie` and `Pants` wardrobe assets are explicitly Classic-only.
 
 ## Adding a new option to an existing category
 
@@ -73,10 +91,11 @@ A content change that affects arms, outer arm layers or model-dependent UVs must
    - `defineTextureLayers({ tintable: ... })` for fully recolorable artwork;
    - `defineTextureLayers({ fixed: ... })` for artwork that never recolors;
    - `defineTextureLayers({ tintable: ..., fixed: ... })` for mixed artwork.
-4. Add the option label to both English and Polish translations for choice controls.
-5. Verify normalization/default behavior. Removed or unknown IDs must still fall back through the existing semantic normalization contract.
-6. Add or update a test that proves the option resolves the expected layer(s), tint behavior and `assetBaseUrl` path.
-7. If the option is reorderable, confirm it remains one logical category entry even when it has two internal texture layers.
+4. For a texture-backed wardrobe item, wrap the layer definition in `defineWardrobeItem()` and set the required whole-item `skinModel` to `classic` or `slim`. Do not attach a model separately to internal tintable/fixed layers and do not add an implicit fallback.
+5. Add the option label to both English and Polish translations for choice controls.
+6. Verify normalization/default behavior. Removed, unknown or model-incompatible IDs must fall back through the semantic normalization contract.
+7. Add or update tests that prove the option resolves the expected layer(s), model compatibility, tint behavior and `assetBaseUrl` path. Model-sensitive content must cover both accepted and rejected models.
+8. If the option is reorderable, confirm it remains one logical category entry even when it has two internal texture layers.
 
 Color swatches are data rather than translated choice labels, so the localization completeness test intentionally covers categories/options with `control: 'choice'`.
 
@@ -104,7 +123,9 @@ The generated 64×64 PNG is the authoritative output used by `onSkinChange` / `o
 
 Regression coverage relevant to content changes includes:
 
-- `src/data/appearance.test.ts` for logical layer ordering, fixed-only/tintable-only/mixed options and `assetBaseUrl` resolution;
+- `src/data/appearance.test.ts` for logical layer ordering, model filtering/normalization, fixed-only/tintable-only/mixed options and `assetBaseUrl` resolution;
+- `src/data/wardrobeDefinitions.test.ts` for required Classic/Slim metadata and rejection of missing/unknown model values;
+- `src/components/wardrobe.texture-layers.test.tsx` for model-aware UI filtering and effective color controls;
 - `src/data/contentWorkflow.test.ts` for the documented Human/Male reference option and EN/PL choice-label completeness;
 - `src/utils/combineTextures.layer-composition.test.ts` for no-smoothing composition, tintable-first ordering and unchanged fixed overlays;
 - `src/SkinCrafterEditor.preview-output.test.tsx` for preview/generated-output parity;
@@ -168,6 +189,9 @@ A content PR does not bump `packages/editor/package.json` automatically. Version
 Before merging a wardrobe-content change, confirm all of the following:
 
 - every runtime skin layer is a valid 64×64 PNG with explicit alpha;
+- every texture-backed wardrobe item declares exactly one valid `classic` or `slim` model for the whole logical item;
+- missing/unknown model metadata is rejected rather than defaulted;
+- model-incompatible options are absent from UI choices, normalized out of state after a model change and filtered by composition;
 - non-skin assets are governed by their own dimension/alpha contract rather than the atlas rule;
 - mixed layers share the same UV layout and remain one logical option;
 - no RGB/grayscale heuristic decides tintability;
