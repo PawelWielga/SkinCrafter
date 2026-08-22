@@ -234,6 +234,7 @@ export default function SkinCrafterEditor({
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
   const lastGeneratedKeyRef = useRef<string | null>(null);
+  const effectiveModelRef = useRef<SkinCrafterSkinModel>('classic');
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
@@ -268,9 +269,15 @@ export default function SkinCrafterEditor({
         current.includes(category) ? current : [...current, category]
       );
     }
+    const nextModel: SkinCrafterSkinModel = category === 'sex'
+      ? nextValue === 'Female' ? 'slim' : 'classic'
+      : effectiveModelRef.current;
     publishState({
       ...state,
-      appearance: normalizeAppearance({ ...state.appearance, [category]: nextValue }),
+      appearance: normalizeAppearance(
+        { ...state.appearance, [category]: nextValue },
+        nextModel
+      ),
     });
   }, [hasImportedRequest, publishState, state]);
 
@@ -435,6 +442,7 @@ export default function SkinCrafterEditor({
     && !sexWasEdited
     ? loadedImportedSkin.model
     : sex === 'Female' ? 'slim' : 'classic';
+  effectiveModelRef.current = effectiveModel;
   const importedFingerprint = importedLoadedCurrent ? loadedImportedSkin?.fingerprint ?? null : null;
   const importedDataUrl = importedLoadedCurrent ? loadedImportedSkin?.dataUrl ?? null : null;
   const generationKey = JSON.stringify([
@@ -520,7 +528,8 @@ export default function SkinCrafterEditor({
             compositionAppearanceSnapshot,
             layerOrderSnapshot,
             activeCategorySnapshot,
-            canonicalAssetBaseUrl
+            canonicalAssetBaseUrl,
+            effectiveModel
           );
           dataUrl = textureInputs.filter(Boolean).length === 0
             ? importedDataUrl
@@ -529,7 +538,8 @@ export default function SkinCrafterEditor({
           const textureInputs = buildTextureInputs(
             appearanceSnapshot,
             layerOrderSnapshot,
-            canonicalAssetBaseUrl
+            canonicalAssetBaseUrl,
+            effectiveModel
           );
           dataUrl = await combineTextures(textureInputs);
         }
@@ -625,6 +635,7 @@ export default function SkinCrafterEditor({
             onLayerOrderChange={handleLayerOrderChange}
             t={t}
             assetBaseUrl={assetBaseUrl}
+            skinModel={effectiveModel}
           />
         }
       />
