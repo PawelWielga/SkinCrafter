@@ -122,4 +122,38 @@ describe('standalone app package integration', () => {
     expect(screen.getByTestId('packaged-preview')).toBeInTheDocument();
     expect(screen.getByLabelText('Minecraft username')).toBeInTheDocument();
   });
+
+  it('renders an unknown route and returns to the creator through client-side routing', () => {
+    render(
+      <MemoryRouter initialEntries={['/does-not-exist']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { name: 'Page not found', level: 1 })).toBeInTheDocument();
+    expect(screen.getByText('This address does not point to a SkinCrafter page.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Back to creator' }));
+
+    expect(screen.getByTestId('packaged-editor')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Page not found' })).not.toBeInTheDocument();
+  });
+
+  it('localizes the unknown-route page using the persisted standalone language', () => {
+    installLocalStorage({
+      getItem: (key: string) => (key === 'skincrafterLanguage' ? 'pl' : null),
+      setItem: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/does-not-exist']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Nie znaleziono strony', level: 1 })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Wróć do kreatora' })).toBeInTheDocument();
+  });
 });
