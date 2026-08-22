@@ -1,8 +1,8 @@
-import { getHatTextureUrl, hats } from './hatTextureMap';
-import { getPantsTextureUrl, pants } from './pantsTextureMap';
+import { getHatDefinition, hats } from './hatTextureMap';
+import { getPantsDefinition, pants } from './pantsTextureMap';
 import { getAvailableSexes, getRaceTextureLayers, type Sex } from './raceTextureMap';
 import races, { type Race } from './races';
-import { getShirtTextureUrl, shirts } from './shirtTextureMap';
+import { getShirtDefinition, shirts } from './shirtTextureMap';
 import skinColorMap from './skinColorMap';
 import {
   defineTextureLayers,
@@ -10,6 +10,11 @@ import {
   resolveTextureLayers,
   type ResolvedTextureLayers,
 } from './textureLayers';
+import {
+  isWardrobeItemCompatible,
+  type ResolvedWardrobeItemDefinition,
+} from './wardrobeDefinitions';
+import type { SkinCrafterSkinModel } from '../publicTypes';
 import type { TextureInput } from '../utils/combineTextures';
 
 export type AppearanceCategoryId =
@@ -76,10 +81,26 @@ const eyeTextureLayers = {
   }),
 } as const;
 
-const fixedTextureLayers = (url: string | null): ResolvedTextureLayers | null =>
-  url ? { fixed: url } : null;
+function getSkinModelForAppearance(appearance: AppearanceState): SkinCrafterSkinModel {
+  return appearance.sex === 'Female' ? 'slim' : 'classic';
+}
 
-export function getOptions(categoryId: AppearanceCategoryId, appearance: AppearanceState, assetBaseUrl?: string): AppearanceOption[] {
+function wardrobeOption(
+  id: string,
+  labelKey: string,
+  definition: ResolvedWardrobeItemDefinition | null,
+  skinModel: SkinCrafterSkinModel
+): AppearanceOption[] {
+  if (!definition || !isWardrobeItemCompatible(definition, skinModel)) return [];
+  return [{ id, labelKey, textureLayers: definition.textureLayers }];
+}
+
+export function getOptions(
+  categoryId: AppearanceCategoryId,
+  appearance: AppearanceState,
+  assetBaseUrl?: string,
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
+): AppearanceOption[] {
   if (categoryId === 'race') {
     return races.map((race) => ({
       id: race,
@@ -116,20 +137,63 @@ export function getOptions(categoryId: AppearanceCategoryId, appearance: Appeara
       { id: '#1F1A17', labelKey: 'option.color.black', color: '#1F1A17' },
     ];
   }
-  if (categoryId === 'hat') return hats.map((hat) => ({ id: hat, labelKey: hat === 'None' ? 'option.none' : `option.hat.${hat}`, textureLayers: fixedTextureLayers(getHatTextureUrl(hat, assetBaseUrl)) }));
-  if (categoryId === 'shirt') return shirts.map((shirt) => ({ id: shirt, labelKey: shirt === 'None' ? 'option.none' : `option.shirt.${shirt}`, textureLayers: fixedTextureLayers(getShirtTextureUrl(shirt, assetBaseUrl)) }));
-  if (categoryId === 'pants') return pants.map((item) => ({ id: item, labelKey: item === 'None' ? 'option.none' : `option.pants.${item}`, textureLayers: fixedTextureLayers(getPantsTextureUrl(item, assetBaseUrl)) }));
+  if (categoryId === 'hat') {
+    return hats.flatMap((hat) =>
+      hat === 'None'
+        ? [noneOption]
+        : wardrobeOption(
+            hat,
+            `option.hat.${hat}`,
+            getHatDefinition(hat, assetBaseUrl),
+            skinModel
+          )
+    );
+  }
+  if (categoryId === 'shirt') {
+    return shirts.flatMap((shirt) =>
+      shirt === 'None'
+        ? [noneOption]
+        : wardrobeOption(
+            shirt,
+            `option.shirt.${shirt}`,
+            getShirtDefinition(shirt, assetBaseUrl),
+            skinModel
+          )
+    );
+  }
+  if (categoryId === 'pants') {
+    return pants.flatMap((item) =>
+      item === 'None'
+        ? [noneOption]
+        : wardrobeOption(
+            item,
+            `option.pants.${item}`,
+            getPantsDefinition(item, assetBaseUrl),
+            skinModel
+          )
+    );
+  }
   return [noneOption];
 }
 
-export function normalizeAppearance(value: Partial<AppearanceState> | null): AppearanceState {
+export function normalizeAppearance(
+  value: Partial<AppearanceState> | null,
+  skinModel?: SkinCrafterSkinModel
+): AppearanceState {
   const next: AppearanceState = { ...defaultAppearance, ...(value ?? {}) };
   const raceOptions = getOptions('race', next).map((option) => option.id);
   if (!raceOptions.includes(next.race)) next.race = defaultAppearance.race;
-  const skinColors = getOptions('skinColor', next).map((option) => option.id);
+
+  const availableSexes = getOptions('sex', next).map((option) => option.id);
+  if (!availableSexes.includes(next.sex)) next.sex = availableSexes[0] ?? defaultAppearance.sex;
+
+  const effectiveSkinModel = skinModel ?? getSkinModelForAppearance(next);
+  const skinColors = getOptions('skinColor', next, undefined, effectiveSkinModel).map((option) => option.id);
   if (!skinColors.includes(next.skinColor)) next.skinColor = skinColors[0] ?? defaultAppearance.skinColor;
+
   appearanceCategories.forEach((category) => {
-    const optionIds = getOptions(category.id, next).map((option) => option.id);
+    if (category.id === 'race' || category.id === 'sex' || category.id === 'skinColor') return;
+    const optionIds = getOptions(category.id, next, undefined, effectiveSkinModel).map((option) => option.id);
     if (!optionIds.includes(next[category.id])) next[category.id] = optionIds[0] ?? 'None';
   });
   return next;
@@ -164,7 +228,8 @@ function buildTextureInputsFromLayers(
 function buildTextureInputsForLayer(
   layer: AppearanceCategoryId,
   appearance: AppearanceState,
-  assetBaseUrl?: string
+  assetBaseUrl: string | undefined,
+  skinModel: SkinCrafterSkinModel
 ): TextureInput[] {
   if (layer === 'race') {
     return buildTextureInputsFromLayers(
@@ -174,14 +239,14 @@ function buildTextureInputsForLayer(
   }
   if (layer === 'sex') return [];
   if (layer === 'eyes') {
-    const option = getOptions('eyes', appearance, assetBaseUrl).find((item) => item.id === appearance.eyes);
+    const option = getOptions('eyes', appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance.eyes);
     return buildTextureInputsFromLayers(option?.textureLayers, appearance.eyesColor);
   }
   if (layer === 'hair') {
-    const option = getOptions('hair', appearance, assetBaseUrl).find((item) => item.id === appearance.hair);
+    const option = getOptions('hair', appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance.hair);
     return buildTextureInputsFromLayers(option?.textureLayers, appearance.hairColor);
   }
-  const option = getOptions(layer, appearance, assetBaseUrl).find((item) => item.id === appearance[layer]);
+  const option = getOptions(layer, appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance[layer]);
   return buildTextureInputsFromLayers(option?.textureLayers);
 }
 
@@ -192,10 +257,11 @@ function orderedTextureLayers(textureLayerOrder: readonly string[]): AppearanceC
 export function buildTextureInputs(
   appearance: AppearanceState,
   textureLayerOrder: readonly string[] = textureLayerCategories,
-  assetBaseUrl?: string
+  assetBaseUrl?: string,
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
 ): TextureInput[] {
   return orderedTextureLayers(textureLayerOrder).flatMap((layer) =>
-    buildTextureInputsForLayer(layer, appearance, assetBaseUrl)
+    buildTextureInputsForLayer(layer, appearance, assetBaseUrl, skinModel)
   );
 }
 
@@ -203,7 +269,8 @@ export function buildTextureInputsForCategories(
   appearance: AppearanceState,
   textureLayerOrder: readonly string[],
   activeCategories: readonly AppearanceCategoryId[],
-  assetBaseUrl?: string
+  assetBaseUrl?: string,
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
 ): TextureInput[] {
   const active = new Set(activeCategories);
   const shouldIncludeLayer = (layer: AppearanceCategoryId): boolean => {
@@ -224,7 +291,7 @@ export function buildTextureInputsForCategories(
 
   return orderedTextureLayers(textureLayerOrder)
     .filter(shouldIncludeLayer)
-    .flatMap((layer) => buildTextureInputsForLayer(layer, appearance, assetBaseUrl));
+    .flatMap((layer) => buildTextureInputsForLayer(layer, appearance, assetBaseUrl, skinModel));
 }
 
 export function isColorControlEffective(

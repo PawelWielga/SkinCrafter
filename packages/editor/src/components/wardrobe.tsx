@@ -19,6 +19,7 @@ import {
   type TextureLayerCategoryId,
 } from '../data/appearance';
 import type { TranslationKey } from '../i18n/translations';
+import type { SkinCrafterSkinModel } from '../publicTypes';
 
 interface WardrobeProps {
   appearance: AppearanceState;
@@ -27,6 +28,7 @@ interface WardrobeProps {
   onLayerOrderChange: (layerOrder: TextureLayerCategoryId[]) => void;
   t: (key: TranslationKey) => string;
   assetBaseUrl?: string;
+  skinModel?: SkinCrafterSkinModel;
 }
 
 interface LayerDragGhost {
@@ -50,6 +52,7 @@ export default function Wardrobe({
   onLayerOrderChange,
   t,
   assetBaseUrl,
+  skinModel,
 }: WardrobeProps): React.JSX.Element {
   const [draggingLayer, setDraggingLayer] = useState<TextureLayerCategoryId | null>(null);
   const [previewLayerOrder, setPreviewLayerOrder] = useState<TextureLayerCategoryId[] | null>(
@@ -314,7 +317,7 @@ export default function Wardrobe({
   };
 
   const renderCategory = (category: AppearanceCategory): React.JSX.Element => {
-    const options = getOptions(category.id, appearance, assetBaseUrl);
+    const options = getOptions(category.id, appearance, assetBaseUrl, skinModel);
     const layerCategory: TextureLayerCategoryId | null = isTextureLayerCategory(category.id)
       ? category.id
       : null;

@@ -62,9 +62,12 @@ interface PersistenceInitialization {
   error: SkinCrafterError | null;
 }
 
-function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null): SkinCrafterState {
+function normalizeState(
+  value?: SkinCrafterInitialSkin | SkinCrafterState | null,
+  skinModel?: SkinCrafterSkinModel
+): SkinCrafterState {
   return {
-    appearance: normalizeAppearance(value?.appearance ?? null),
+    appearance: normalizeAppearance(value?.appearance ?? null, skinModel),
     layerOrder: normalizeTextureLayerOrder(value?.layerOrder),
   };
 }
@@ -196,15 +199,22 @@ export default function SkinCrafterEditor({
   theme,
   previewBottomOffset = 0,
 }: SkinCrafterEditorProps): React.JSX.Element {
+  const initialImage = initialSkin?.image ?? null;
+  const initialModel = initialSkin?.model ?? null;
+  const hasImportedRequest = initialImage !== null;
   const [persistenceInitialization] = useState<PersistenceInitialization>(() => {
     if (value) {
-      return { state: normalizeState(value), writesBlocked: false, error: null };
+      return {
+        state: normalizeState(value, initialModel ?? undefined),
+        writesBlocked: false,
+        error: null,
+      };
     }
 
     const persisted = initializePersistence(persistence);
     if (initialSkin) {
       return {
-        state: normalizeState(initialSkin),
+        state: normalizeState(initialSkin, initialModel ?? undefined),
         writesBlocked: persisted.writesBlocked,
         error: persisted.error,
       };
@@ -234,20 +244,26 @@ export default function SkinCrafterEditor({
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
   const lastGeneratedKeyRef = useRef<string | null>(null);
+  const effectiveModelRef = useRef<SkinCrafterSkinModel>('classic');
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
   const persistenceFailureLatchedRef = useRef(persistenceInitialization.error !== null);
   const initialPersistenceErrorReportedRef = useRef(false);
 
-  const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
+  const importedBaselineSex = persistenceInitialization.state.appearance.sex;
+  const controlledState = useMemo(() => {
+    if (!value) return null;
+
+    const modelOverride = initialModel !== null && value.appearance.sex === importedBaselineSex
+      ? initialModel
+      : undefined;
+    return normalizeState(value, modelOverride);
+  }, [importedBaselineSex, initialModel, value]);
   const state = controlledState ?? internalState;
   const stateRef = useRef(state);
   stateRef.current = state;
   const t = useCallback((key: TranslationKey) => translate(locale, key), [locale]);
-  const initialImage = initialSkin?.image ?? null;
-  const initialModel = initialSkin?.model ?? null;
-  const hasImportedRequest = initialImage !== null;
 
   useEffect(() => {
     if (!controlledState) return;
@@ -268,9 +284,15 @@ export default function SkinCrafterEditor({
         current.includes(category) ? current : [...current, category]
       );
     }
+    const nextModel: SkinCrafterSkinModel = category === 'sex'
+      ? nextValue === 'Female' ? 'slim' : 'classic'
+      : effectiveModelRef.current;
     publishState({
       ...state,
-      appearance: normalizeAppearance({ ...state.appearance, [category]: nextValue }),
+      appearance: normalizeAppearance(
+        { ...state.appearance, [category]: nextValue },
+        nextModel
+      ),
     });
   }, [hasImportedRequest, publishState, state]);
 
@@ -435,6 +457,7 @@ export default function SkinCrafterEditor({
     && !sexWasEdited
     ? loadedImportedSkin.model
     : sex === 'Female' ? 'slim' : 'classic';
+  effectiveModelRef.current = effectiveModel;
   const importedFingerprint = importedLoadedCurrent ? loadedImportedSkin?.fingerprint ?? null : null;
   const importedDataUrl = importedLoadedCurrent ? loadedImportedSkin?.dataUrl ?? null : null;
   const generationKey = JSON.stringify([
@@ -520,7 +543,8 @@ export default function SkinCrafterEditor({
             compositionAppearanceSnapshot,
             layerOrderSnapshot,
             activeCategorySnapshot,
-            canonicalAssetBaseUrl
+            canonicalAssetBaseUrl,
+            effectiveModel
           );
           dataUrl = textureInputs.filter(Boolean).length === 0
             ? importedDataUrl
@@ -529,7 +553,8 @@ export default function SkinCrafterEditor({
           const textureInputs = buildTextureInputs(
             appearanceSnapshot,
             layerOrderSnapshot,
-            canonicalAssetBaseUrl
+            canonicalAssetBaseUrl,
+            effectiveModel
           );
           dataUrl = await combineTextures(textureInputs);
         }
@@ -625,6 +650,7 @@ export default function SkinCrafterEditor({
             onLayerOrderChange={handleLayerOrderChange}
             t={t}
             assetBaseUrl={assetBaseUrl}
+            skinModel={effectiveModel}
           />
         }
       />

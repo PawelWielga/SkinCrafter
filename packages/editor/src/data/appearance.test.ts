@@ -28,6 +28,65 @@ describe('appearance model', () => {
     );
   });
 
+  it('filters classic wardrobe definitions out of slim model choices', () => {
+    const slimAppearance = { ...defaultAppearance, sex: 'Female' };
+
+    expect(getOptions('hat', slimAppearance).map((option) => option.id)).toEqual(['None']);
+    expect(getOptions('shirt', slimAppearance).map((option) => option.id)).toEqual(['None']);
+    expect(getOptions('pants', slimAppearance).map((option) => option.id)).toEqual(['None']);
+
+    expect(getOptions('hat', defaultAppearance).map((option) => option.id)).toContain('Duck');
+    expect(getOptions('shirt', defaultAppearance).map((option) => option.id)).toContain('Hoodie');
+    expect(getOptions('pants', defaultAppearance).map((option) => option.id)).toContain('Pants');
+  });
+
+  it('honors an explicit active model when it differs from semantic sex', () => {
+    expect(
+      getOptions('shirt', defaultAppearance, undefined, 'slim').map((option) => option.id)
+    ).toEqual(['None']);
+    expect(
+      getOptions('shirt', { ...defaultAppearance, sex: 'Female' }, undefined, 'classic').map(
+        (option) => option.id
+      )
+    ).toEqual(['None', 'Hoodie']);
+  });
+
+  it('normalizes incompatible wardrobe selections when switching from classic to slim', () => {
+    const classic = normalizeAppearance({
+      ...defaultAppearance,
+      sex: 'Male',
+      hat: 'Duck',
+      shirt: 'Hoodie',
+      pants: 'Pants',
+    });
+
+    expect(classic).toEqual(expect.objectContaining({
+      sex: 'Male',
+      hat: 'Duck',
+      shirt: 'Hoodie',
+      pants: 'Pants',
+    }));
+
+    const slim = normalizeAppearance({ ...classic, sex: 'Female' });
+    expect(slim).toEqual(expect.objectContaining({
+      sex: 'Female',
+      hat: 'None',
+      shirt: 'None',
+      pants: 'None',
+    }));
+  });
+
+  it('normalizes wardrobe against an explicit model override without rewriting sex', () => {
+    const slim = normalizeAppearance({
+      ...defaultAppearance,
+      sex: 'Male',
+      shirt: 'Hoodie',
+    }, 'slim');
+
+    expect(slim.sex).toBe('Male');
+    expect(slim.shirt).toBe('None');
+  });
+
   it('normalizes texture layer order', () => {
     expect(normalizeTextureLayerOrder(['pants', 'hat', 'unknown', 'hat'])).toEqual([
       'pants', 'hat', 'shirt', 'shoes', 'accessory',
@@ -145,6 +204,54 @@ describe('appearance model', () => {
       { url: '/textures/race/human/female.tintable.png', role: 'tintable', tint: defaultAppearance.skinColor },
       { url: '/textures/race/human/female.fixed.png', role: 'fixed' },
     ]);
+  });
+
+  it('never sends incompatible wardrobe definitions to the compositor', () => {
+    const incompatibleSlimState = {
+      ...defaultAppearance,
+      sex: 'Female',
+      hat: 'Duck',
+      shirt: 'Hoodie',
+      pants: 'Pants',
+    };
+
+    const inputs = buildTextureInputs(
+      incompatibleSlimState,
+      ['hat', 'shirt', 'pants', 'shoes', 'accessory'],
+      '/assets'
+    );
+
+    expect(inputs.map((input) => input.url)).not.toEqual(
+      expect.arrayContaining([
+        '/assets/textures/hat/duck.png',
+        '/assets/textures/top/male/hoodie.png',
+        '/assets/textures/bottom/pants.png',
+      ])
+    );
+    expect(inputs).toEqual([
+      { url: '/assets/textures/race/human/female.tintable.png', role: 'tintable', tint: defaultAppearance.skinColor },
+      { url: '/assets/textures/race/human/female.fixed.png', role: 'fixed' },
+      { url: '/assets/textures/eyes/clasic.tintable.png', role: 'tintable', tint: defaultAppearance.eyesColor },
+      { url: '/assets/textures/eyes/clasic.fixed.png', role: 'fixed' },
+    ]);
+  });
+
+  it('uses an explicit model override as a compositor safety boundary', () => {
+    const incompatibleImportedState = {
+      ...defaultAppearance,
+      sex: 'Male',
+      shirt: 'Hoodie',
+    };
+
+    const inputs = buildTextureInputsForCategories(
+      incompatibleImportedState,
+      textureLayerCategories,
+      ['shirt'],
+      '/assets',
+      'slim'
+    );
+
+    expect(inputs).toEqual([]);
   });
 
   it('hides color controls when the selected option has no tintable layer', () => {
