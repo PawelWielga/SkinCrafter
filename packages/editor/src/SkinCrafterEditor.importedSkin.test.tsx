@@ -64,6 +64,8 @@ async function flushAsyncUpdates(): Promise<void> {
 describe('SkinCrafterEditor imported skin contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedCombineTextures.mockReset();
+    loadImportedSkinMock.mockReset();
     mockedCombineTextures.mockResolvedValue(GENERATED_DATA_URL);
     loadImportedSkinMock.mockImplementation(async (_image: Blob, model: SkinCrafterSkinModel) => ({
       dataUrl: IMPORTED_DATA_URL,
@@ -96,6 +98,84 @@ describe('SkinCrafterEditor imported skin contract', () => {
     }
   );
 
+  it('normalizes imported initial wardrobe state against the declared skin model', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+
+    render(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim', appearance: { hat: 'Duck' } }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+
+    expect(outputs[0].metadata.model).toBe('slim');
+    expect(outputs[0].metadata.appearance.hat).toBe('None');
+    expect(mockedCombineTextures).not.toHaveBeenCalled();
+  });
+
+  it('normalizes controlled imported wardrobe state against the declared skin model', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const value = createState();
+    value.appearance.hat = 'Duck';
+    const outputs: SkinCrafterSkinOutput[] = [];
+    const onStateChange = vi.fn();
+
+    render(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim' }}
+        value={value}
+        onStateChange={onStateChange}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+
+    expect(outputs[0].metadata.model).toBe('slim');
+    expect(outputs[0].metadata.appearance.hat).toBe('None');
+    fireEvent.click(screen.getByRole('button', { name: 'Big' }));
+    expect(onStateChange).toHaveBeenCalledWith(expect.objectContaining({
+      appearance: expect.objectContaining({ hat: 'None', eyes: 'Big' }),
+    }));
+  });
+
+  it('lets a controlled sex edit switch away from the imported model compatibility', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+    const initialState = createState();
+    initialState.appearance.sex = 'Female';
+    const changedState = createState();
+    changedState.appearance.sex = 'Male';
+    changedState.appearance.hat = 'Duck';
+    mockedCombineTextures.mockResolvedValueOnce(EDITED_DATA_URL);
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim' }}
+        value={initialState}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim' }}
+        value={changedState}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(2));
+    expect(outputs[1].metadata.model).toBe('classic');
+    expect(outputs[1].metadata.appearance.hat).toBe('Duck');
+    expect(mockedCombineTextures).toHaveBeenCalledTimes(1);
+  });
+
   it('composes only the explicitly edited wardrobe category over the imported pixels', async () => {
     const image = new Blob(['skin'], { type: 'image/png' });
     const outputs: SkinCrafterSkinOutput[] = [];
@@ -103,7 +183,7 @@ describe('SkinCrafterEditor imported skin contract', () => {
 
     render(
       <SkinCrafterEditor
-        initialSkin={{ image, model: 'slim' }}
+        initialSkin={{ image, model: 'classic' }}
         onSkinChange={(skin) => outputs.push(skin)}
       />
     );
@@ -123,7 +203,7 @@ describe('SkinCrafterEditor imported skin contract', () => {
       role: 'fixed',
     });
     expect(outputs[1].dataUrl).toBe(EDITED_DATA_URL);
-    expect(outputs[1].metadata.model).toBe('slim');
+    expect(outputs[1].metadata.model).toBe('classic');
   });
 
   it('treats controlled appearance changes as explicit edits without depending on object identity', async () => {

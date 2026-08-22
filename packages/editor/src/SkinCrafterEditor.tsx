@@ -62,9 +62,12 @@ interface PersistenceInitialization {
   error: SkinCrafterError | null;
 }
 
-function normalizeState(value?: SkinCrafterInitialSkin | SkinCrafterState | null): SkinCrafterState {
+function normalizeState(
+  value?: SkinCrafterInitialSkin | SkinCrafterState | null,
+  skinModel?: SkinCrafterSkinModel
+): SkinCrafterState {
   return {
-    appearance: normalizeAppearance(value?.appearance ?? null),
+    appearance: normalizeAppearance(value?.appearance ?? null, skinModel),
     layerOrder: normalizeTextureLayerOrder(value?.layerOrder),
   };
 }
@@ -196,15 +199,22 @@ export default function SkinCrafterEditor({
   theme,
   previewBottomOffset = 0,
 }: SkinCrafterEditorProps): React.JSX.Element {
+  const initialImage = initialSkin?.image ?? null;
+  const initialModel = initialSkin?.model ?? null;
+  const hasImportedRequest = initialImage !== null;
   const [persistenceInitialization] = useState<PersistenceInitialization>(() => {
     if (value) {
-      return { state: normalizeState(value), writesBlocked: false, error: null };
+      return {
+        state: normalizeState(value, initialModel ?? undefined),
+        writesBlocked: false,
+        error: null,
+      };
     }
 
     const persisted = initializePersistence(persistence);
     if (initialSkin) {
       return {
-        state: normalizeState(initialSkin),
+        state: normalizeState(initialSkin, initialModel ?? undefined),
         writesBlocked: persisted.writesBlocked,
         error: persisted.error,
       };
@@ -241,14 +251,19 @@ export default function SkinCrafterEditor({
   const persistenceFailureLatchedRef = useRef(persistenceInitialization.error !== null);
   const initialPersistenceErrorReportedRef = useRef(false);
 
-  const controlledState = useMemo(() => (value ? normalizeState(value) : null), [value]);
+  const importedBaselineSex = persistenceInitialization.state.appearance.sex;
+  const controlledState = useMemo(() => {
+    if (!value) return null;
+
+    const modelOverride = initialModel !== null && value.appearance.sex === importedBaselineSex
+      ? initialModel
+      : undefined;
+    return normalizeState(value, modelOverride);
+  }, [importedBaselineSex, initialModel, value]);
   const state = controlledState ?? internalState;
   const stateRef = useRef(state);
   stateRef.current = state;
   const t = useCallback((key: TranslationKey) => translate(locale, key), [locale]);
-  const initialImage = initialSkin?.image ?? null;
-  const initialModel = initialSkin?.model ?? null;
-  const hasImportedRequest = initialImage !== null;
 
   useEffect(() => {
     if (!controlledState) return;
