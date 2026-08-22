@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SkinCrafterPersistenceAdapter } from '@dihor/skincrafter-editor';
 
 vi.mock('@dihor/skincrafter-editor', async () => {
   const actual = await vi.importActual<typeof import('@dihor/skincrafter-editor')>(
@@ -8,30 +9,55 @@ vi.mock('@dihor/skincrafter-editor', async () => {
   );
   return {
     ...actual,
-    SkinCrafterEditor: ({ locale }: { locale?: string }) => (
-      <div data-testid="packaged-editor" data-locale={locale}>Packaged SkinCrafter editor</div>
-    ),
+    SkinCrafterEditor: ({
+      locale,
+      persistence,
+    }: {
+      locale?: string;
+      persistence?: SkinCrafterPersistenceAdapter;
+    }) => {
+      const loaded = persistence?.load();
+      const persistenceStatus = loaded
+        && typeof loaded === 'object'
+        && 'status' in loaded
+        ? String(loaded.status)
+        : 'legacy';
+
+      return (
+        <div
+          data-testid="packaged-editor"
+          data-locale={locale}
+          data-persistence-status={persistenceStatus}
+        >
+          Packaged SkinCrafter editor
+        </div>
+      );
+    },
     SkinPreview: () => <div data-testid="packaged-preview">Packaged SkinCrafter preview</div>,
   };
 });
 
 import App from './App';
 
+function installLocalStorage(storage: Pick<Storage, 'getItem' | 'setItem'>): void {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: storage,
+  });
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: window.localStorage,
+  });
+}
+
 describe('standalone app package integration', () => {
   beforeEach(() => {
     const store = new Map<string, string>();
-    Object.defineProperty(window, 'localStorage', {
-      configurable: true,
-      value: {
-        getItem: (key: string) => store.get(key) ?? null,
-        setItem: (key: string, value: string) => store.set(key, value),
-        removeItem: (key: string) => store.delete(key),
-        clear: () => store.clear(),
+    installLocalStorage({
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
       },
-    });
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true,
-      value: window.localStorage,
     });
   });
 
@@ -44,6 +70,46 @@ describe('standalone app package integration', () => {
 
     expect(screen.getByTestId('packaged-editor')).toBeInTheDocument();
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'en');
+  });
+
+  it('mounts with default language and in-memory wardrobe state when storage reads throw', () => {
+    installLocalStorage({
+      getItem: () => {
+        throw new DOMException('Storage blocked', 'SecurityError');
+      },
+      setItem: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'en');
+    expect(screen.getByTestId('packaged-editor')).toHaveAttribute(
+      'data-persistence-status',
+      'empty'
+    );
+  });
+
+  it('keeps the selected language in memory when storage writes throw', () => {
+    installLocalStorage({
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'pl' } });
+
+    expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'pl');
   });
 
   it('renders the skin-view route through the packaged preview', () => {
