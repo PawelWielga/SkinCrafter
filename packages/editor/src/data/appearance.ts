@@ -90,6 +90,10 @@ function getSkinModelForAppearance(appearance: AppearanceState): SkinCrafterSkin
   return appearance.sex === 'Female' ? 'slim' : 'classic';
 }
 
+function isTextureLayerCategory(layer: AppearanceCategoryId): layer is TextureLayerCategoryId {
+  return textureLayerCategories.includes(layer as TextureLayerCategoryId);
+}
+
 function wardrobeOption(
   id: string,
   labelKey: string,
@@ -316,6 +320,8 @@ function buildTextureInputsForLayer(
     const option = getOptions('hair', appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance.hair);
     return buildTextureInputsFromLayers(option?.textureLayers, appearance.hairColor);
   }
+  if (!isTextureLayerCategory(layer)) return [];
+
   const option = getOptions(layer, appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance[layer]);
   const slotColors = wardrobeColors[layer]?.[appearance[layer]];
   return buildTextureInputsFromLayers(option?.textureLayers, undefined, slotColors);
