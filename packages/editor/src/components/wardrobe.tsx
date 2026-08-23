@@ -17,18 +17,77 @@ import {
   type AppearanceCategory,
   type AppearanceState,
   type TextureLayerCategoryId,
+  type WardrobeColorState,
 } from '../data/appearance';
 import type { TranslationKey } from '../i18n/translations';
 import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { WardrobeColorSlotDefinition } from '../data/wardrobeDefinitions';
 
 interface WardrobeProps {
   appearance: AppearanceState;
   textureLayerOrder: TextureLayerCategoryId[];
+  wardrobeColors?: WardrobeColorState;
   onAppearanceChange: (category: AppearanceCategoryId, value: string) => void;
+  onWardrobeColorChange?: (
+    category: TextureLayerCategoryId,
+    itemId: string,
+    slotId: string,
+    color: string
+  ) => void;
   onLayerOrderChange: (layerOrder: TextureLayerCategoryId[]) => void;
   t: (key: TranslationKey) => string;
   assetBaseUrl?: string;
   skinModel?: SkinCrafterSkinModel;
+}
+
+interface WardrobeColorPalettesProps {
+  colorSlots: readonly WardrobeColorSlotDefinition[];
+  colors?: Readonly<Record<string, string>>;
+  onChange: (slotId: string, color: string) => void;
+  t: (key: TranslationKey) => string;
+}
+
+export function WardrobeColorPalettes({
+  colorSlots,
+  colors,
+  onChange,
+  t,
+}: WardrobeColorPalettesProps): React.JSX.Element | null {
+  if (colorSlots.length === 0) return null;
+
+  return (
+    <div className="mt-2 space-y-2" data-testid="wardrobe-color-palettes">
+      {colorSlots.map((slot) => {
+        const selectedColor = colors?.[slot.id] ?? slot.defaultColor;
+        const label = t(slot.labelKey);
+        return (
+          <div key={slot.id} data-color-slot={slot.id}>
+            <div className="text-xs font-semibold mb-1">{label}</div>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
+              {slot.palette.map((color) => {
+                const isSelected = selectedColor === color;
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`color-option-swatch h-7 w-7 border pixel-border ${
+                      isSelected ? 'is-selected' : ''
+                    }`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`${label}: ${color}`}
+                    aria-pressed={isSelected}
+                    onClick={() => onChange(slot.id, color)}
+                  >
+                    {isSelected && <SkinCrafterIcon name="fa-check" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 interface LayerDragGhost {
@@ -48,7 +107,9 @@ const layerOrdersEqual = (
 export default function Wardrobe({
   appearance,
   textureLayerOrder,
+  wardrobeColors,
   onAppearanceChange,
+  onWardrobeColorChange,
   onLayerOrderChange,
   t,
   assetBaseUrl,
@@ -323,6 +384,11 @@ export default function Wardrobe({
       : null;
     const layerIndex = layerCategory ? textureLayerOrder.indexOf(layerCategory) : -1;
     const isDropTarget = layerCategory && dropHint?.targetLayer === layerCategory;
+    const selectedOption = options.find((option) => appearance[category.id] === option.id);
+    const colorSlots = layerCategory ? selectedOption?.colorSlots ?? [] : [];
+    const selectedColors = layerCategory && selectedOption
+      ? wardrobeColors?.[layerCategory]?.[selectedOption.id]
+      : undefined;
 
     return (
       <OptionCard
@@ -423,6 +489,17 @@ export default function Wardrobe({
             );
           })}
         </div>
+
+        {layerCategory && selectedOption && colorSlots.length > 0 && (
+          <WardrobeColorPalettes
+            colorSlots={colorSlots}
+            colors={selectedColors}
+            t={t}
+            onChange={(slotId, color) =>
+              onWardrobeColorChange?.(layerCategory, selectedOption.id, slotId, color)
+            }
+          />
+        )}
       </OptionCard>
     );
   };
