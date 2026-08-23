@@ -9,42 +9,70 @@ import {
   type WardrobeItemDefinition,
 } from './wardrobeDefinitions';
 
+const primarySlot = {
+  id: 'primary',
+  labelKey: 'wardrobeColor.primary' as const,
+  defaultColor: '#4A6FA5',
+  palette: ['#4A6FA5', '#A33A3A'],
+};
+
+const secondarySlot = {
+  id: 'secondary',
+  labelKey: 'wardrobeColor.secondary' as const,
+  defaultColor: '#D6B15D',
+  palette: ['#D6B15D', '#7047A3'],
+};
+
 describe('wardrobe item definitions', () => {
-  it('accepts an explicit classic model for the whole item definition', () => {
+  it('accepts an explicit classic model for a tintable item with a color slot', () => {
     const definition = defineWardrobeItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({
-        tintable: 'textures/eyes/clasic.tintable.png',
+        tintable: {
+          texture: 'textures/eyes/clasic.tintable.png',
+          colorSlot: 'primary',
+        },
         fixed: 'textures/eyes/clasic.fixed.png',
       }),
+      colorSlots: [primarySlot],
     });
 
     expect(definition.skinModel).toBe('classic');
     expect(definition.textureLayers).toEqual({
-      tintable: 'textures/eyes/clasic.tintable.png',
+      tintable: [{ texture: 'textures/eyes/clasic.tintable.png', colorSlot: 'primary' }],
       fixed: 'textures/eyes/clasic.fixed.png',
     });
   });
 
-  it('accepts an explicit slim model and preserves it while resolving every layer', () => {
+  it('preserves arbitrary ordered tintable layers, shared slots, different slots and fixed-last metadata', () => {
     const definition = defineWardrobeItem({
       skinModel: 'slim',
       textureLayers: defineTextureLayers({
-        tintable: 'textures/eyes/big.tintable.png',
-        fixed: 'textures/eyes/big.fixed.png',
+        tintable: [
+          { texture: 'textures/eyes/big.fixed.png', colorSlot: 'primary' },
+          { texture: 'textures/eyes/small.tintable.png', colorSlot: 'secondary' },
+          { texture: 'textures/eyes/clasic.fixed.png', colorSlot: 'primary' },
+        ],
+        fixed: 'textures/eyes/big.tintable.png',
       }),
+      colorSlots: [primarySlot, secondarySlot],
     });
 
     expect(resolveWardrobeItem(definition, '/assets')).toEqual({
       skinModel: 'slim',
       textureLayers: {
-        tintable: '/assets/textures/eyes/big.tintable.png',
-        fixed: '/assets/textures/eyes/big.fixed.png',
+        tintable: [
+          { texture: '/assets/textures/eyes/big.fixed.png', colorSlot: 'primary' },
+          { texture: '/assets/textures/eyes/small.tintable.png', colorSlot: 'secondary' },
+          { texture: '/assets/textures/eyes/clasic.fixed.png', colorSlot: 'primary' },
+        ],
+        fixed: '/assets/textures/eyes/big.tintable.png',
       },
+      colorSlots: [primarySlot, secondarySlot],
     });
   });
 
-  it('resolves two explicit model variants that intentionally share one atlas', () => {
+  it('supports fixed-only definitions without color slots', () => {
     const variants = defineWardrobeItemVariants({
       classic: defineWardrobeItem({
         skinModel: 'classic',
@@ -64,6 +92,50 @@ describe('wardrobe item definitions', () => {
       skinModel: 'slim',
       textureLayers: { fixed: '/assets/textures/hat/duck.png' },
     });
+  });
+
+  it('rejects tintable wardrobe layers without declared color slots', () => {
+    expect(() => defineWardrobeItem({
+      skinModel: 'classic',
+      textureLayers: defineTextureLayers({ tintable: 'textures/eyes/small.tintable.png' }),
+    })).toThrow('Every tintable wardrobe item must define at least one color slot.');
+  });
+
+  it('rejects tintable layers that reference an unknown slot', () => {
+    expect(() => defineWardrobeItem({
+      skinModel: 'classic',
+      textureLayers: defineTextureLayers({
+        tintable: {
+          texture: 'textures/eyes/small.tintable.png',
+          colorSlot: 'missing',
+        },
+      }),
+      colorSlots: [primarySlot],
+    })).toThrow('Every tintable wardrobe layer must reference a declared colorSlot.');
+  });
+
+  it('rejects duplicate and unused color slots', () => {
+    expect(() => defineWardrobeItem({
+      skinModel: 'classic',
+      textureLayers: defineTextureLayers({
+        tintable: {
+          texture: 'textures/eyes/small.tintable.png',
+          colorSlot: 'primary',
+        },
+      }),
+      colorSlots: [primarySlot, primarySlot],
+    })).toThrow('Wardrobe color slot "primary" is defined more than once.');
+
+    expect(() => defineWardrobeItem({
+      skinModel: 'classic',
+      textureLayers: defineTextureLayers({
+        tintable: {
+          texture: 'textures/eyes/small.tintable.png',
+          colorSlot: 'primary',
+        },
+      }),
+      colorSlots: [primarySlot, secondarySlot],
+    })).toThrow('Wardrobe color slot "secondary" is not used by any tintable layer.');
   });
 
   it('rejects a variant whose registry key disagrees with its declared model', () => {
