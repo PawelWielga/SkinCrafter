@@ -144,7 +144,7 @@ export function getOptions(
         : wardrobeOption(
             hat,
             `option.hat.${hat}`,
-            getHatDefinition(hat, assetBaseUrl),
+            getHatDefinition(hat, skinModel, assetBaseUrl),
             skinModel
           )
     );
@@ -156,7 +156,7 @@ export function getOptions(
         : wardrobeOption(
             shirt,
             `option.shirt.${shirt}`,
-            getShirtDefinition(shirt, assetBaseUrl),
+            getShirtDefinition(shirt, skinModel, assetBaseUrl),
             skinModel
           )
     );
@@ -168,7 +168,7 @@ export function getOptions(
         : wardrobeOption(
             item,
             `option.pants.${item}`,
-            getPantsDefinition(item, assetBaseUrl),
+            getPantsDefinition(item, skinModel, assetBaseUrl),
             skinModel
           )
     );
