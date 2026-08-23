@@ -9,12 +9,14 @@ export {
   defaultAppearance,
   normalizeAppearance,
   normalizeTextureLayerOrder,
+  normalizeWardrobeColors,
   textureLayerCategories,
 } from './data/appearance';
 export type {
   AppearanceCategoryId,
   AppearanceState,
   TextureLayerCategoryId,
+  WardrobeColorState,
 } from './data/appearance';
 export { defaultLanguage, isLanguage, languages, translate } from './i18n/translations';
 export type { Language, TranslationKey } from './i18n/translations';
@@ -36,6 +38,7 @@ export type {
   SkinCrafterSemanticInitialSkin,
   SkinCrafterSerializedState,
   SkinCrafterSerializedStateV1,
+  SkinCrafterSerializedStateV2,
   SkinCrafterSkinMetadata,
   SkinCrafterSkinModel,
   SkinCrafterSkinOutput,
