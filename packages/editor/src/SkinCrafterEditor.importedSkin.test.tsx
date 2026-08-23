@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultAppearance, normalizeTextureLayerOrder } from './data/appearance';
 import { InvalidInitialSkinError } from './importedSkin';
@@ -64,6 +65,8 @@ async function flushAsyncUpdates(): Promise<void> {
 describe('SkinCrafterEditor imported skin contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedCombineTextures.mockReset();
+    loadImportedSkinMock.mockReset();
     mockedCombineTextures.mockResolvedValue(GENERATED_DATA_URL);
     loadImportedSkinMock.mockImplementation(async (_image: Blob, model: SkinCrafterSkinModel) => ({
       dataUrl: IMPORTED_DATA_URL,
@@ -96,6 +99,221 @@ describe('SkinCrafterEditor imported skin contract', () => {
     }
   );
 
+  it('normalizes imported initial wardrobe state against the declared skin model', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+
+    render(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim', appearance: { shirt: 'Hoodie' } }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+
+    expect(outputs[0].metadata.model).toBe('slim');
+    expect(outputs[0].metadata.appearance.shirt).toBe('None');
+    expect(mockedCombineTextures).not.toHaveBeenCalled();
+  });
+
+  it('normalizes uncontrolled wardrobe state when a replacement import changes model', async () => {
+    const firstImage = new Blob(['classic'], { type: 'image/png' });
+    const secondImage = new Blob(['slim'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+    loadImportedSkinMock
+      .mockResolvedValueOnce({
+        dataUrl: IMPORTED_DATA_URL,
+        fingerprint: 'classic-bytes',
+        model: 'classic',
+      })
+      .mockResolvedValueOnce({
+        dataUrl: SECOND_IMPORTED_DATA_URL,
+        fingerprint: 'slim-bytes',
+        model: 'slim',
+      });
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{
+          image: firstImage,
+          model: 'classic',
+          appearance: { shirt: 'Hoodie' },
+        }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    expect(outputs[0].metadata.model).toBe('classic');
+    expect(outputs[0].metadata.appearance.shirt).toBe('Hoodie');
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image: secondImage, model: 'slim' }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(2));
+    expect(outputs[1].dataUrl).toBe(SECOND_IMPORTED_DATA_URL);
+    expect(outputs[1].metadata.model).toBe('slim');
+    expect(outputs[1].metadata.appearance.shirt).toBe('None');
+    expect(screen.queryByRole('button', { name: 'Hoodie' })).not.toBeInTheDocument();
+    expect(mockedCombineTextures).not.toHaveBeenCalled();
+  });
+
+  it('preserves a repeated explicit sex choice made while a replacement import is loading', async () => {
+    const firstImage = new Blob(['first-slim'], { type: 'image/png' });
+    const secondImage = new Blob(['second-slim'], { type: 'image/png' });
+    const replacementLoad = createDeferred<{
+      dataUrl: string;
+      fingerprint: string;
+      model: 'slim';
+    }>();
+    const outputs: SkinCrafterSkinOutput[] = [];
+    loadImportedSkinMock
+      .mockResolvedValueOnce({
+        dataUrl: IMPORTED_DATA_URL,
+        fingerprint: 'first-slim-bytes',
+        model: 'slim',
+      })
+      .mockImplementationOnce(() => replacementLoad.promise);
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{ image: firstImage, model: 'slim' }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hoodie' })).toBeInTheDocument());
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image: secondImage, model: 'slim' }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+    await waitFor(() => expect(loadImportedSkinMock).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
+
+    await act(async () => {
+      replacementLoad.resolve({
+        dataUrl: SECOND_IMPORTED_DATA_URL,
+        fingerprint: 'second-slim-bytes',
+        model: 'slim',
+      });
+      await replacementLoad.promise;
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('three-preview')).toHaveAttribute('data-model', 'classic');
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toBeInTheDocument();
+      expect(outputs.at(-1)?.metadata.model).toBe('classic');
+    });
+  });
+
+  it('normalizes controlled imported wardrobe state against the declared skin model', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const value = createState();
+    value.appearance.shirt = 'Hoodie';
+    const outputs: SkinCrafterSkinOutput[] = [];
+    const onStateChange = vi.fn();
+
+    render(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim' }}
+        value={value}
+        onStateChange={onStateChange}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+
+    expect(outputs[0].metadata.model).toBe('slim');
+    expect(outputs[0].metadata.appearance.shirt).toBe('None');
+    fireEvent.click(screen.getByRole('button', { name: 'Big' }));
+    expect(onStateChange).toHaveBeenCalledWith(expect.objectContaining({
+      appearance: expect.objectContaining({ shirt: 'None', eyes: 'Big' }),
+    }));
+  });
+
+  it('lets a controlled sex edit switch away from the imported model compatibility', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+    const initialState = createState();
+    initialState.appearance.sex = 'Female';
+    const changedState = createState();
+    changedState.appearance.sex = 'Male';
+    changedState.appearance.shirt = 'Hoodie';
+    mockedCombineTextures.mockResolvedValueOnce(EDITED_DATA_URL);
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim' }}
+        value={initialState}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'slim' }}
+        value={changedState}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(2));
+    expect(outputs[1].metadata.model).toBe('classic');
+    expect(outputs[1].metadata.appearance.shirt).toBe('Hoodie');
+    expect(mockedCombineTextures).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an explicit controlled model switch latched when the host echoes the baseline sex', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+
+    function ControlledHost(): React.JSX.Element {
+      const [value, setValue] = useState(createState());
+      return (
+        <SkinCrafterEditor
+          initialSkin={{ image, model: 'slim' }}
+          value={value}
+          onStateChange={setValue}
+          onSkinChange={(skin) => outputs.push(skin)}
+        />
+      );
+    }
+
+    render(<ControlledHost />);
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    expect(outputs[0].metadata.model).toBe('slim');
+    expect(screen.queryByRole('button', { name: 'Hoodie' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hoodie' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    await waitFor(() => expect(outputs.at(-1)?.metadata.appearance.shirt).toBe('Hoodie'));
+    expect(outputs.at(-1)?.metadata.model).toBe('classic');
+  });
+
   it('composes only the explicitly edited wardrobe category over the imported pixels', async () => {
     const image = new Blob(['skin'], { type: 'image/png' });
     const outputs: SkinCrafterSkinOutput[] = [];
@@ -103,7 +321,7 @@ describe('SkinCrafterEditor imported skin contract', () => {
 
     render(
       <SkinCrafterEditor
-        initialSkin={{ image, model: 'slim' }}
+        initialSkin={{ image, model: 'classic' }}
         onSkinChange={(skin) => outputs.push(skin)}
       />
     );
@@ -123,7 +341,7 @@ describe('SkinCrafterEditor imported skin contract', () => {
       role: 'fixed',
     });
     expect(outputs[1].dataUrl).toBe(EDITED_DATA_URL);
-    expect(outputs[1].metadata.model).toBe('slim');
+    expect(outputs[1].metadata.model).toBe('classic');
   });
 
   it('treats controlled appearance changes as explicit edits without depending on object identity', async () => {

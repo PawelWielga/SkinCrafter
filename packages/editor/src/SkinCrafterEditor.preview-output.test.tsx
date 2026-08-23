@@ -64,14 +64,14 @@ describe('SkinCrafterEditor preview/output texture parity', () => {
 
     render(
       <SkinCrafterEditor
-        initialSkin={{ appearance: { sex: 'Female' } }}
+        initialSkin={{ appearance: { sex: 'Male' } }}
         onSkinChange={(skin) => outputs.push(skin)}
       />
     );
 
     await waitFor(() => expect(outputs).toHaveLength(1));
     expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-texture', BASE_TEXTURE);
-    expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-model', 'slim');
+    expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-model', 'classic');
 
     fireEvent.click(screen.getByRole('button', { name: 'Hoodie' }));
     await waitFor(() => expect(mockedCombineTextures).toHaveBeenCalledTimes(2));
@@ -81,7 +81,7 @@ describe('SkinCrafterEditor preview/output texture parity', () => {
       'generating'
     );
     expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-texture', BASE_TEXTURE);
-    expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-model', 'slim');
+    expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-model', 'classic');
     expect(screen.getByRole('button', { name: 'Download character skin' })).toBeDisabled();
 
     await act(async () => {
@@ -92,7 +92,7 @@ describe('SkinCrafterEditor preview/output texture parity', () => {
     await waitFor(() => expect(outputs).toHaveLength(2));
     expect(outputs[1].dataUrl).toBe(HOODIE_TEXTURE);
     expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-texture', HOODIE_TEXTURE);
-    expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-model', 'slim');
+    expect(screen.getByTestId('three-preview')).toHaveAttribute('data-preview-model', 'classic');
   });
 
   it('keeps preview stable across rapid cache-miss selections and ignores a stale completion', async () => {

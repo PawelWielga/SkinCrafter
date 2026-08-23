@@ -10,6 +10,28 @@ A logical texture option can contain:
 
 At least one of these layers is required for every texture-backed option. A definition with neither layer is invalid.
 
+## Wardrobe skin model metadata
+
+Every texture-backed **wardrobe item** must also declare exactly one Minecraft player model for the whole logical item:
+
+```ts
+defineWardrobeItem({
+  skinModel: 'classic', // or 'slim'
+  textureLayers: defineTextureLayers({
+    tintable: 'textures/top/example.tintable.png',
+    fixed: 'textures/top/example.fixed.png',
+  }),
+});
+```
+
+`skinModel` is required and accepts only `classic` or `slim`. There is no implicit Classic fallback for a missing or unknown value. The metadata belongs to the logical wardrobe item, not to individual `tintable` / `fixed` layers, so all layers of one item always target the same geometry.
+
+If the same visual design supports both models, author two model-correct wardrobe definitions. They may share fixed artwork only when the referenced pixels are genuinely model-independent; any arm or outer-arm pixels must use the correct Classic/Slim UV layout. Do not mark one atlas as compatible with both models unless it is represented by two explicit definitions whose assets are valid for each geometry. `defineWardrobeItemVariants()` groups those explicit definitions under one semantic wardrobe option while keeping the model declaration on each definition.
+
+The wardrobe UI lists only items compatible with the active model. Normalization removes an incompatible selected item when the model changes, and the compositor independently filters model-incompatible definitions so an invalid host/state value cannot leak into the generated PNG.
+
+Current packaged `Hoodie` artwork paints model-dependent arm UVs and is explicitly Classic-only. `Duck` and `Pants` do not touch model-dependent arm UVs, so each has separate explicit Classic and Slim definitions that intentionally reference the same model-independent PNG.
+
 ## Tintable layer
 
 The tintable PNG is the part intentionally controlled by a SkinCrafter color selector. Every non-transparent pixel belongs to that recolorable layer regardless of whether the authored RGB is gray, black, white or chromatic.
