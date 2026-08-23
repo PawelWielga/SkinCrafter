@@ -2,6 +2,7 @@ import {
   defaultAppearance,
   normalizeTextureLayerOrder,
   parseSkinCrafterState,
+  serializeSkinCrafterState,
   type SkinCrafterPersistenceAdapter,
   type SkinCrafterSerializedState,
   type SkinCrafterState,
@@ -148,11 +149,12 @@ function loadLegacyState(read: StorageReader, write: StorageWriter): SkinCrafter
   return parsed.state;
 }
 
-function serializedStatesEqual(
+function legacyEditableStateEqual(
   left: SkinCrafterSerializedState,
   right: SkinCrafterSerializedState
 ): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return JSON.stringify(left.appearance) === JSON.stringify(right.appearance)
+    && JSON.stringify(left.layerOrder) === JSON.stringify(right.layerOrder);
 }
 
 export function createWardrobePersistence(storage: SafeBrowserStorage = browserStorage) {
@@ -195,18 +197,19 @@ export function createWardrobePersistence(storage: SafeBrowserStorage = browserS
 
       const legacyAggregate = loadLegacyAggregateState(read);
       if (legacyAggregate.kind === 'loaded'
-        && !serializedStatesEqual(
+        && !legacyEditableStateEqual(
           legacyAggregate.value.serializedState,
           versioned.value.serializedState
         )) {
-        // Older standalone releases know only the aggregate legacy keys. Because current saves keep
-        // those keys synchronized, a valid divergence means an older release changed the wardrobe
-        // after skincrafterState was written. Preserve that newer user edit and migrate it forward.
-        write(
-          WARDROBE_STATE_STORAGE_KEY,
-          JSON.stringify(legacyAggregate.value.serializedState)
-        );
-        return { status: 'loaded' as const, state: legacyAggregate.value.state };
+        // Older standalone releases know only appearance and layer order. Preserve their newer edit,
+        // but carry forward v2-only wardrobe colors that the old build could not have changed.
+        const mergedState: SkinCrafterState = {
+          ...legacyAggregate.value.state,
+          wardrobeColors: versioned.value.state.wardrobeColors,
+        };
+        const serialized = serializeSkinCrafterState(mergedState);
+        write(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(serialized));
+        return { status: 'loaded' as const, state: mergedState };
       }
 
       return { status: 'loaded' as const, state: versioned.value.state };
