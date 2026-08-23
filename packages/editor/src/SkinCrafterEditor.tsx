@@ -251,15 +251,24 @@ export default function SkinCrafterEditor({
   const persistenceFailureLatchedRef = useRef(persistenceInitialization.error !== null);
   const initialPersistenceErrorReportedRef = useRef(false);
 
-  const importedBaselineSex = persistenceInitialization.state.appearance.sex;
+  const importedLoadedCurrent = hasImportedRequest
+    && initialModel !== null
+    && loadedImportedSkin?.source === initialImage
+    && loadedImportedSkin.model === initialModel;
+  const importedBaselineSex = importedLoadedCurrent && loadedImportedSkin
+    ? loadedImportedSkin.baselineState.appearance.sex
+    : persistenceInitialization.state.appearance.sex;
+  const sexWasExplicitlyActivated = activatedCategories.includes('sex');
   const controlledState = useMemo(() => {
     if (!value) return null;
 
-    const modelOverride = initialModel !== null && value.appearance.sex === importedBaselineSex
+    const modelOverride = initialModel !== null
+      && !sexWasExplicitlyActivated
+      && value.appearance.sex === importedBaselineSex
       ? initialModel
       : undefined;
     return normalizeState(value, modelOverride);
-  }, [importedBaselineSex, initialModel, value]);
+  }, [importedBaselineSex, initialModel, sexWasExplicitlyActivated, value]);
   const state = controlledState ?? internalState;
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -272,6 +281,15 @@ export default function SkinCrafterEditor({
       areStatesEqual(current, controlledState) ? current : controlledState
     ));
   }, [controlledState]);
+
+  useEffect(() => {
+    if (!value || !hasImportedRequest || sexWasExplicitlyActivated) return;
+    if (value.appearance.sex === importedBaselineSex) return;
+
+    setActivatedCategories((current) =>
+      current.includes('sex') ? current : [...current, 'sex']
+    );
+  }, [hasImportedRequest, importedBaselineSex, sexWasExplicitlyActivated, value]);
 
   const publishState = useCallback((next: SkinCrafterState) => {
     if (!value) setInternalState(next);
@@ -413,10 +431,6 @@ export default function SkinCrafterEditor({
     }
   }, [persistence, state, value]);
 
-  const importedLoadedCurrent = hasImportedRequest
-    && initialModel !== null
-    && loadedImportedSkin?.source === initialImage
-    && loadedImportedSkin.model === initialModel;
   const effectiveActiveCategories = useMemo(() => {
     if (!importedLoadedCurrent || !loadedImportedSkin) return [];
 
