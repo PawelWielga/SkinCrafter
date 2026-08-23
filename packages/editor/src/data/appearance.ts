@@ -13,6 +13,7 @@ import {
 import {
   isWardrobeItemCompatible,
   type ResolvedWardrobeItemDefinition,
+  type WardrobeColorSlotDefinition,
 } from './wardrobeDefinitions';
 import type { SkinCrafterSkinModel } from '../publicTypes';
 import type { TextureInput } from '../utils/combineTextures';
@@ -24,12 +25,16 @@ export type AppearanceCategoryId =
 export type TextureLayerCategoryId = Extract<AppearanceCategoryId, 'hat' | 'shirt' | 'pants' | 'shoes' | 'accessory'>;
 export type AppearanceState = Record<AppearanceCategoryId, string>;
 export type AppearanceControl = 'choice' | 'color';
+export type WardrobeColorState = Partial<
+  Record<TextureLayerCategoryId, Record<string, Record<string, string>>>
+>;
 
 export interface AppearanceOption {
   id: string;
   labelKey: string;
   color?: string;
   textureLayers?: ResolvedTextureLayers | null;
+  colorSlots?: readonly WardrobeColorSlotDefinition[];
 }
 
 export interface AppearanceCategory {
@@ -92,7 +97,12 @@ function wardrobeOption(
   skinModel: SkinCrafterSkinModel
 ): AppearanceOption[] {
   if (!definition || !isWardrobeItemCompatible(definition, skinModel)) return [];
-  return [{ id, labelKey, textureLayers: definition.textureLayers }];
+  return [{
+    id,
+    labelKey,
+    textureLayers: definition.textureLayers,
+    ...(definition.colorSlots ? { colorSlots: definition.colorSlots } : {}),
+  }];
 }
 
 export function getOptions(
@@ -199,6 +209,59 @@ export function normalizeAppearance(
   return next;
 }
 
+function collectWardrobeOptions(category: TextureLayerCategoryId): AppearanceOption[] {
+  const options = new Map<string, AppearanceOption>();
+  for (const skinModel of ['classic', 'slim'] as const) {
+    for (const option of getOptions(category, defaultAppearance, undefined, skinModel)) {
+      const existing = options.get(option.id);
+      if (!existing || (!existing.colorSlots?.length && option.colorSlots?.length)) {
+        options.set(option.id, option);
+      }
+    }
+  }
+  return [...options.values()];
+}
+
+export function normalizeWardrobeColors(
+  value: WardrobeColorState | null | undefined
+): WardrobeColorState {
+  const next: WardrobeColorState = {};
+
+  for (const category of textureLayerCategories) {
+    const itemColors: Record<string, Record<string, string>> = {};
+    for (const option of collectWardrobeOptions(category)) {
+      if (!option.colorSlots?.length) continue;
+
+      const slotColors: Record<string, string> = {};
+      for (const slot of option.colorSlots) {
+        const candidate = value?.[category]?.[option.id]?.[slot.id];
+        slotColors[slot.id] = typeof candidate === 'string' && slot.palette.includes(candidate)
+          ? candidate
+          : slot.defaultColor;
+      }
+      itemColors[option.id] = slotColors;
+    }
+
+    if (Object.keys(itemColors).length > 0) {
+      next[category] = itemColors;
+    }
+  }
+
+  return next;
+}
+
+export function cloneWardrobeColors(value: WardrobeColorState): WardrobeColorState {
+  const next: WardrobeColorState = {};
+  for (const category of textureLayerCategories) {
+    const items = value[category];
+    if (!items) continue;
+    next[category] = Object.fromEntries(
+      Object.entries(items).map(([itemId, colors]) => [itemId, { ...colors }])
+    );
+  }
+  return next;
+}
+
 export function normalizeTextureLayerOrder(value: readonly string[] | null | undefined): TextureLayerCategoryId[] {
   const validLayers = new Set<TextureLayerCategoryId>(textureLayerCategories);
   const next: TextureLayerCategoryId[] = [];
@@ -209,15 +272,21 @@ export function normalizeTextureLayerOrder(value: readonly string[] | null | und
   return next;
 }
 
-function buildTextureInputsFromLayers(
+export function buildTextureInputsFromLayers(
   layers: ResolvedTextureLayers | null | undefined,
-  tint?: string
+  tint?: string,
+  slotColors?: Readonly<Record<string, string>>
 ): TextureInput[] {
   if (!layers) return [];
 
   const inputs: TextureInput[] = [];
-  if (layers.tintable) {
-    inputs.push({ url: layers.tintable, role: 'tintable', tint: tint ?? '#FFFFFF' });
+  for (const layer of layers.tintable ?? []) {
+    const layerTint = layer.colorSlot ? slotColors?.[layer.colorSlot] : tint;
+    inputs.push({
+      url: layer.texture,
+      role: 'tintable',
+      tint: layerTint ?? tint ?? '#FFFFFF',
+    });
   }
   if (layers.fixed) {
     inputs.push({ url: layers.fixed, role: 'fixed' });
@@ -229,7 +298,8 @@ function buildTextureInputsForLayer(
   layer: AppearanceCategoryId,
   appearance: AppearanceState,
   assetBaseUrl: string | undefined,
-  skinModel: SkinCrafterSkinModel
+  skinModel: SkinCrafterSkinModel,
+  wardrobeColors: WardrobeColorState
 ): TextureInput[] {
   if (layer === 'race') {
     return buildTextureInputsFromLayers(
@@ -247,7 +317,8 @@ function buildTextureInputsForLayer(
     return buildTextureInputsFromLayers(option?.textureLayers, appearance.hairColor);
   }
   const option = getOptions(layer, appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance[layer]);
-  return buildTextureInputsFromLayers(option?.textureLayers);
+  const slotColors = wardrobeColors[layer]?.[appearance[layer]];
+  return buildTextureInputsFromLayers(option?.textureLayers, undefined, slotColors);
 }
 
 function orderedTextureLayers(textureLayerOrder: readonly string[]): AppearanceCategoryId[] {
@@ -258,10 +329,12 @@ export function buildTextureInputs(
   appearance: AppearanceState,
   textureLayerOrder: readonly string[] = textureLayerCategories,
   assetBaseUrl?: string,
-  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance),
+  wardrobeColors?: WardrobeColorState
 ): TextureInput[] {
+  const normalizedWardrobeColors = normalizeWardrobeColors(wardrobeColors);
   return orderedTextureLayers(textureLayerOrder).flatMap((layer) =>
-    buildTextureInputsForLayer(layer, appearance, assetBaseUrl, skinModel)
+    buildTextureInputsForLayer(layer, appearance, assetBaseUrl, skinModel, normalizedWardrobeColors)
   );
 }
 
@@ -270,9 +343,11 @@ export function buildTextureInputsForCategories(
   textureLayerOrder: readonly string[],
   activeCategories: readonly AppearanceCategoryId[],
   assetBaseUrl?: string,
-  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance),
+  wardrobeColors?: WardrobeColorState
 ): TextureInput[] {
   const active = new Set(activeCategories);
+  const normalizedWardrobeColors = normalizeWardrobeColors(wardrobeColors);
   const shouldIncludeLayer = (layer: AppearanceCategoryId): boolean => {
     if (layer === 'race') {
       return active.has('race') || active.has('sex') || active.has('skinColor');
@@ -291,7 +366,13 @@ export function buildTextureInputsForCategories(
 
   return orderedTextureLayers(textureLayerOrder)
     .filter(shouldIncludeLayer)
-    .flatMap((layer) => buildTextureInputsForLayer(layer, appearance, assetBaseUrl, skinModel));
+    .flatMap((layer) => buildTextureInputsForLayer(
+      layer,
+      appearance,
+      assetBaseUrl,
+      skinModel,
+      normalizedWardrobeColors
+    ));
 }
 
 export function isColorControlEffective(
