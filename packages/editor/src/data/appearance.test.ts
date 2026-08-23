@@ -3,11 +3,13 @@ import {
   appearanceCategories,
   buildTextureInputs,
   buildTextureInputsForCategories,
+  buildTextureInputsFromLayers,
   defaultAppearance,
   getOptions,
   isColorControlEffective,
   normalizeAppearance,
   normalizeTextureLayerOrder,
+  normalizeWardrobeColors,
   textureLayerCategories,
 } from './appearance';
 
@@ -100,11 +102,55 @@ describe('appearance model', () => {
     expect(normalizeTextureLayerOrder(null)).toEqual(textureLayerCategories);
   });
 
+  it('fills missing wardrobe color slots with declared defaults and preserves valid saved colors', () => {
+    expect(normalizeWardrobeColors(undefined)).toEqual({
+      shirt: { Hoodie: { primary: '#4A6FA5' } },
+    });
+    expect(normalizeWardrobeColors({
+      shirt: { Hoodie: { primary: '#A33A3A' } },
+    })).toEqual({
+      shirt: { Hoodie: { primary: '#A33A3A' } },
+    });
+    expect(normalizeWardrobeColors({
+      shirt: { Hoodie: { primary: '#not-a-palette-color', removed: '#FFFFFF' } },
+      hat: { RemovedItem: { primary: '#FFFFFF' } },
+    })).toEqual({
+      shirt: { Hoodie: { primary: '#4A6FA5' } },
+    });
+  });
+
+  it('builds arbitrary tintable layers in declaration order with per-slot tints and fixed last', () => {
+    const inputs = buildTextureInputsFromLayers(
+      {
+        tintable: [
+          { texture: '/looks-fixed.png', colorSlot: 'primary' },
+          { texture: '/looks-tintable.png', colorSlot: 'secondary' },
+          { texture: '/also-fixed-name.png', colorSlot: 'primary' },
+        ],
+        fixed: '/looks-tintable-final.png',
+      },
+      undefined,
+      { primary: '#A33A3A', secondary: '#2F8F4E' }
+    );
+
+    expect(inputs).toEqual([
+      { url: '/looks-fixed.png', role: 'tintable', tint: '#A33A3A' },
+      { url: '/looks-tintable.png', role: 'tintable', tint: '#2F8F4E' },
+      { url: '/also-fixed-name.png', role: 'tintable', tint: '#A33A3A' },
+      { url: '/looks-tintable-final.png', role: 'fixed' },
+    ]);
+  });
+
   it('resolves tintable and fixed layers through the host asset base', () => {
+    const colors = normalizeWardrobeColors({
+      shirt: { Hoodie: { primary: '#A33A3A' } },
+    });
     const inputs = buildTextureInputs(
       { ...defaultAppearance, hat: 'Duck', shirt: 'Hoodie', pants: 'Pants' },
       ['pants', 'shirt', 'hat', 'shoes', 'accessory'],
-      '/character/skincrafter-assets/'
+      '/character/skincrafter-assets/',
+      'classic',
+      colors
     );
 
     expect(inputs).toEqual([
@@ -132,7 +178,8 @@ describe('appearance model', () => {
       },
       {
         url: '/character/skincrafter-assets/textures/top/male/hoodie.png',
-        role: 'fixed',
+        role: 'tintable',
+        tint: '#A33A3A',
       },
       {
         url: '/character/skincrafter-assets/textures/hat/duck.png',
@@ -141,7 +188,7 @@ describe('appearance model', () => {
     ]);
   });
 
-  it('keeps a mixed option pair adjacent while category order moves as one logical layer', () => {
+  it('keeps every internal item layer adjacent while category order moves as one logical layer', () => {
     const inputs = buildTextureInputs(
       { ...defaultAppearance, hat: 'Duck', shirt: 'Hoodie', pants: 'Pants' },
       ['hat', 'pants', 'shirt', 'shoes', 'accessory'],
@@ -157,7 +204,7 @@ describe('appearance model', () => {
     expect(inputs.slice(4)).toEqual([
       { url: '/assets/textures/hat/duck.png', role: 'fixed' },
       { url: '/assets/textures/bottom/pants.png', role: 'fixed' },
-      { url: '/assets/textures/top/male/hoodie.png', role: 'fixed' },
+      { url: '/assets/textures/top/male/hoodie.png', role: 'tintable', tint: '#4A6FA5' },
     ]);
   });
 
@@ -227,9 +274,6 @@ describe('appearance model', () => {
       '/assets'
     );
 
-    expect(inputs.map((input) => input.url)).not.toContain(
-      '/assets/textures/top/male/hoodie.png'
-    );
     expect(inputs).toEqual([
       { url: '/assets/textures/race/human/female.tintable.png', role: 'tintable', tint: defaultAppearance.skinColor },
       { url: '/assets/textures/race/human/female.fixed.png', role: 'fixed' },
