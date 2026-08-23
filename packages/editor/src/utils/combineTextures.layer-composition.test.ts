@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { buildTextureInputsFromLayers } from '../data/appearance';
 import combineTextures from './combineTextures';
 
 interface LoadedImage {
@@ -61,7 +62,7 @@ function createTintCanvas() {
     255, 0, 0, 77,
   ]);
 
-  const getImageData = vi.fn(() => ({ data: sourcePixels } as ImageData));
+  const getImageData = vi.fn(() => ({ data: new Uint8ClampedArray(sourcePixels) } as ImageData));
   const putImageData = vi.fn();
   const context = {
     imageSmoothingEnabled: true,
@@ -133,6 +134,54 @@ describe('combineTextures explicit layer composition', () => {
       expect(output.drawImage).toHaveBeenCalledTimes(2);
       expect(output.drawImage).toHaveBeenNthCalledWith(1, tint.canvas, 0, 0);
       expect(output.drawImage).toHaveBeenNthCalledWith(2, fixedImage, 0, 0);
+    } finally {
+      createElementSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('applies shared and independent wardrobe slots to ordered tintable layers before fixed content', async () => {
+    const images = installSuccessfulImages();
+    const output = createOutputCanvas();
+    const primaryFirst = createTintCanvas();
+    const secondary = createTintCanvas();
+    const primarySecond = createTintCanvas();
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockReturnValueOnce(output.canvas)
+      .mockReturnValueOnce(primaryFirst.canvas)
+      .mockReturnValueOnce(secondary.canvas)
+      .mockReturnValueOnce(primarySecond.canvas);
+
+    const inputs = buildTextureInputsFromLayers(
+      {
+        tintable: [
+          { texture: '/layer-named-fixed.png', colorSlot: 'primary' },
+          { texture: '/layer-secondary.png', colorSlot: 'secondary' },
+          { texture: '/layer-primary-again.png', colorSlot: 'primary' },
+        ],
+        fixed: '/overlay-named-tintable.png',
+      },
+      undefined,
+      { primary: '#A33A3A', secondary: '#2F8F4E' }
+    );
+
+    try {
+      await expect(combineTextures(inputs)).resolves.toBe('data:image/png;base64,composed');
+
+      const fixedImage = images.find((image) => image.src === '/overlay-named-tintable.png');
+      expect(fixedImage).toBeDefined();
+      expect(output.drawImage).toHaveBeenNthCalledWith(1, primaryFirst.canvas, 0, 0);
+      expect(output.drawImage).toHaveBeenNthCalledWith(2, secondary.canvas, 0, 0);
+      expect(output.drawImage).toHaveBeenNthCalledWith(3, primarySecond.canvas, 0, 0);
+      expect(output.drawImage).toHaveBeenNthCalledWith(4, fixedImage, 0, 0);
+
+      const firstPrimaryPixels = primaryFirst.putImageData.mock.calls[0]?.[0].data as Uint8ClampedArray;
+      const secondaryPixels = secondary.putImageData.mock.calls[0]?.[0].data as Uint8ClampedArray;
+      const secondPrimaryPixels = primarySecond.putImageData.mock.calls[0]?.[0].data as Uint8ClampedArray;
+      expect([...firstPrimaryPixels.slice(0, 4)]).toEqual([163, 58, 58, 255]);
+      expect([...secondaryPixels.slice(0, 4)]).toEqual([47, 143, 78, 255]);
+      expect([...secondPrimaryPixels.slice(0, 4)]).toEqual([163, 58, 58, 255]);
     } finally {
       createElementSpy.mockRestore();
       vi.unstubAllGlobals();
