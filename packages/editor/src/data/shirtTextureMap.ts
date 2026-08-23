@@ -11,11 +11,37 @@ import {
 export const shirts = ['None', 'Hoodie'] as const;
 export type Shirt = (typeof shirts)[number];
 
+const hoodiePalette = [
+  '#4A6FA5',
+  '#A33A3A',
+  '#2F8F4E',
+  '#D6B15D',
+  '#7047A3',
+  '#5B3A29',
+  '#1F1A17',
+  '#FFFFFF',
+] as const;
+
 const shirtDefinitions = {
   Hoodie: defineWardrobeItemVariants({
     classic: defineWardrobeItem({
       skinModel: 'classic',
-      textureLayers: defineTextureLayers({ fixed: 'textures/top/male/hoodie.png' }),
+      textureLayers: defineTextureLayers({
+        tintable: [
+          {
+            texture: 'textures/top/male/hoodie.png',
+            colorSlot: 'primary',
+          },
+        ],
+      }),
+      colorSlots: [
+        {
+          id: 'primary',
+          labelKey: 'wardrobeColor.primary',
+          defaultColor: hoodiePalette[0],
+          palette: hoodiePalette,
+        },
+      ],
     }),
   }),
 } satisfies Record<Exclude<Shirt, 'None'>, WardrobeItemVariants>;
