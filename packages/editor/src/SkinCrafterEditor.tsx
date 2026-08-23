@@ -397,7 +397,8 @@ export default function SkinCrafterEditor({
 
   useEffect(() => {
     const pending = pendingControlledWardrobeColorActivationRef.current;
-    if (!pending || !value || !importedLoadedCurrent) return;
+    // Controlled state acceptance is authoritative even while an equivalent import Blob is reloading.
+    if (!pending || !value) return;
     if (state.appearance[pending.category] !== pending.itemId) return;
     if (stateWardrobeColors[pending.category]?.[pending.itemId]?.[pending.slotId] !== pending.color) {
       return;

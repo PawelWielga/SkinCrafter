@@ -137,4 +137,76 @@ describe('SkinCrafterEditor controlled imported wardrobe colors', () => {
     expect(outputs[2].dataUrl).toBe(EDITED_DATA_URL);
     expect(outputs[2].metadata.wardrobeColors.shirt?.Hoodie?.primary).toBe('#4A6FA5');
   });
+
+  it('keeps accepted wardrobe activation when the host resupplies equivalent import blobs', async () => {
+    const firstImage = new Blob(['skin'], { type: 'image/png' });
+    const secondImage = new Blob(['skin'], { type: 'image/png' });
+    const thirdImage = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+    const onStateChange = vi.fn();
+    const state = createControlledState();
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{ image: firstImage, model: 'classic' }}
+        value={state}
+        onStateChange={onStateChange}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    expect(outputs[0].dataUrl).toBe(IMPORTED_DATA_URL);
+
+    fireEvent.click(screen.getByRole('button', { name: /#A33A3A/ }));
+    const redState = onStateChange.mock.calls[0][0] as SkinCrafterState;
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image: secondImage, model: 'classic' }}
+        value={redState}
+        onStateChange={onStateChange}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(loadImportedSkinMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockedCombineTextures).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(outputs).toHaveLength(2));
+    expect(mockedCombineTextures.mock.calls[0][0]).toEqual([
+      IMPORTED_DATA_URL,
+      {
+        url: expect.stringContaining('hoodie'),
+        role: 'tintable',
+        tint: '#A33A3A',
+      },
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: /#4A6FA5/ }));
+    expect(onStateChange).toHaveBeenCalledTimes(2);
+    const baselineColorState = onStateChange.mock.calls[1][0] as SkinCrafterState;
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image: thirdImage, model: 'classic' }}
+        value={baselineColorState}
+        onStateChange={onStateChange}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(loadImportedSkinMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(mockedCombineTextures).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(outputs).toHaveLength(3));
+    expect(mockedCombineTextures.mock.calls[1][0]).toEqual([
+      IMPORTED_DATA_URL,
+      {
+        url: expect.stringContaining('hoodie'),
+        role: 'tintable',
+        tint: '#4A6FA5',
+      },
+    ]);
+    expect(outputs[2].dataUrl).toBe(EDITED_DATA_URL);
+  });
+
 });
