@@ -362,7 +362,7 @@ export default function SkinCrafterEditor({
     slotId: string,
     color: string
   ) => {
-    if (hasImportedRequest) markCategoryActivated(category);
+    if (hasImportedRequest && !value) markCategoryActivated(category);
     const nextColors = cloneWardrobeColors(stateWardrobeColors);
     const categoryColors = nextColors[category] ?? {};
     const itemColors = categoryColors[itemId] ?? {};
@@ -377,7 +377,7 @@ export default function SkinCrafterEditor({
       ...state,
       wardrobeColors: normalizeWardrobeColors(nextColors),
     });
-  }, [hasImportedRequest, markCategoryActivated, publishState, state, stateWardrobeColors]);
+  }, [hasImportedRequest, markCategoryActivated, publishState, state, stateWardrobeColors, value]);
 
   const handleLayerOrderChange = useCallback((layerOrder: TextureLayerCategoryId[]) => {
     publishState({ ...state, layerOrder: normalizeTextureLayerOrder(layerOrder) });
