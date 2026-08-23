@@ -46,7 +46,7 @@ describe('Wardrobe explicit texture color controls', () => {
     expect(screen.getByRole('group', { name: t('category.skinColor') })).toBeInTheDocument();
   });
 
-  it('shows classic wardrobe options only for the classic model', () => {
+  it('keeps shared wardrobe variants visible while filtering model-specific options', () => {
     const { rerender } = renderWardrobe(defaultAppearance, 'classic');
 
     expect(screen.getByRole('button', { name: t('option.shirt.Hoodie') })).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('Wardrobe explicit texture color controls', () => {
     );
 
     expect(screen.queryByRole('button', { name: t('option.shirt.Hoodie') })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: t('option.hat.Duck') })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: t('option.pants.Pants') })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('option.hat.Duck') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('option.pants.Pants') })).toBeInTheDocument();
   });
 });
