@@ -15,6 +15,10 @@ export interface ResolvedWardrobeItemDefinition {
   textureLayers: ResolvedTextureLayers;
 }
 
+export type WardrobeItemVariants = Partial<
+  Record<SkinCrafterSkinModel, WardrobeItemDefinition>
+>;
+
 export function defineWardrobeItem(
   definition: WardrobeItemDefinition
 ): WardrobeItemDefinition {
@@ -26,6 +30,25 @@ export function defineWardrobeItem(
   return { ...definition, skinModel };
 }
 
+export function defineWardrobeItemVariants(
+  variants: WardrobeItemVariants
+): WardrobeItemVariants {
+  const normalized: WardrobeItemVariants = {};
+
+  for (const skinModel of ['classic', 'slim'] as const) {
+    const definition = variants[skinModel];
+    if (!definition) continue;
+
+    const validated = defineWardrobeItem(definition);
+    if (validated.skinModel !== skinModel) {
+      throw new Error(`Wardrobe variant "${skinModel}" must declare the same skinModel.`);
+    }
+    normalized[skinModel] = validated;
+  }
+
+  return normalized;
+}
+
 export function resolveWardrobeItem(
   definition: WardrobeItemDefinition,
   assetBaseUrl?: string
@@ -34,6 +57,15 @@ export function resolveWardrobeItem(
     skinModel: definition.skinModel,
     textureLayers: resolveTextureLayers(definition.textureLayers, assetBaseUrl),
   };
+}
+
+export function resolveWardrobeItemVariant(
+  variants: WardrobeItemVariants,
+  skinModel: SkinCrafterSkinModel,
+  assetBaseUrl?: string
+): ResolvedWardrobeItemDefinition | null {
+  const definition = variants[skinModel];
+  return definition ? resolveWardrobeItem(definition, assetBaseUrl) : null;
 }
 
 export function isWardrobeItemCompatible(
