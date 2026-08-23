@@ -6,11 +6,15 @@ import {
   appearanceCategories,
   buildTextureInputs,
   buildTextureInputsForCategories,
+  cloneWardrobeColors,
   normalizeAppearance,
   normalizeTextureLayerOrder,
+  normalizeWardrobeColors,
+  textureLayerCategories,
   type AppearanceCategoryId,
   type AppearanceState,
   type TextureLayerCategoryId,
+  type WardrobeColorState,
 } from './data/appearance';
 import { defaultLanguage, translate, type TranslationKey } from './i18n/translations';
 import { InvalidInitialSkinError, loadImportedSkin } from './importedSkin';
@@ -69,12 +73,21 @@ function normalizeState(
   return {
     appearance: normalizeAppearance(value?.appearance ?? null, skinModel),
     layerOrder: normalizeTextureLayerOrder(value?.layerOrder),
+    wardrobeColors: normalizeWardrobeColors(value?.wardrobeColors),
   };
+}
+
+function areWardrobeColorsEqual(
+  left: WardrobeColorState | undefined,
+  right: WardrobeColorState | undefined
+): boolean {
+  return JSON.stringify(normalizeWardrobeColors(left)) === JSON.stringify(normalizeWardrobeColors(right));
 }
 
 function areStatesEqual(left: SkinCrafterState, right: SkinCrafterState): boolean {
   if (left.layerOrder.length !== right.layerOrder.length) return false;
   if (left.layerOrder.some((category, index) => category !== right.layerOrder[index])) return false;
+  if (!areWardrobeColorsEqual(left.wardrobeColors, right.wardrobeColors)) return false;
 
   return appearanceCategories.every(
     ({ id }) => left.appearance[id] === right.appearance[id]
@@ -125,6 +138,7 @@ function cloneState(state: SkinCrafterState): SkinCrafterState {
   return {
     appearance: { ...state.appearance },
     layerOrder: [...state.layerOrder],
+    wardrobeColors: cloneWardrobeColors(normalizeWardrobeColors(state.wardrobeColors)),
   };
 }
 
@@ -252,6 +266,12 @@ export default function SkinCrafterEditor({
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
   const persistenceFailureLatchedRef = useRef(persistenceInitialization.error !== null);
   const initialPersistenceErrorReportedRef = useRef(false);
+  const pendingControlledWardrobeColorActivationRef = useRef<{
+    category: TextureLayerCategoryId;
+    itemId: string;
+    slotId: string;
+    color: string;
+  } | null>(null);
 
   const importedLoadedCurrent = hasImportedRequest
     && initialModel !== null
@@ -280,6 +300,10 @@ export default function SkinCrafterEditor({
     return areStatesEqual(internalState, normalized) ? internalState : normalized;
   }, [importedLoadedCurrent, initialModel, internalState, sexWasExplicitlyActivated]);
   const state = controlledState ?? modelNormalizedInternalState;
+  const stateWardrobeColors = useMemo(
+    () => normalizeWardrobeColors(state.wardrobeColors),
+    [state.wardrobeColors]
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
   const t = useCallback((key: TranslationKey) => translate(locale, key), [locale]);
@@ -334,12 +358,65 @@ export default function SkinCrafterEditor({
         { ...state.appearance, [category]: nextValue },
         nextModel
       ),
+      wardrobeColors: stateWardrobeColors,
     });
-  }, [hasImportedRequest, markCategoryActivated, publishState, state]);
+  }, [hasImportedRequest, markCategoryActivated, publishState, state, stateWardrobeColors]);
+
+  const handleWardrobeColorChange = useCallback((
+    category: TextureLayerCategoryId,
+    itemId: string,
+    slotId: string,
+    color: string
+  ) => {
+    if (hasImportedRequest) {
+      if (value) {
+        pendingControlledWardrobeColorActivationRef.current = { category, itemId, slotId, color };
+      } else {
+        markCategoryActivated(category);
+      }
+    }
+    const nextColors = cloneWardrobeColors(stateWardrobeColors);
+    const categoryColors = nextColors[category] ?? {};
+    const itemColors = categoryColors[itemId] ?? {};
+    nextColors[category] = {
+      ...categoryColors,
+      [itemId]: {
+        ...itemColors,
+        [slotId]: color,
+      },
+    };
+    publishState({
+      ...state,
+      wardrobeColors: normalizeWardrobeColors(nextColors),
+    });
+  }, [hasImportedRequest, markCategoryActivated, publishState, state, stateWardrobeColors, value]);
 
   const handleLayerOrderChange = useCallback((layerOrder: TextureLayerCategoryId[]) => {
     publishState({ ...state, layerOrder: normalizeTextureLayerOrder(layerOrder) });
   }, [publishState, state]);
+
+  useEffect(() => {
+    const pending = pendingControlledWardrobeColorActivationRef.current;
+    // Controlled state acceptance is authoritative even while an equivalent import Blob is reloading.
+    if (!pending || !value) return;
+    if (state.appearance[pending.category] !== pending.itemId) return;
+    if (stateWardrobeColors[pending.category]?.[pending.itemId]?.[pending.slotId] !== pending.color) {
+      return;
+    }
+
+    pendingControlledWardrobeColorActivationRef.current = null;
+    markCategoryActivated(pending.category);
+  }, [
+    importedLoadedCurrent,
+    markCategoryActivated,
+    state.appearance,
+    stateWardrobeColors,
+    value,
+  ]);
+
+  useEffect(() => {
+    pendingControlledWardrobeColorActivationRef.current = null;
+  }, [initialImage, initialModel]);
 
   useEffect(() => {
     onSkinChangeRef.current = onSkinChange;
@@ -471,10 +548,28 @@ export default function SkinCrafterEditor({
         active.add(category.id);
       }
     }
+
+    const baselineColors = normalizeWardrobeColors(loadedImportedSkin.baselineState.wardrobeColors);
+    for (const category of textureLayerCategories) {
+      const selectedItem = state.appearance[category];
+      if (selectedItem !== loadedImportedSkin.baselineState.appearance[category]) continue;
+      const current = stateWardrobeColors[category]?.[selectedItem] ?? {};
+      const baseline = baselineColors[category]?.[selectedItem] ?? {};
+      if (JSON.stringify(current) !== JSON.stringify(baseline)) {
+        active.add(category);
+      }
+    }
+
     return appearanceCategories
       .map((category) => category.id)
       .filter((category) => active.has(category));
-  }, [activatedCategories, importedLoadedCurrent, loadedImportedSkin, state.appearance]);
+  }, [
+    activatedCategories,
+    importedLoadedCurrent,
+    loadedImportedSkin,
+    state.appearance,
+    stateWardrobeColors,
+  ]);
 
   const {
     race,
@@ -491,6 +586,7 @@ export default function SkinCrafterEditor({
     accessory,
   } = state.appearance;
   const layerOrderKey = JSON.stringify(state.layerOrder);
+  const wardrobeColorsKey = JSON.stringify(stateWardrobeColors);
   const activeCategoriesKey = JSON.stringify(effectiveActiveCategories);
   const canonicalAssetBaseUrl = assetBaseUrl?.replace(/\/+$/, '') || undefined;
   const sexWasEdited = effectiveActiveCategories.includes('sex');
@@ -519,6 +615,7 @@ export default function SkinCrafterEditor({
     shoes,
     accessory,
     layerOrderKey,
+    wardrobeColorsKey,
     canonicalAssetBaseUrl ?? null,
     importedFingerprint,
     effectiveModel,
@@ -573,6 +670,7 @@ export default function SkinCrafterEditor({
       sex: compositionSex,
     };
     const layerOrderSnapshot = JSON.parse(layerOrderKey) as TextureLayerCategoryId[];
+    const wardrobeColorSnapshot = JSON.parse(wardrobeColorsKey) as WardrobeColorState;
     const activeCategorySnapshot = JSON.parse(activeCategoriesKey) as AppearanceCategoryId[];
 
     setGenerationState({ key: generationKey, status: 'generating', error: null });
@@ -589,7 +687,8 @@ export default function SkinCrafterEditor({
             layerOrderSnapshot,
             activeCategorySnapshot,
             canonicalAssetBaseUrl,
-            effectiveModel
+            effectiveModel,
+            wardrobeColorSnapshot
           );
           dataUrl = textureInputs.filter(Boolean).length === 0
             ? importedDataUrl
@@ -599,13 +698,20 @@ export default function SkinCrafterEditor({
             appearanceSnapshot,
             layerOrderSnapshot,
             canonicalAssetBaseUrl,
-            effectiveModel
+            effectiveModel,
+            wardrobeColorSnapshot
           );
           dataUrl = await combineTextures(textureInputs);
         }
         result = {
           dataUrl,
-          output: createSkinOutput(dataUrl, appearanceSnapshot, layerOrderSnapshot, effectiveModel),
+          output: createSkinOutput(
+            dataUrl,
+            appearanceSnapshot,
+            layerOrderSnapshot,
+            effectiveModel,
+            wardrobeColorSnapshot
+          ),
         };
       } catch (cause) {
         if (!current) return;
@@ -653,6 +759,7 @@ export default function SkinCrafterEditor({
     shirt,
     shoes,
     skinColor,
+    wardrobeColorsKey,
   ]);
 
   const previewSkin = currentGeneratedSkin ?? generatedSkin;
@@ -691,7 +798,9 @@ export default function SkinCrafterEditor({
           <Wardrobe
             appearance={state.appearance}
             textureLayerOrder={state.layerOrder}
+            wardrobeColors={stateWardrobeColors}
             onAppearanceChange={handleAppearanceChange}
+            onWardrobeColorChange={handleWardrobeColorChange}
             onLayerOrderChange={handleLayerOrderChange}
             t={t}
             assetBaseUrl={assetBaseUrl}

@@ -18,7 +18,9 @@ describe('wardrobe content workflow contract', () => {
     );
 
     expect(humanOption?.textureLayers).toEqual({
-      tintable: '/character/skincrafter-assets/textures/race/human/male.tintable.png',
+      tintable: [
+        { texture: '/character/skincrafter-assets/textures/race/human/male.tintable.png' },
+      ],
       fixed: '/character/skincrafter-assets/textures/race/human/male.fixed.png',
     });
     expect(skinCrafterAssetPaths).toEqual(
@@ -47,7 +49,7 @@ describe('wardrobe content workflow contract', () => {
     ]);
   });
 
-  it('keeps English and Polish labels complete for every choice category and option', () => {
+  it('keeps English and Polish labels complete for every choice category, option and color slot', () => {
     const choiceCategories = appearanceCategories.filter(
       (category) => category.control === 'choice'
     );
@@ -61,6 +63,9 @@ describe('wardrobe content workflow contract', () => {
       for (const category of choiceCategories) {
         for (const option of getOptions(category.id, appearance)) {
           labelKeys.add(option.labelKey);
+          for (const slot of option.colorSlots ?? []) {
+            labelKeys.add(slot.labelKey);
+          }
         }
       }
     }

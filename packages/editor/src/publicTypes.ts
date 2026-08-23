@@ -3,6 +3,7 @@ import type {
   AppearanceCategoryId,
   AppearanceState,
   TextureLayerCategoryId,
+  WardrobeColorState,
 } from './data/appearance';
 import type { Language } from './i18n/translations';
 
@@ -11,11 +12,13 @@ export type SkinCrafterSkinModel = 'classic' | 'slim';
 export interface SkinCrafterState {
   appearance: AppearanceState;
   layerOrder: TextureLayerCategoryId[];
+  wardrobeColors?: WardrobeColorState;
 }
 
 export interface SkinCrafterSemanticInitialSkin {
   appearance?: Partial<AppearanceState>;
   layerOrder?: readonly string[];
+  wardrobeColors?: WardrobeColorState;
   image?: never;
   model?: never;
 }
@@ -23,6 +26,7 @@ export interface SkinCrafterSemanticInitialSkin {
 export interface SkinCrafterImportedInitialSkin {
   appearance?: Partial<AppearanceState>;
   layerOrder?: readonly string[];
+  wardrobeColors?: WardrobeColorState;
   image: Blob;
   model: SkinCrafterSkinModel;
 }
@@ -37,18 +41,26 @@ export interface SkinCrafterSerializedStateV1 {
   layerOrder: TextureLayerCategoryId[];
 }
 
-export type SkinCrafterSerializedState = SkinCrafterSerializedStateV1;
+export interface SkinCrafterSerializedStateV2 {
+  schemaVersion: 2;
+  appearance: AppearanceState;
+  layerOrder: TextureLayerCategoryId[];
+  wardrobeColors: WardrobeColorState;
+}
+
+export type SkinCrafterSerializedState = SkinCrafterSerializedStateV2;
 
 export type SkinCrafterStateMigrationNoticeCode =
   | 'legacy_unversioned'
   | 'schema_version_migrated'
   | 'appearance_value_defaulted'
-  | 'layer_order_normalized';
+  | 'layer_order_normalized'
+  | 'wardrobe_colors_normalized';
 
 export interface SkinCrafterStateMigrationNotice {
   code: SkinCrafterStateMigrationNoticeCode;
   message: string;
-  path?: AppearanceCategoryId | 'layerOrder';
+  path?: AppearanceCategoryId | 'layerOrder' | 'wardrobeColors';
   from?: unknown;
   to?: unknown;
 }
@@ -101,6 +113,7 @@ export interface SkinCrafterSkinMetadata {
   model: SkinCrafterSkinModel;
   appearance: AppearanceState;
   layerOrder: TextureLayerCategoryId[];
+  wardrobeColors: WardrobeColorState;
 }
 
 export interface SkinCrafterSkinOutput {

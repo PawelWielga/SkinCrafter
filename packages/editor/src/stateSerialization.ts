@@ -1,8 +1,12 @@
 import {
   appearanceCategories,
+  cloneWardrobeColors,
   normalizeAppearance,
   normalizeTextureLayerOrder,
+  normalizeWardrobeColors,
+  textureLayerCategories,
   type AppearanceState,
+  type WardrobeColorState,
 } from './data/appearance';
 import type {
   SkinCrafterSerializedState,
@@ -11,7 +15,7 @@ import type {
   SkinCrafterStateParseResult,
 } from './publicTypes';
 
-export const SKINCRAFTER_STATE_SCHEMA_VERSION = 1 as const;
+export const SKINCRAFTER_STATE_SCHEMA_VERSION = 2 as const;
 
 interface UnknownStateRecord {
   [key: string]: unknown;
@@ -21,6 +25,7 @@ type StateMigration = (value: UnknownStateRecord) => UnknownStateRecord;
 
 const migrations = new Map<number, StateMigration>([
   [0, (value) => ({ ...value, schemaVersion: 1 })],
+  [1, (value) => ({ ...value, schemaVersion: 2, wardrobeColors: value.wardrobeColors ?? {} })],
 ]);
 
 function isRecord(value: unknown): value is UnknownStateRecord {
@@ -53,6 +58,7 @@ function canonicalizeState(state: SkinCrafterState): SkinCrafterSerializedState 
     schemaVersion: SKINCRAFTER_STATE_SCHEMA_VERSION,
     appearance: normalizeAppearance(state.appearance),
     layerOrder: normalizeTextureLayerOrder(state.layerOrder),
+    wardrobeColors: normalizeWardrobeColors(state.wardrobeColors),
   };
 }
 
@@ -62,7 +68,39 @@ export function serializeSkinCrafterState(state: SkinCrafterState): SkinCrafterS
     ...serialized,
     appearance: { ...serialized.appearance },
     layerOrder: [...serialized.layerOrder],
+    wardrobeColors: cloneWardrobeColors(serialized.wardrobeColors),
   };
+}
+
+function readWardrobeColorState(value: UnknownStateRecord): WardrobeColorState | string {
+  const result: WardrobeColorState = {};
+
+  for (const category of textureLayerCategories) {
+    const rawItems = value[category];
+    if (rawItems === undefined) continue;
+    if (!isRecord(rawItems)) {
+      return `SkinCrafter persisted wardrobeColors.${category} must be an object.`;
+    }
+
+    const items: Record<string, Record<string, string>> = {};
+    for (const [itemId, rawSlots] of Object.entries(rawItems)) {
+      if (!isRecord(rawSlots)) {
+        return `SkinCrafter persisted wardrobeColors.${category}.${itemId} must be an object.`;
+      }
+
+      const slots: Record<string, string> = {};
+      for (const [slotId, rawColor] of Object.entries(rawSlots)) {
+        if (typeof rawColor !== 'string') {
+          return `SkinCrafter persisted wardrobeColors.${category}.${itemId}.${slotId} must be a string.`;
+        }
+        slots[slotId] = rawColor;
+      }
+      items[itemId] = slots;
+    }
+    result[category] = items;
+  }
+
+  return result;
 }
 
 export function parseSkinCrafterState(value: unknown): SkinCrafterStateParseResult {
@@ -150,6 +188,14 @@ export function parseSkinCrafterState(value: unknown): SkinCrafterStateParseResu
     }
   }
 
+  if (!isRecord(working.wardrobeColors)) {
+    return invalidState('SkinCrafter persisted wardrobeColors must be an object.');
+  }
+  const wardrobeColorInput = readWardrobeColorState(working.wardrobeColors);
+  if (typeof wardrobeColorInput === 'string') {
+    return invalidState(wardrobeColorInput);
+  }
+
   const normalizedAppearance = normalizeAppearance(appearanceInput);
   for (const category of appearanceCategories) {
     const rawValue = working.appearance[category.id];
@@ -180,9 +226,21 @@ export function parseSkinCrafterState(value: unknown): SkinCrafterStateParseResu
     });
   }
 
+  const normalizedWardrobeColors = normalizeWardrobeColors(wardrobeColorInput);
+  if (JSON.stringify(wardrobeColorInput) !== JSON.stringify(normalizedWardrobeColors)) {
+    notices.push({
+      code: 'wardrobe_colors_normalized',
+      message: 'Normalized wardrobe color slots by removing unknown values and filling missing slots with defaults.',
+      path: 'wardrobeColors',
+      from: wardrobeColorInput,
+      to: normalizedWardrobeColors,
+    });
+  }
+
   const state: SkinCrafterState = {
     appearance: normalizedAppearance,
     layerOrder: normalizedLayerOrder,
+    wardrobeColors: normalizedWardrobeColors,
   };
   const serializedState = serializeSkinCrafterState(state);
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   defaultAppearance,
   normalizeTextureLayerOrder,
+  normalizeWardrobeColors,
   serializeSkinCrafterState,
 } from '@dihor/skincrafter-editor';
 import {
@@ -60,11 +61,12 @@ describe('standalone wardrobe persistence', () => {
 
     expect(loaded.appearance.hat).toBe('Duck');
     expect(loaded.layerOrder).toEqual(['pants', 'hat', 'shirt', 'shoes', 'accessory']);
+    expect(loaded.wardrobeColors).toEqual(normalizeWardrobeColors(undefined));
 
     const rewritten = JSON.parse(
       localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null'
     ) as { schemaVersion?: number; appearance?: { hat?: string } } | null;
-    expect(rewritten?.schemaVersion).toBe(1);
+    expect(rewritten?.schemaVersion).toBe(2);
     expect(rewritten?.appearance?.hat).toBe('Duck');
   });
 
@@ -72,6 +74,9 @@ describe('standalone wardrobe persistence', () => {
     const serialized = serializeSkinCrafterState({
       appearance: { ...defaultAppearance, hat: 'Duck' },
       layerOrder: normalizeTextureLayerOrder(null),
+      wardrobeColors: normalizeWardrobeColors({
+        shirt: { Hoodie: { primary: '#7047A3' } },
+      }),
     });
     localStorage.setItem(WARDROBE_STATE_STORAGE_KEY, JSON.stringify(serialized));
     localStorage.setItem(
@@ -86,15 +91,19 @@ describe('standalone wardrobe persistence', () => {
     const loaded = requireLoadedState(persistence.load());
 
     expect(loaded.appearance.hat).toBe('Duck');
+    expect(loaded.wardrobeColors).toEqual(serialized.wardrobeColors);
     expect(JSON.parse(localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null')).toEqual(
       serialized
     );
   });
 
-  it('migrates divergent valid legacy aggregate keys forward instead of overwriting newer user edits', () => {
+  it('migrates divergent legacy aggregate edits while preserving v2-only wardrobe colors', () => {
     const staleVersioned = serializeSkinCrafterState({
       appearance: { ...defaultAppearance, hat: 'Duck' },
       layerOrder: normalizeTextureLayerOrder(null),
+      wardrobeColors: normalizeWardrobeColors({
+        shirt: { Hoodie: { primary: '#7047A3' } },
+      }),
     });
     const newerLegacyAppearance = { ...defaultAppearance, hat: 'None', shirt: 'Hoodie' };
     const newerLegacyLayerOrder = ['pants', 'shirt', 'hat'];
@@ -114,16 +123,22 @@ describe('standalone wardrobe persistence', () => {
     expect(loaded.appearance.hat).toBe('None');
     expect(loaded.appearance.shirt).toBe('Hoodie');
     expect(loaded.layerOrder).toEqual(['pants', 'shirt', 'hat', 'shoes', 'accessory']);
+    expect(loaded.wardrobeColors).toEqual(staleVersioned.wardrobeColors);
 
     const rewritten = JSON.parse(
       localStorage.getItem(WARDROBE_STATE_STORAGE_KEY) ?? 'null'
-    ) as { schemaVersion?: number; appearance?: { hat?: string; shirt?: string } } | null;
+    ) as {
+      schemaVersion?: number;
+      appearance?: { hat?: string; shirt?: string };
+      wardrobeColors?: unknown;
+    } | null;
     expect(rewritten).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       appearance: {
         hat: 'None',
         shirt: 'Hoodie',
       },
+      wardrobeColors: staleVersioned.wardrobeColors,
     });
   });
 
@@ -146,9 +161,10 @@ describe('standalone wardrobe persistence', () => {
 
   it('reports an unsupported future schema as incompatible without rewriting storage', () => {
     const futureState = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       appearance: { ...defaultAppearance, hat: 'Duck' },
       layerOrder: normalizeTextureLayerOrder(null),
+      wardrobeColors: normalizeWardrobeColors(undefined),
       futureOnlyField: 'keep-me',
     };
 
@@ -233,9 +249,10 @@ describe('standalone wardrobe persistence', () => {
 
   it('keeps future-schema protection fail-closed even if storage writes would throw', () => {
     const futureState = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       appearance: { ...defaultAppearance, hat: 'Duck' },
       layerOrder: normalizeTextureLayerOrder(null),
+      wardrobeColors: normalizeWardrobeColors(undefined),
       futureOnlyField: 'keep-me',
     };
     const getItem = vi.fn((key: string) => {

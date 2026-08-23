@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SkinCrafterEditor from './SkinCrafterEditor';
-import { defaultAppearance } from './data/appearance';
+import { defaultAppearance, normalizeWardrobeColors } from './data/appearance';
 import type {
   SkinCrafterPersistenceAdapter,
   SkinCrafterSerializedState,
@@ -45,8 +45,9 @@ describe('SkinCrafterEditor persistence serialization', () => {
 
     await waitFor(() => expect(saved.length).toBeGreaterThan(0));
     expect(saved[0]).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       appearance: { hat: 'Duck' },
+      wardrobeColors: normalizeWardrobeColors(undefined),
     });
   });
 
@@ -136,9 +137,10 @@ describe('SkinCrafterEditor persistence serialization', () => {
 
   it('preserves an unsupported future schema on mount and after user edits', async () => {
     const futureState = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       appearance: { ...defaultAppearance, hat: 'Duck' },
       layerOrder: ['hat', 'shirt', 'pants', 'shoes', 'accessory'],
+      wardrobeColors: normalizeWardrobeColors(undefined),
       futureOnlyField: 'keep-me',
     };
     let storedState: unknown = futureState;
