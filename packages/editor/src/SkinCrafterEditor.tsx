@@ -238,8 +238,8 @@ export default function SkinCrafterEditor({
     error: null,
   });
   const [activatedCategories, setActivatedCategories] = useState<AppearanceCategoryId[]>([]);
-  const activatedCategoriesRef = useRef<AppearanceCategoryId[]>(activatedCategories);
-  activatedCategoriesRef.current = activatedCategories;
+  const activationVersionRef = useRef(0);
+  const categoryActivationVersionRef = useRef<Partial<Record<AppearanceCategoryId, number>>>({});
   const onSkinChangeRef = useRef(onSkinChange);
   const onStatusChangeRef = useRef(onStatusChange);
   const onErrorRef = useRef(onError);
@@ -283,6 +283,14 @@ export default function SkinCrafterEditor({
   const stateRef = useRef(state);
   stateRef.current = state;
   const t = useCallback((key: TranslationKey) => translate(locale, key), [locale]);
+  const markCategoryActivated = useCallback((category: AppearanceCategoryId) => {
+    const activationVersion = activationVersionRef.current + 1;
+    activationVersionRef.current = activationVersion;
+    categoryActivationVersionRef.current[category] = activationVersion;
+    setActivatedCategories((current) =>
+      current.includes(category) ? current : [...current, category]
+    );
+  }, []);
 
   useEffect(() => {
     if (!controlledState) return;
@@ -301,10 +309,14 @@ export default function SkinCrafterEditor({
     if (!value || !hasImportedRequest || sexWasExplicitlyActivated) return;
     if (value.appearance.sex === importedBaselineSex) return;
 
-    setActivatedCategories((current) =>
-      current.includes('sex') ? current : [...current, 'sex']
-    );
-  }, [hasImportedRequest, importedBaselineSex, sexWasExplicitlyActivated, value]);
+    markCategoryActivated('sex');
+  }, [
+    hasImportedRequest,
+    importedBaselineSex,
+    markCategoryActivated,
+    sexWasExplicitlyActivated,
+    value,
+  ]);
 
   const publishState = useCallback((next: SkinCrafterState) => {
     if (!value) setInternalState(next);
@@ -312,11 +324,7 @@ export default function SkinCrafterEditor({
   }, [onStateChange, value]);
 
   const handleAppearanceChange = useCallback((category: AppearanceCategoryId, nextValue: string) => {
-    if (hasImportedRequest) {
-      setActivatedCategories((current) =>
-        current.includes(category) ? current : [...current, category]
-      );
-    }
+    if (hasImportedRequest) markCategoryActivated(category);
     const nextModel: SkinCrafterSkinModel = category === 'sex'
       ? nextValue === 'Female' ? 'slim' : 'classic'
       : effectiveModelRef.current;
@@ -327,7 +335,7 @@ export default function SkinCrafterEditor({
         nextModel
       ),
     });
-  }, [hasImportedRequest, publishState, state]);
+  }, [hasImportedRequest, markCategoryActivated, publishState, state]);
 
   const handleLayerOrderChange = useCallback((layerOrder: TextureLayerCategoryId[]) => {
     publishState({ ...state, layerOrder: normalizeTextureLayerOrder(layerOrder) });
@@ -357,6 +365,8 @@ export default function SkinCrafterEditor({
       loadedImportedSkinRef.current = null;
       equivalentImportPendingRef.current = false;
       setLoadedImportedSkin(null);
+      activationVersionRef.current = 0;
+      categoryActivationVersionRef.current = {};
       setActivatedCategories([]);
       setImportLoadState({ source: null, model: null, status: 'idle', error: null });
       return undefined;
@@ -375,7 +385,7 @@ export default function SkinCrafterEditor({
 
     let current = true;
     const requestBaseline = cloneState(stateRef.current);
-    const activatedCategoriesAtRequest = new Set(activatedCategoriesRef.current);
+    const activationVersionAtRequest = activationVersionRef.current;
     setImportLoadState({ source: initialImage, model: initialModel, status: 'loading', error: null });
     notifyHost(onStatusChangeRef.current, 'generating');
 
@@ -401,11 +411,10 @@ export default function SkinCrafterEditor({
         loadedImportedSkinRef.current = next;
         setLoadedImportedSkin(next);
         if (!semanticallyUnchanged) {
-          setActivatedCategories(
-            activatedCategoriesRef.current.filter(
-              (category) => !activatedCategoriesAtRequest.has(category)
-            )
-          );
+          const activatedDuringRequest = Object.entries(categoryActivationVersionRef.current)
+            .filter(([, version]) => (version ?? 0) > activationVersionAtRequest)
+            .map(([category]) => category as AppearanceCategoryId);
+          setActivatedCategories(activatedDuringRequest);
         }
         setImportLoadState({ source: initialImage, model: initialModel, status: 'ready', error: null });
 

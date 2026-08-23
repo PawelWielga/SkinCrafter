@@ -163,6 +163,60 @@ describe('SkinCrafterEditor imported skin contract', () => {
     expect(mockedCombineTextures).not.toHaveBeenCalled();
   });
 
+  it('preserves a repeated explicit sex choice made while a replacement import is loading', async () => {
+    const firstImage = new Blob(['first-slim'], { type: 'image/png' });
+    const secondImage = new Blob(['second-slim'], { type: 'image/png' });
+    const replacementLoad = createDeferred<{
+      dataUrl: string;
+      fingerprint: string;
+      model: 'slim';
+    }>();
+    const outputs: SkinCrafterSkinOutput[] = [];
+    loadImportedSkinMock
+      .mockResolvedValueOnce({
+        dataUrl: IMPORTED_DATA_URL,
+        fingerprint: 'first-slim-bytes',
+        model: 'slim',
+      })
+      .mockImplementationOnce(() => replacementLoad.promise);
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{ image: firstImage, model: 'slim' }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hoodie' })).toBeInTheDocument());
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image: secondImage, model: 'slim' }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+    await waitFor(() => expect(loadImportedSkinMock).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
+
+    await act(async () => {
+      replacementLoad.resolve({
+        dataUrl: SECOND_IMPORTED_DATA_URL,
+        fingerprint: 'second-slim-bytes',
+        model: 'slim',
+      });
+      await replacementLoad.promise;
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('three-preview')).toHaveAttribute('data-model', 'classic');
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toBeInTheDocument();
+      expect(outputs.at(-1)?.metadata.model).toBe('classic');
+    });
+  });
+
   it('normalizes controlled imported wardrobe state against the declared skin model', async () => {
     const image = new Blob(['skin'], { type: 'image/png' });
     const value = createState();
