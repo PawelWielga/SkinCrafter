@@ -75,6 +75,9 @@ See [`packages/editor/README.md`](packages/editor/README.md) for installation, c
 
 - `/`: creator rendered by `SkinCrafterEditor` from the package.
 - `/mcskinview`: PlayerDB username lookup rendered with the package `SkinPreview`.
+- `*`: localized Not Found view for every unknown path, rendered inside the normal `AppShell` with a client-side link back to `/`.
+
+GitHub Pages still uses `apps/standalone/scripts/create-pages-fallback.mjs` to copy the built `index.html` to `404.html`. This lets a direct request or browser refresh on an unknown URL boot the SPA, after which the `*` route renders the localized Not Found view. Returning to the creator uses React Router navigation and does not require a full document reload.
 
 The standalone application persists current wardrobe data under `skincrafterState` using the package's versioned serialization format. Existing `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys are migrated on load, and the aggregate legacy keys remain synchronized on save for backward compatibility. If an older standalone build later changes the synchronized aggregate keys, the next current build detects that valid divergence and migrates those newer user choices forward instead of overwriting them with stale `skincrafterState`. A `skincrafterState` written by an unsupported future schema is preserved byte-for-byte and persistence writes are suppressed until that record is removed or a compatible build is used. Storage ownership stays in the standalone host rather than the reusable package.
 

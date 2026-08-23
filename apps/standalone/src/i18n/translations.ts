@@ -13,9 +13,16 @@ export type SkinViewTranslationKey =
   | 'skinView.error.rateLimited'
   | 'skinView.error.invalidResponse';
 
-export type StandaloneTranslationKey = EditorTranslationKey | SkinViewTranslationKey;
+export type NotFoundTranslationKey =
+  | 'notFound.title'
+  | 'notFound.description'
+  | 'notFound.backToCreator';
 
-const standaloneTranslations: Record<Language, Record<SkinViewTranslationKey, string>> = {
+type StandaloneOnlyTranslationKey = SkinViewTranslationKey | NotFoundTranslationKey;
+
+export type StandaloneTranslationKey = EditorTranslationKey | StandaloneOnlyTranslationKey;
+
+const standaloneTranslations: Record<Language, Record<StandaloneOnlyTranslationKey, string>> = {
   en: {
     'skinView.error.usernameRequired': 'Please enter a Minecraft username.',
     'skinView.error.playerNotFound': 'Minecraft player not found.',
@@ -24,6 +31,9 @@ const standaloneTranslations: Record<Language, Record<SkinViewTranslationKey, st
     'skinView.error.serviceUnavailable': 'PlayerDB is temporarily unavailable. Try again later.',
     'skinView.error.rateLimited': 'Too many player lookup requests. Try again in a moment.',
     'skinView.error.invalidResponse': 'PlayerDB returned an unexpected response. Try again later.',
+    'notFound.title': 'Page not found',
+    'notFound.description': 'This address does not point to a SkinCrafter page.',
+    'notFound.backToCreator': 'Back to creator',
   },
   pl: {
     'skinView.error.usernameRequired': 'Podaj nazwe gracza Minecraft.',
@@ -33,15 +43,20 @@ const standaloneTranslations: Record<Language, Record<SkinViewTranslationKey, st
     'skinView.error.serviceUnavailable': 'PlayerDB jest chwilowo niedostepne. Sprobuj ponownie pozniej.',
     'skinView.error.rateLimited': 'Za duzo zapytan o graczy. Sprobuj ponownie za chwile.',
     'skinView.error.invalidResponse': 'PlayerDB zwrocilo nieoczekiwana odpowiedz. Sprobuj ponownie pozniej.',
+    'notFound.title': 'Nie znaleziono strony',
+    'notFound.description': 'Ten adres nie prowadzi do żadnej strony SkinCraftera.',
+    'notFound.backToCreator': 'Wróć do kreatora',
   },
 };
 
-function isSkinViewTranslationKey(key: StandaloneTranslationKey): key is SkinViewTranslationKey {
+function isStandaloneOnlyTranslationKey(
+  key: StandaloneTranslationKey
+): key is StandaloneOnlyTranslationKey {
   return key in standaloneTranslations.en;
 }
 
 export function translateStandalone(language: Language, key: StandaloneTranslationKey): string {
-  return isSkinViewTranslationKey(key)
+  return isStandaloneOnlyTranslationKey(key)
     ? standaloneTranslations[language][key]
     : translateEditor(language, key);
 }
