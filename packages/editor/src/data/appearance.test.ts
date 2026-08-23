@@ -28,12 +28,12 @@ describe('appearance model', () => {
     );
   });
 
-  it('filters classic wardrobe definitions out of slim model choices', () => {
+  it('keeps explicit shared variants on slim while filtering classic-only wardrobe definitions', () => {
     const slimAppearance = { ...defaultAppearance, sex: 'Female' };
 
-    expect(getOptions('hat', slimAppearance).map((option) => option.id)).toEqual(['None']);
+    expect(getOptions('hat', slimAppearance).map((option) => option.id)).toEqual(['None', 'Duck']);
     expect(getOptions('shirt', slimAppearance).map((option) => option.id)).toEqual(['None']);
-    expect(getOptions('pants', slimAppearance).map((option) => option.id)).toEqual(['None']);
+    expect(getOptions('pants', slimAppearance).map((option) => option.id)).toEqual(['None', 'Pants']);
 
     expect(getOptions('hat', defaultAppearance).map((option) => option.id)).toContain('Duck');
     expect(getOptions('shirt', defaultAppearance).map((option) => option.id)).toContain('Hoodie');
@@ -45,13 +45,19 @@ describe('appearance model', () => {
       getOptions('shirt', defaultAppearance, undefined, 'slim').map((option) => option.id)
     ).toEqual(['None']);
     expect(
+      getOptions('hat', defaultAppearance, undefined, 'slim').map((option) => option.id)
+    ).toEqual(['None', 'Duck']);
+    expect(
+      getOptions('pants', defaultAppearance, undefined, 'slim').map((option) => option.id)
+    ).toEqual(['None', 'Pants']);
+    expect(
       getOptions('shirt', { ...defaultAppearance, sex: 'Female' }, undefined, 'classic').map(
         (option) => option.id
       )
     ).toEqual(['None', 'Hoodie']);
   });
 
-  it('normalizes incompatible wardrobe selections when switching from classic to slim', () => {
+  it('normalizes only incompatible selections when switching from classic to slim', () => {
     const classic = normalizeAppearance({
       ...defaultAppearance,
       sex: 'Male',
@@ -70,9 +76,9 @@ describe('appearance model', () => {
     const slim = normalizeAppearance({ ...classic, sex: 'Female' });
     expect(slim).toEqual(expect.objectContaining({
       sex: 'Female',
-      hat: 'None',
+      hat: 'Duck',
       shirt: 'None',
-      pants: 'None',
+      pants: 'Pants',
     }));
   });
 
@@ -206,8 +212,8 @@ describe('appearance model', () => {
     ]);
   });
 
-  it('never sends incompatible wardrobe definitions to the compositor', () => {
-    const incompatibleSlimState = {
+  it('filters only incompatible wardrobe definitions at the compositor boundary', () => {
+    const slimState = {
       ...defaultAppearance,
       sex: 'Female',
       hat: 'Duck',
@@ -216,23 +222,21 @@ describe('appearance model', () => {
     };
 
     const inputs = buildTextureInputs(
-      incompatibleSlimState,
+      slimState,
       ['hat', 'shirt', 'pants', 'shoes', 'accessory'],
       '/assets'
     );
 
-    expect(inputs.map((input) => input.url)).not.toEqual(
-      expect.arrayContaining([
-        '/assets/textures/hat/duck.png',
-        '/assets/textures/top/male/hoodie.png',
-        '/assets/textures/bottom/pants.png',
-      ])
+    expect(inputs.map((input) => input.url)).not.toContain(
+      '/assets/textures/top/male/hoodie.png'
     );
     expect(inputs).toEqual([
       { url: '/assets/textures/race/human/female.tintable.png', role: 'tintable', tint: defaultAppearance.skinColor },
       { url: '/assets/textures/race/human/female.fixed.png', role: 'fixed' },
       { url: '/assets/textures/eyes/clasic.tintable.png', role: 'tintable', tint: defaultAppearance.eyesColor },
       { url: '/assets/textures/eyes/clasic.fixed.png', role: 'fixed' },
+      { url: '/assets/textures/hat/duck.png', role: 'fixed' },
+      { url: '/assets/textures/bottom/pants.png', role: 'fixed' },
     ]);
   });
 
