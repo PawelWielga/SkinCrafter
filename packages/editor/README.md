@@ -168,7 +168,7 @@ interface SkinCrafterError {
 }
 ```
 
-`invalid_initial_skin` reports malformed, unsupported-dimension or undecodable imported input through category `input`. Generation, asset and input failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. Persistence failures are also reported separately: they disable persistence for the current editor mount but do not change a successful skin generation to `error`, invalidate a valid PNG or disable the editor's in-memory state.
+`invalid_initial_skin` reports malformed, unsupported-dimension or undecodable imported input through category `input`. Generation, asset and input failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. Persistence failures are also reported separately: they disable persistence for the current editor mount but do not change a successful skin generation to `error`, invalidate a valid PNG or disable the editor's in-memory state. The editor displays a localized default error message for generation/input failures; hosts may additionally use `onError` for telemetry or their own shell-level UI.
 
 Late async completions are ignored when they belong to an obsolete editor/import state. Hosts should therefore treat `onSkinChange` as the authoritative notification that the current state has produced a new upload-ready skin rather than caching and reusing a previous result after subsequent edits.
 
@@ -287,3 +287,50 @@ const persistence: SkinCrafterPersistenceAdapter = {
 - layer order keeps valid known layers in stored relative order, removes invalid/duplicate entries and appends missing known layers in canonical order; normalization emits `layer_order_normalized`.
 
 A successful parse includes `sourceSchemaVersion`, `migrated`, `notices`, the runtime `state`, and the canonical current `serializedState`. Hosts can therefore distinguish a clean current-schema load from a migration or fallback instead of guessing whether a default value was intentional.
+
+When a future release changes the persisted semantic model incompatibly, the package will advance `schemaVersion` and add deterministic migrations. Storage/database selection remains a host concern. Hosts that encounter `unsupported_schema_version` should return `incompatible` and preserve the original record rather than replacing it with defaults from an older package release.
+
+The standalone SkinCrafter site migrates its historical `wardrobeAppearance`, `wardrobeLayerOrder` and older single-value wardrobe keys into the versioned `skincrafterState` entry. Current saves keep the aggregate legacy keys synchronized for backward compatibility with older standalone builds. If those valid aggregate keys later diverge from `skincrafterState`, the standalone treats the divergence as a newer edit made by an older compatible build and migrates those user choices forward into the current schema. If `skincrafterState` uses an unsupported future schema, the standalone returns the package-defined `incompatible` result, renders with normal in-memory defaults and relies on the editor's public persistence contract to suppress writes for that mount, preventing an older build from downgrading newer persisted data.
+
+## Localization
+
+The editor locale is a prop. An embedding application owns the locale and can coordinate it with its own language selector. The standalone app keeps its persisted `skincrafterLanguage` setting and passes that language into the package.
+
+## Styling and theme hooks
+
+Import `@dihor/skincrafter-editor/styles.css`. Package Tailwind preflight is disabled, and generated utilities plus package-owned selectors are scoped below `.skincrafter-editor`. Importing the stylesheet therefore does not redefine common host classes such as `flex`, `grid`, `container` or `border` outside the editor boundary. Package keyframes use the `skincrafter-` prefix.
+
+The editor root is `.skincrafter-editor`. `className` and `style` are applied to that root. `theme` maps to these CSS variables:
+
+- `--skincrafter-accent`
+- `--skincrafter-accent-strong`
+- `--skincrafter-surface`
+- `--skincrafter-text`
+- `--skincrafter-muted`
+- `--skincrafter-border`
+
+Editor icons are bundled package-owned inline SVGs. An embedding host does not need Font Awesome or another global icon stylesheet. Layer ordering uses browser-native drag-and-drop inside the editor plus ordinary focusable up/down buttons for keyboard operation; the package does not install compatibility globals on `window`.
+
+## Assets and non-root routes
+
+SkinCrafter-owned wardrobe PNGs are part of the package artifact, but they are emitted as separate cache-safe hashed files rather than embedded as base64 payloads in `dist/index.js`. The editor JavaScript therefore grows with logical asset references, not with the binary size of every texture, and the browser only requests texture files that are actually used by preview/composition or option thumbnails.
+
+Default package asset URLs are relative to the emitted editor module. A normal bundler such as Vite can therefore carry the installed package assets into an application served from `/character`, `/account/character`, or another non-root base without SkinCrafter assuming `/textures/...` or `/assets/...` at the application root. The packed `.tgz` includes the emitted PNG files under `dist/assets/`; their hashed filenames are intentionally cacheable as immutable build artifacts and may change when the underlying texture bytes change.
+
+If a host intentionally serves a compatible asset set itself, pass `assetBaseUrl`, for example `/character/skincrafter-assets/` or an absolute CDN prefix. All logical texture paths are then resolved below that prefix instead of using the package-emitted URL. The override must mirror the logical `textures/...` layout used by SkinCrafter. Package assets remain available in the distributable artifact as the default fallback, but their bytes are not duplicated inside the JavaScript bundle.
+
+When adding a new wardrobe texture, add it to `packages/editor/src/assets/textures` and the typed manifest in `src/assetResolver.ts`. Keep the logical path stable unless the corresponding wardrobe mapping is intentionally changed. Package verification checks that wardrobe PNGs are emitted as separate hashed files, referenced by the runtime bundle, included by `npm pack`, and never reintroduced as inline PNG data URLs. The external-consumer smoke test also builds the packed package below `/character/` so route-relative asset regressions fail CI.
+
+## Release/versioning policy
+
+The package follows SemVer. The version is stored in `packages/editor/package.json`.
+
+1. Update the package version and keep the standalone dependency on `@dihor/skincrafter-editor` aligned with that version; refresh `package-lock.json` in the same change.
+2. Merge the release preparation to `main` after repository validation, including `npm test`, `npm run test:e2e`, `npm run build`, and `npm run test:consumer`, passes.
+3. Create a GitHub release with tag `editor-v<version>`, for example `editor-v0.1.0`.
+4. `.github/workflows/publish-editor.yml` verifies that the tag matches the package version, validates the workspace on the supported Node 20 baseline, creates an npm-compatible `.tgz`, and attaches that tarball to the GitHub release.
+5. The workflow publishes `@dihor/skincrafter-editor` to the public npm registry with provenance. npm Trusted Publishing through GitHub Actions OIDC is the preferred authentication method; configure the npm package to trust repository `PawelWielga/SkinCrafter` and workflow `publish-editor.yml`. Repository secret `NPM_TOKEN` remains an optional fallback.
+6. Trusted Publishing requires the package to already exist on npm, so the initial package version is published manually before the trusted publisher relationship is configured. Future releases are published automatically when the matching GitHub release is published.
+7. Production consumers pin an explicit released package version, from npm when available or from the matching versioned GitHub release artifact. They must not use repository branches, copied source, or local filesystem links.
+
+Breaking public contract changes require a major version bump. Additive public props/types are minor releases. Fixes that preserve the contract are patch releases.
