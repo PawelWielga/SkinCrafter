@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { defineTextureLayers } from './textureLayers';
 import {
   defineWardrobeItem,
+  defineWardrobeItemVariants,
   isWardrobeItemCompatible,
   resolveWardrobeItem,
+  resolveWardrobeItemVariant,
   type WardrobeItemDefinition,
 } from './wardrobeDefinitions';
 
@@ -40,6 +42,39 @@ describe('wardrobe item definitions', () => {
         fixed: '/assets/textures/eyes/big.fixed.png',
       },
     });
+  });
+
+  it('resolves two explicit model variants that intentionally share one atlas', () => {
+    const variants = defineWardrobeItemVariants({
+      classic: defineWardrobeItem({
+        skinModel: 'classic',
+        textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
+      }),
+      slim: defineWardrobeItem({
+        skinModel: 'slim',
+        textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
+      }),
+    });
+
+    expect(resolveWardrobeItemVariant(variants, 'classic', '/assets')).toEqual({
+      skinModel: 'classic',
+      textureLayers: { fixed: '/assets/textures/hat/duck.png' },
+    });
+    expect(resolveWardrobeItemVariant(variants, 'slim', '/assets')).toEqual({
+      skinModel: 'slim',
+      textureLayers: { fixed: '/assets/textures/hat/duck.png' },
+    });
+  });
+
+  it('rejects a variant whose registry key disagrees with its declared model', () => {
+    const slim = defineWardrobeItem({
+      skinModel: 'slim',
+      textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
+    });
+
+    expect(() => defineWardrobeItemVariants({ classic: slim })).toThrow(
+      'Wardrobe variant "classic" must declare the same skinModel.'
+    );
   });
 
   it('rejects a missing skinModel instead of silently assuming classic', () => {
