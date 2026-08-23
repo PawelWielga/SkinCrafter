@@ -114,6 +114,8 @@ Every runtime layer uses the full 64×64 Minecraft atlas. If artwork touches UV 
 
 Missing or unsupported model metadata is invalid; runtime definition validation rejects it instead of silently assuming Classic. The wardrobe UI exposes only definitions compatible with the active model, normalization removes incompatible selections after a model change, and the compositor independently filters incompatible definitions as a final correctness boundary.
 
+`WardrobeColorState` is keyed by semantic item rather than skin model. If both Classic and Slim variants of one item are colorable, they must therefore declare the same ordered color-slot contract, including IDs, labels, defaults and palettes. A fixed-only variant may coexist with a colorable variant because only the colorable model contributes slot state.
+
 A content change that affects arms, outer-arm layers or model-dependent UVs must exercise both model paths and preserve the contract in `RENDERER_PARITY.md`. Current packaged `Hoodie` artwork paints model-dependent arm UVs and is explicitly Classic-only. `Duck` and `Pants` each have explicit Classic and Slim definitions that intentionally reuse the same model-independent PNG.
 
 ## Adding a new option to an existing category

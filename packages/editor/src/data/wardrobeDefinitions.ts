@@ -115,6 +115,18 @@ export function defineWardrobeItemVariants(
     normalized[skinModel] = validated;
   }
 
+  const colorableVariants = Object.values(normalized).filter(
+    (definition): definition is WardrobeItemDefinition => Boolean(definition?.colorSlots?.length)
+  );
+  if (colorableVariants.length > 1) {
+    const colorSlotContract = JSON.stringify(colorableVariants[0].colorSlots);
+    if (colorableVariants.some((definition) => JSON.stringify(definition.colorSlots) !== colorSlotContract)) {
+      throw new Error(
+        'Colorable wardrobe variants for one item must define identical color slots across skin models.'
+      );
+    }
+  }
+
   return normalized;
 }
 
