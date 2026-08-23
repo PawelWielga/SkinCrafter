@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultAppearance, normalizeTextureLayerOrder } from './data/appearance';
 import { InvalidInitialSkinError } from './importedSkin';
@@ -104,7 +105,7 @@ describe('SkinCrafterEditor imported skin contract', () => {
 
     render(
       <SkinCrafterEditor
-        initialSkin={{ image, model: 'slim', appearance: { hat: 'Duck' } }}
+        initialSkin={{ image, model: 'slim', appearance: { shirt: 'Hoodie' } }}
         onSkinChange={(skin) => outputs.push(skin)}
       />
     );
@@ -112,14 +113,14 @@ describe('SkinCrafterEditor imported skin contract', () => {
     await waitFor(() => expect(outputs).toHaveLength(1));
 
     expect(outputs[0].metadata.model).toBe('slim');
-    expect(outputs[0].metadata.appearance.hat).toBe('None');
+    expect(outputs[0].metadata.appearance.shirt).toBe('None');
     expect(mockedCombineTextures).not.toHaveBeenCalled();
   });
 
   it('normalizes controlled imported wardrobe state against the declared skin model', async () => {
     const image = new Blob(['skin'], { type: 'image/png' });
     const value = createState();
-    value.appearance.hat = 'Duck';
+    value.appearance.shirt = 'Hoodie';
     const outputs: SkinCrafterSkinOutput[] = [];
     const onStateChange = vi.fn();
 
@@ -135,10 +136,10 @@ describe('SkinCrafterEditor imported skin contract', () => {
     await waitFor(() => expect(outputs).toHaveLength(1));
 
     expect(outputs[0].metadata.model).toBe('slim');
-    expect(outputs[0].metadata.appearance.hat).toBe('None');
+    expect(outputs[0].metadata.appearance.shirt).toBe('None');
     fireEvent.click(screen.getByRole('button', { name: 'Big' }));
     expect(onStateChange).toHaveBeenCalledWith(expect.objectContaining({
-      appearance: expect.objectContaining({ hat: 'None', eyes: 'Big' }),
+      appearance: expect.objectContaining({ shirt: 'None', eyes: 'Big' }),
     }));
   });
 
@@ -149,7 +150,7 @@ describe('SkinCrafterEditor imported skin contract', () => {
     initialState.appearance.sex = 'Female';
     const changedState = createState();
     changedState.appearance.sex = 'Male';
-    changedState.appearance.hat = 'Duck';
+    changedState.appearance.shirt = 'Hoodie';
     mockedCombineTextures.mockResolvedValueOnce(EDITED_DATA_URL);
 
     const { rerender } = render(
@@ -172,8 +173,45 @@ describe('SkinCrafterEditor imported skin contract', () => {
 
     await waitFor(() => expect(outputs).toHaveLength(2));
     expect(outputs[1].metadata.model).toBe('classic');
-    expect(outputs[1].metadata.appearance.hat).toBe('Duck');
+    expect(outputs[1].metadata.appearance.shirt).toBe('Hoodie');
     expect(mockedCombineTextures).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an explicit controlled model switch latched when the host echoes the baseline sex', async () => {
+    const image = new Blob(['skin'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+
+    function ControlledHost(): React.JSX.Element {
+      const [value, setValue] = useState(createState());
+      return (
+        <SkinCrafterEditor
+          initialSkin={{ image, model: 'slim' }}
+          value={value}
+          onStateChange={setValue}
+          onSkinChange={(skin) => outputs.push(skin)}
+        />
+      );
+    }
+
+    render(<ControlledHost />);
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    expect(outputs[0].metadata.model).toBe('slim');
+    expect(screen.queryByRole('button', { name: 'Hoodie' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Male' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hoodie' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Hoodie' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    await waitFor(() => expect(outputs.at(-1)?.metadata.appearance.shirt).toBe('Hoodie'));
+    expect(outputs.at(-1)?.metadata.model).toBe('classic');
   });
 
   it('composes only the explicitly edited wardrobe category over the imported pixels', async () => {
