@@ -1,4 +1,10 @@
-import type { AppearanceState, TextureLayerCategoryId } from './data/appearance';
+import {
+  cloneWardrobeColors,
+  normalizeWardrobeColors,
+  type AppearanceState,
+  type TextureLayerCategoryId,
+  type WardrobeColorState,
+} from './data/appearance';
 import type { SkinCrafterSkinModel, SkinCrafterSkinOutput } from './publicTypes';
 
 export function dataUrlToBlob(dataUrl: string): Blob {
@@ -18,10 +24,12 @@ export function createSkinOutput(
   dataUrl: string,
   appearance: AppearanceState,
   layerOrder: TextureLayerCategoryId[],
-  model: SkinCrafterSkinModel = appearance.sex === 'Female' ? 'slim' : 'classic'
+  model: SkinCrafterSkinModel = appearance.sex === 'Female' ? 'slim' : 'classic',
+  wardrobeColors?: WardrobeColorState
 ): SkinCrafterSkinOutput {
   const blob = dataUrlToBlob(dataUrl);
   const file = new File([blob], 'skincrafter-skin.png', { type: 'image/png' });
+  const normalizedWardrobeColors = normalizeWardrobeColors(wardrobeColors);
 
   return {
     blob,
@@ -34,6 +42,7 @@ export function createSkinOutput(
       model,
       appearance: { ...appearance },
       layerOrder: [...layerOrder],
+      wardrobeColors: cloneWardrobeColors(normalizedWardrobeColors),
     },
   };
 }
