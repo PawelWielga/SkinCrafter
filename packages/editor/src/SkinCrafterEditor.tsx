@@ -238,6 +238,8 @@ export default function SkinCrafterEditor({
     error: null,
   });
   const [activatedCategories, setActivatedCategories] = useState<AppearanceCategoryId[]>([]);
+  const activatedCategoriesRef = useRef<AppearanceCategoryId[]>(activatedCategories);
+  activatedCategoriesRef.current = activatedCategories;
   const onSkinChangeRef = useRef(onSkinChange);
   const onStatusChangeRef = useRef(onStatusChange);
   const onErrorRef = useRef(onError);
@@ -269,7 +271,15 @@ export default function SkinCrafterEditor({
       : undefined;
     return normalizeState(value, modelOverride);
   }, [importedBaselineSex, initialModel, sexWasExplicitlyActivated, value]);
-  const state = controlledState ?? internalState;
+  const modelNormalizedInternalState = useMemo(() => {
+    if (!importedLoadedCurrent || initialModel === null || sexWasExplicitlyActivated) {
+      return internalState;
+    }
+
+    const normalized = normalizeState(internalState, initialModel);
+    return areStatesEqual(internalState, normalized) ? internalState : normalized;
+  }, [importedLoadedCurrent, initialModel, internalState, sexWasExplicitlyActivated]);
+  const state = controlledState ?? modelNormalizedInternalState;
   const stateRef = useRef(state);
   stateRef.current = state;
   const t = useCallback((key: TranslationKey) => translate(locale, key), [locale]);
@@ -281,6 +291,11 @@ export default function SkinCrafterEditor({
       areStatesEqual(current, controlledState) ? current : controlledState
     ));
   }, [controlledState]);
+
+  useEffect(() => {
+    if (value || modelNormalizedInternalState === internalState) return;
+    setInternalState(modelNormalizedInternalState);
+  }, [internalState, modelNormalizedInternalState, value]);
 
   useEffect(() => {
     if (!value || !hasImportedRequest || sexWasExplicitlyActivated) return;
@@ -360,6 +375,7 @@ export default function SkinCrafterEditor({
 
     let current = true;
     const requestBaseline = cloneState(stateRef.current);
+    const activatedCategoriesAtRequest = new Set(activatedCategoriesRef.current);
     setImportLoadState({ source: initialImage, model: initialModel, status: 'loading', error: null });
     notifyHost(onStatusChangeRef.current, 'generating');
 
@@ -378,13 +394,19 @@ export default function SkinCrafterEditor({
               dataUrl: loaded.dataUrl,
               fingerprint: loaded.fingerprint,
               model: loaded.model,
-              baselineState: requestBaseline,
+              baselineState: normalizeState(requestBaseline, loaded.model),
             };
 
         equivalentImportPendingRef.current = semanticallyUnchanged;
         loadedImportedSkinRef.current = next;
         setLoadedImportedSkin(next);
-        if (!semanticallyUnchanged) setActivatedCategories([]);
+        if (!semanticallyUnchanged) {
+          setActivatedCategories(
+            activatedCategoriesRef.current.filter(
+              (category) => !activatedCategoriesAtRequest.has(category)
+            )
+          );
+        }
         setImportLoadState({ source: initialImage, model: initialModel, status: 'ready', error: null });
 
         if (semanticallyUnchanged) {

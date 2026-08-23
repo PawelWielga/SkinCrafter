@@ -117,6 +117,52 @@ describe('SkinCrafterEditor imported skin contract', () => {
     expect(mockedCombineTextures).not.toHaveBeenCalled();
   });
 
+  it('normalizes uncontrolled wardrobe state when a replacement import changes model', async () => {
+    const firstImage = new Blob(['classic'], { type: 'image/png' });
+    const secondImage = new Blob(['slim'], { type: 'image/png' });
+    const outputs: SkinCrafterSkinOutput[] = [];
+    loadImportedSkinMock
+      .mockResolvedValueOnce({
+        dataUrl: IMPORTED_DATA_URL,
+        fingerprint: 'classic-bytes',
+        model: 'classic',
+      })
+      .mockResolvedValueOnce({
+        dataUrl: SECOND_IMPORTED_DATA_URL,
+        fingerprint: 'slim-bytes',
+        model: 'slim',
+      });
+
+    const { rerender } = render(
+      <SkinCrafterEditor
+        initialSkin={{
+          image: firstImage,
+          model: 'classic',
+          appearance: { shirt: 'Hoodie' },
+        }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(1));
+    expect(outputs[0].metadata.model).toBe('classic');
+    expect(outputs[0].metadata.appearance.shirt).toBe('Hoodie');
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image: secondImage, model: 'slim' }}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(outputs).toHaveLength(2));
+    expect(outputs[1].dataUrl).toBe(SECOND_IMPORTED_DATA_URL);
+    expect(outputs[1].metadata.model).toBe('slim');
+    expect(outputs[1].metadata.appearance.shirt).toBe('None');
+    expect(screen.queryByRole('button', { name: 'Hoodie' })).not.toBeInTheDocument();
+    expect(mockedCombineTextures).not.toHaveBeenCalled();
+  });
+
   it('normalizes controlled imported wardrobe state against the declared skin model', async () => {
     const image = new Blob(['skin'], { type: 'image/png' });
     const value = createState();
