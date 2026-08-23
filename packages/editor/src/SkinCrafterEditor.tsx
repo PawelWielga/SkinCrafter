@@ -266,6 +266,12 @@ export default function SkinCrafterEditor({
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
   const persistenceFailureLatchedRef = useRef(persistenceInitialization.error !== null);
   const initialPersistenceErrorReportedRef = useRef(false);
+  const pendingControlledWardrobeColorActivationRef = useRef<{
+    category: TextureLayerCategoryId;
+    itemId: string;
+    slotId: string;
+    color: string;
+  } | null>(null);
 
   const importedLoadedCurrent = hasImportedRequest
     && initialModel !== null
@@ -362,7 +368,13 @@ export default function SkinCrafterEditor({
     slotId: string,
     color: string
   ) => {
-    if (hasImportedRequest && !value) markCategoryActivated(category);
+    if (hasImportedRequest) {
+      if (value) {
+        pendingControlledWardrobeColorActivationRef.current = { category, itemId, slotId, color };
+      } else {
+        markCategoryActivated(category);
+      }
+    }
     const nextColors = cloneWardrobeColors(stateWardrobeColors);
     const categoryColors = nextColors[category] ?? {};
     const itemColors = categoryColors[itemId] ?? {};
@@ -382,6 +394,28 @@ export default function SkinCrafterEditor({
   const handleLayerOrderChange = useCallback((layerOrder: TextureLayerCategoryId[]) => {
     publishState({ ...state, layerOrder: normalizeTextureLayerOrder(layerOrder) });
   }, [publishState, state]);
+
+  useEffect(() => {
+    const pending = pendingControlledWardrobeColorActivationRef.current;
+    if (!pending || !value || !importedLoadedCurrent) return;
+    if (state.appearance[pending.category] !== pending.itemId) return;
+    if (stateWardrobeColors[pending.category]?.[pending.itemId]?.[pending.slotId] !== pending.color) {
+      return;
+    }
+
+    pendingControlledWardrobeColorActivationRef.current = null;
+    markCategoryActivated(pending.category);
+  }, [
+    importedLoadedCurrent,
+    markCategoryActivated,
+    state.appearance,
+    stateWardrobeColors,
+    value,
+  ]);
+
+  useEffect(() => {
+    pendingControlledWardrobeColorActivationRef.current = null;
+  }, [initialImage, initialModel]);
 
   useEffect(() => {
     onSkinChangeRef.current = onSkinChange;

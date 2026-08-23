@@ -108,5 +108,33 @@ describe('SkinCrafterEditor controlled imported wardrobe colors', () => {
       },
     ]);
     expect(outputs[1].metadata.wardrobeColors.shirt?.Hoodie?.primary).toBe('#A33A3A');
+
+    fireEvent.click(screen.getByRole('button', { name: /#4A6FA5/ }));
+
+    expect(onStateChange).toHaveBeenCalledTimes(2);
+    const baselineColorState = onStateChange.mock.calls[1][0] as SkinCrafterState;
+    expect(baselineColorState.wardrobeColors?.shirt?.Hoodie?.primary).toBe('#4A6FA5');
+
+    rerender(
+      <SkinCrafterEditor
+        initialSkin={{ image, model: 'classic' }}
+        value={baselineColorState}
+        onStateChange={onStateChange}
+        onSkinChange={(skin) => outputs.push(skin)}
+      />
+    );
+
+    await waitFor(() => expect(mockedCombineTextures).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(outputs).toHaveLength(3));
+    expect(mockedCombineTextures.mock.calls[1][0]).toEqual([
+      IMPORTED_DATA_URL,
+      {
+        url: expect.stringContaining('hoodie'),
+        role: 'tintable',
+        tint: '#4A6FA5',
+      },
+    ]);
+    expect(outputs[2].dataUrl).toBe(EDITED_DATA_URL);
+    expect(outputs[2].metadata.wardrobeColors.shirt?.Hoodie?.primary).toBe('#4A6FA5');
   });
 });
