@@ -26,11 +26,11 @@ defineWardrobeItem({
 
 `skinModel` is required and accepts only `classic` or `slim`. There is no implicit Classic fallback for a missing or unknown value. The metadata belongs to the logical wardrobe item, not to individual `tintable` / `fixed` layers, so all layers of one item always target the same geometry.
 
-If the same visual design supports both models, author two model-correct wardrobe definitions. They may share fixed artwork only when the referenced pixels are genuinely model-independent; any arm or outer-arm pixels must use the correct Classic/Slim UV layout. Do not mark one atlas as compatible with both models unless it is represented by two explicit definitions whose assets are valid for each geometry.
+If the same visual design supports both models, author two model-correct wardrobe definitions. They may share fixed artwork only when the referenced pixels are genuinely model-independent; any arm or outer-arm pixels must use the correct Classic/Slim UV layout. Do not mark one atlas as compatible with both models unless it is represented by two explicit definitions whose assets are valid for each geometry. `defineWardrobeItemVariants()` groups those explicit definitions under one semantic wardrobe option while keeping the model declaration on each definition.
 
 The wardrobe UI lists only items compatible with the active model. Normalization removes an incompatible selected item when the model changes, and the compositor independently filters model-incompatible definitions so an invalid host/state value cannot leak into the generated PNG.
 
-Current packaged `Duck`, `Hoodie` and `Pants` assets are explicitly declared as `classic`.
+Current packaged `Hoodie` artwork paints model-dependent arm UVs and is explicitly Classic-only. `Duck` and `Pants` do not touch model-dependent arm UVs, so each has separate explicit Classic and Slim definitions that intentionally reference the same model-independent PNG.
 
 ## Tintable layer
 
