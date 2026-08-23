@@ -4,6 +4,7 @@ import SkinCrafterEditor from './SkinCrafterEditor';
 import {
   defaultAppearance,
   normalizeTextureLayerOrder,
+  normalizeWardrobeColors,
   type AppearanceState,
 } from './data/appearance';
 import type {
@@ -139,11 +140,12 @@ describe('SkinCrafterEditor controlled lifecycle', () => {
     await waitFor(() => expect(saved).toHaveLength(1));
     expect(load).toHaveBeenCalledTimes(1);
     expect(saved[0]).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       appearance: {
         race: 'Bear',
         hat: 'Duck',
       },
+      wardrobeColors: normalizeWardrobeColors(undefined),
     });
   });
 });
