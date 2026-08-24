@@ -20,16 +20,19 @@ describe('race model compatibility', () => {
     ).toEqual(['Human']);
   });
 
-  it('normalizes a classic-only race away when an imported slim model is authoritative', () => {
-    const normalized = normalizeAppearance({
-      ...defaultAppearance,
-      race: 'Bear',
-      sex: 'Male',
-    }, 'slim');
+  it.each(classicOnlyRaces)(
+    'normalizes the Classic-only %s race away when an imported Slim model is authoritative',
+    (race) => {
+      const normalized = normalizeAppearance({
+        ...defaultAppearance,
+        race,
+        sex: 'Male',
+      }, 'slim');
 
-    expect(normalized.race).toBe('Human');
-    expect(normalized.sex).toBe('Male');
-  });
+      expect(normalized.race).toBe('Human');
+      expect(normalized.sex).toBe('Male');
+    }
+  );
 
   it('uses the explicit model for the Human race even when semantic sex still says Male', () => {
     const inputs = buildTextureInputsForCategories(
@@ -68,17 +71,34 @@ describe('race model compatibility', () => {
     }
   );
 
-  it('still composes a classic-only race when the active model is Classic', () => {
-    const inputs = buildTextureInputsForCategories(
-      { ...defaultAppearance, race: 'Bear', sex: 'Male' },
-      textureLayerCategories,
-      ['race'],
-      '/assets',
-      'classic'
-    );
+  it.each(classicOnlyRaces)(
+    'still composes the %s race when the active model is Classic',
+    (race) => {
+      const appearance = normalizeAppearance({
+        ...defaultAppearance,
+        race,
+        sex: 'Male',
+      });
+      const inputs = buildTextureInputsForCategories(
+        appearance,
+        textureLayerCategories,
+        ['race'],
+        '/assets',
+        'classic'
+      );
+      const baseUrl = `/assets/textures/race/${race.toLowerCase()}/male`;
 
-    expect(inputs).toEqual([
-      { url: '/assets/textures/race/bear/male.fixed.png', role: 'fixed' },
-    ]);
-  });
+      if (race === 'Bear') {
+        expect(inputs).toEqual([
+          { url: `${baseUrl}.fixed.png`, role: 'fixed' },
+        ]);
+        return;
+      }
+
+      expect(inputs).toEqual([
+        { url: `${baseUrl}.tintable.png`, role: 'tintable', tint: appearance.skinColor },
+        { url: `${baseUrl}.fixed.png`, role: 'fixed' },
+      ]);
+    }
+  );
 });
