@@ -65,6 +65,14 @@ describe('McSkinView model integration', () => {
     });
   });
 
+  it('renders bundled decorative icons without changing accessible controls', () => {
+    const { container } = renderSkinView();
+
+    expect(container.querySelectorAll('svg[aria-hidden="true"][focusable="false"]')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Load Skin' })).toBeEnabled();
+    expect(screen.getByLabelText('Minecraft username')).toBeEnabled();
+  });
+
   it('passes detected slim and classic models to the packaged SkinPreview', async () => {
     mockedFetchSkin
       .mockResolvedValueOnce({
