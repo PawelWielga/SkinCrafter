@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   defaultLanguage,
   isLanguage,
@@ -42,7 +42,7 @@ export default function AppShell({ children }: AppShellProps): JSX.Element {
     setLanguage(nextLanguage);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
 
