@@ -43,7 +43,7 @@ The root commands validate both workspaces. The e2e suite proves that the standa
 
 On GitHub, `.github/workflows/build.yml` runs install, both audit checks, lint, dead-code detection, unit/integration tests, the production build and the packed external-consumer test. `.github/workflows/test.yml` runs Playwright E2E independently. Both validation workflows use read-only repository permissions.
 
-A push to `main` is deployable only when both workflows have completed successfully for the exact same commit SHA. After a successful `Build` run on `main`, the already validated `apps/standalone/dist` directory is uploaded as a short-lived Actions artifact. `.github/workflows/gh-pages.yml` is triggered by completion of `Build` or `Test`, verifies that both required push runs for the same current `main` SHA succeeded, downloads that exact build artifact and only then publishes it to the `gh-pages` branch. Validation is therefore not repeated inside the deploy workflow, and an older completed SHA is skipped after `main` has advanced. Write permission is granted only to the deployment job.
+A push to `main` is deployable only when both workflows have completed successfully for the exact same commit SHA. After a successful `Build` run on `main`, the already validated `apps/standalone/dist` directory is uploaded as a short-lived Actions artifact. `.github/workflows/gh-pages.yml` is triggered by completion of `Build` or `Test`, verifies that both required push runs for the same current `main` SHA succeeded, downloads that exact build artifact and only then publishes it to the `gh-pages` branch. Validation is therefore not repeated inside the deploy workflow, and an older completed SHA is skipped after `main` has advanced. Write permission is granted only to the deployment job. The third-party Pages publishing action that runs with that write permission is pinned to a reviewed full upstream commit SHA, with its corresponding release version kept as a workflow comment for maintainability.
 
 Performance/resource measurement is intentionally separate from the normal regression suite:
 
@@ -78,6 +78,8 @@ See [`packages/editor/README.md`](packages/editor/README.md) for installation, c
 - `*`: localized Not Found view for every unknown path, rendered inside the normal `AppShell` with a client-side link back to `/`.
 
 The `/mcskinview` PlayerDB boundary accepts skin texture URLs only from the canonical `textures.minecraft.net` host. Historical Mojang `http://textures.minecraft.net/...` values are upgraded to HTTPS before being passed to the packaged preview; malformed URLs, non-HTTP(S) schemes, alternate hosts, custom ports and credential-bearing URLs are rejected as invalid upstream responses.
+
+Standalone shell icons used by `/mcskinview` are bundled inline SVG and marked decorative for assistive technology. The application does not require Font Awesome or another external runtime icon stylesheet for those controls.
 
 GitHub Pages still uses `apps/standalone/scripts/create-pages-fallback.mjs` to copy the built `index.html` to `404.html`. This lets a direct request or browser refresh on an unknown URL boot the SPA, after which the `*` route renders the localized Not Found view. Returning to the creator uses React Router navigation and does not require a full document reload.
 
