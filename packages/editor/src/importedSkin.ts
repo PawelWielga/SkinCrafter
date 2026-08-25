@@ -31,13 +31,22 @@ function bytesToDataUrl(bytes: Uint8Array): string {
   return `data:image/png;base64,${btoa(binary)}`;
 }
 
-function fingerprintBytes(bytes: Uint8Array): string {
-  let hash = 0x811c9dc5;
-  for (const byte of bytes) {
-    hash ^= byte;
-    hash = Math.imul(hash, 0x01000193);
+async function fingerprintImportedSkinBytes(bytes: Uint8Array): Promise<string> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) {
+    throw new InvalidInitialSkinError(
+      'Initial skin fingerprint could not be computed because Web Crypto is unavailable.'
+    );
   }
-  return (hash >>> 0).toString(16).padStart(8, '0');
+
+  try {
+    const digestInput = new Uint8Array(bytes.byteLength);
+    digestInput.set(bytes);
+    const digest = await subtle.digest('SHA-256', digestInput);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  } catch (cause) {
+    throw new InvalidInitialSkinError('Initial skin fingerprint could not be computed.', cause);
+  }
 }
 
 function readPngDimensions(bytes: Uint8Array): { width: number; height: number } {
@@ -129,10 +138,11 @@ export async function loadImportedSkin(
 
   const dataUrl = bytesToDataUrl(bytes);
   await validateDecodedImage(dataUrl);
+  const fingerprint = await fingerprintImportedSkinBytes(bytes);
 
   return {
     dataUrl,
-    fingerprint: fingerprintBytes(bytes),
+    fingerprint,
     model,
   };
 }

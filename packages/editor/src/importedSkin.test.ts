@@ -1,16 +1,23 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { webcrypto } from 'node:crypto';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InvalidInitialSkinError, loadImportedSkin } from './importedSkin';
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-function createPngBlob(width = 64, height = 64, type = 'image/png'): Blob {
-  const bytes = new Uint8Array(24);
+function createPngBlob(
+  width = 64,
+  height = 64,
+  type = 'image/png',
+  trailingBytes: number[] = []
+): Blob {
+  const bytes = new Uint8Array(24 + trailingBytes.length);
   bytes.set(PNG_SIGNATURE, 0);
   const view = new DataView(bytes.buffer);
   view.setUint32(8, 13);
   bytes.set([0x49, 0x48, 0x44, 0x52], 12);
   view.setUint32(16, width);
   view.setUint32(20, height);
+  bytes.set(trailingBytes, 24);
   return new Blob([bytes], { type });
 }
 
@@ -27,6 +34,10 @@ class SuccessfulImage {
   }
 }
 
+beforeEach(() => {
+  vi.stubGlobal('crypto', webcrypto);
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -42,7 +53,10 @@ describe('imported Minecraft skin validation', () => {
 
       expect(loaded.model).toBe(model);
       expect(loaded.dataUrl).toMatch(/^data:image\/png;base64,/);
-      expect(loaded.fingerprint).toMatch(/^[0-9a-f]{8}$/);
+      expect(loaded.fingerprint).toBe(
+        '7843eba05d86b934a4da1083207247512876d7c7c0a7b22ffc586957bca01b5d'
+      );
+      expect(loaded.fingerprint).toMatch(/^[0-9a-f]{64}$/);
     }
   );
 
@@ -54,6 +68,27 @@ describe('imported Minecraft skin validation', () => {
 
     expect(second.fingerprint).toBe(first.fingerprint);
     expect(second.dataUrl).toBe(first.dataUrl);
+  });
+
+  it('distinguishes different imported PNG bytes with the same model and dimensions', async () => {
+    vi.stubGlobal('Image', SuccessfulImage);
+
+    const first = await loadImportedSkin(createPngBlob(64, 64, 'image/png', [0x01]), 'classic');
+    const second = await loadImportedSkin(createPngBlob(64, 64, 'image/png', [0x02]), 'classic');
+
+    expect(second.fingerprint).not.toBe(first.fingerprint);
+  });
+
+  it('fails closed instead of using a weak fallback when Web Crypto is unavailable', async () => {
+    vi.stubGlobal('Image', SuccessfulImage);
+    vi.stubGlobal('crypto', undefined);
+
+    await expect(loadImportedSkin(createPngBlob(), 'classic')).rejects.toEqual(
+      expect.objectContaining({
+        name: 'InvalidInitialSkinError',
+        message: 'Initial skin fingerprint could not be computed because Web Crypto is unavailable.',
+      })
+    );
   });
 
   it('rejects non-PNG MIME input', async () => {
