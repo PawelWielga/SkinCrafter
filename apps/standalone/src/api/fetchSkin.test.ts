@@ -297,4 +297,72 @@ describe('fetchSkin', () => {
       status: 200,
     });
   });
+
+  it.each([
+    ['malformed', 'not a URL'],
+    ['data', 'data:image/png;base64,AAAA'],
+    ['blob', 'blob:https://textures.minecraft.net/skin123'],
+    ['file', 'file:///tmp/skin.png'],
+    ['unexpected host', 'https://example.com/texture/skin123'],
+    ['lookalike host', 'https://textures.minecraft.net.example.com/texture/skin123'],
+    ['custom port', 'https://textures.minecraft.net:444/texture/skin123'],
+    ['credentials', 'https://user:password@textures.minecraft.net/texture/skin123'],
+  ])('classifies a %s texture URL as invalid_response', async (_caseName, textureUrl) => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            player: {
+              skin_texture: textureUrl,
+            },
+          },
+        }),
+    });
+
+    const error = await fetchSkin('Steve').catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(FetchSkinError);
+    expect(error).toMatchObject({
+      code: 'invalid_response',
+      status: 200,
+    });
+  });
+
+  it('rejects an invalid decoded texture URL instead of falling back to player.skin_texture', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            player: {
+              skin_texture: 'https://textures.minecraft.net/texture/fallback123',
+              properties: [
+                {
+                  name: 'textures',
+                  value: btoa(
+                    JSON.stringify({
+                      textures: {
+                        SKIN: {
+                          url: 'https://example.com/texture/authoritative123',
+                          metadata: { model: 'slim' },
+                        },
+                      },
+                    })
+                  ),
+                },
+              ],
+            },
+          },
+        }),
+    });
+
+    await expect(fetchSkin('Alex')).rejects.toMatchObject({
+      code: 'invalid_response',
+      status: 200,
+    });
+  });
 });
