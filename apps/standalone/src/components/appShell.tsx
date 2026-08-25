@@ -43,6 +43,10 @@ export default function AppShell({ children }: AppShellProps): JSX.Element {
   }, []);
 
   useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  useEffect(() => {
     browserStorage.write(LANGUAGE_STORAGE_KEY, language);
   }, [language]);
 
