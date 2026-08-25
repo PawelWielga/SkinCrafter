@@ -59,6 +59,7 @@ describe('standalone app package integration', () => {
         store.set(key, value);
       },
     });
+    document.documentElement.lang = 'en';
   });
 
   it('renders the creator through the reusable package', () => {
@@ -70,6 +71,25 @@ describe('standalone app package integration', () => {
 
     expect(screen.getByTestId('packaged-editor')).toBeInTheDocument();
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'en');
+    expect(document.documentElement).toHaveAttribute('lang', 'en');
+  });
+
+  it('synchronizes the document language when the user changes locale', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const languageSelect = screen.getByRole('combobox');
+
+    fireEvent.change(languageSelect, { target: { value: 'pl' } });
+    expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'pl');
+    expect(document.documentElement).toHaveAttribute('lang', 'pl');
+
+    fireEvent.change(languageSelect, { target: { value: 'en' } });
+    expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'en');
+    expect(document.documentElement).toHaveAttribute('lang', 'en');
   });
 
   it('mounts with default language and in-memory wardrobe state when storage reads throw', () => {
@@ -91,6 +111,7 @@ describe('standalone app package integration', () => {
       'data-persistence-status',
       'empty'
     );
+    expect(document.documentElement).toHaveAttribute('lang', 'en');
   });
 
   it('keeps the selected language in memory when storage writes throw', () => {
@@ -110,6 +131,7 @@ describe('standalone app package integration', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'pl' } });
 
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'pl');
+    expect(document.documentElement).toHaveAttribute('lang', 'pl');
   });
 
   it('renders the skin-view route through the packaged preview', () => {
@@ -155,5 +177,6 @@ describe('standalone app package integration', () => {
       screen.getByRole('heading', { name: 'Nie znaleziono strony', level: 1 })
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Wróć do kreatora' })).toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute('lang', 'pl');
   });
 });
