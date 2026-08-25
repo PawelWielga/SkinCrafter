@@ -65,7 +65,7 @@ function CharacterEditor() {
 - `className`, `style`, `theme`: host-shell integration without forking package CSS.
 - `previewBottomOffset`: lets a host reserve vertical space for its own shell/footer.
 
-The package also exports `SkinPreview` for the standalone `/mcskinview` route and other read-only preview use cases. `SkinPreview` accepts the same `onError` callback for preview texture/WebGL failures. Consumers should import only from the package root, never from `dist` or repository-internal paths.
+The package also exports `SkinPreview` for the standalone `/mcskinview` route and other read-only preview use cases. `SkinPreview` accepts the same `onError` callback for preview texture/WebGL failures. A transient texture-load failure exposes a localized retry action that retries the same URL through the existing mounted Three.js runtime instead of recreating the renderer. Consumers should import only from the package root, never from `dist` or repository-internal paths.
 
 ### Wardrobe color state
 
@@ -168,7 +168,7 @@ interface SkinCrafterError {
 }
 ```
 
-`invalid_initial_skin` reports malformed, unsupported-dimension or undecodable imported input through category `input`. Generation, asset and input failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. Persistence failures are also reported separately: they disable persistence for the current editor mount but do not change a successful skin generation to `error`, invalidate a valid PNG or disable the editor's in-memory state. The editor displays a localized default error message for generation/input failures; hosts may additionally use `onError` for telemetry or their own shell-level UI.
+`invalid_initial_skin` reports malformed, unsupported-dimension or undecodable imported input through category `input`. Generation, asset and input failures move generation status to `error` and keep save disabled. Preview-only failures are reported separately because they do not invalidate an already generated PNG. Texture-load failures can be retried for the same URL from the localized preview action while preserving the mounted renderer and stale-request protection. Persistence failures are also reported separately: they disable persistence for the current editor mount but do not change a successful skin generation to `error`, invalidate a valid PNG or disable the editor's in-memory state. The editor displays a localized default error message for generation/input failures; hosts may additionally use `onError` for telemetry or their own shell-level UI.
 
 Late async completions are ignored when they belong to an obsolete editor/import state. Hosts should therefore treat `onSkinChange` as the authoritative notification that the current state has produced a new upload-ready skin rather than caching and reusing a previous result after subsequent edits.
 

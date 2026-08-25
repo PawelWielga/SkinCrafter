@@ -63,6 +63,19 @@ describe('ThreePreview React lifecycle', () => {
     expect(runtimeMock.dispose).toHaveBeenCalledTimes(1);
   });
 
+  it('retries the current texture without recreating the runtime when request revision changes', () => {
+    const { rerender } = render(
+      <ThreePreview texture="skin-a.png" textureRequestRevision={0} />
+    );
+    const initialTextureCalls = runtimeMock.setTexture.mock.calls.length;
+
+    rerender(<ThreePreview texture="skin-a.png" textureRequestRevision={1} />);
+
+    expect(createRuntimeMock).toHaveBeenCalledTimes(1);
+    expect(runtimeMock.setTexture).toHaveBeenCalledTimes(initialTextureCalls + 1);
+    expect(runtimeMock.setTexture).toHaveBeenLastCalledWith('skin-a.png');
+  });
+
   it('maps runtime texture failures to the public preview error contract', () => {
     const onError = vi.fn();
     render(<ThreePreview texture="skin-a.png" onError={onError} />);

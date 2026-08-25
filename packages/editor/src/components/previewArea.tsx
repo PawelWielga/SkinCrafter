@@ -45,6 +45,7 @@ export default function PreviewArea({
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
   const [autoRotate, setAutoRotate] = useState<boolean>(true);
   const [previewError, setPreviewError] = useState<SkinCrafterError | null>(null);
+  const [previewRetryRevision, setPreviewRetryRevision] = useState(0);
 
   const cyclePose = (): void => {
     setPose((p) => (p === 'default' ? 'tpose' : p === 'tpose' ? 'walking' : 'default'));
@@ -82,6 +83,11 @@ export default function PreviewArea({
     onError?.(error);
   }, [onError]);
 
+  const retryPreview = (): void => {
+    setPreviewError(null);
+    setPreviewRetryRevision((revision) => revision + 1);
+  };
+
   useEffect(() => {
     setPreviewError((current) =>
       current?.code === 'preview_texture_load_failed' ? null : current
@@ -91,6 +97,8 @@ export default function PreviewArea({
   const activeError = generationStatus === 'error' && generationError
     ? generationError
     : previewError;
+  const canRetryPreview =
+    activeError === previewError && previewError?.code === 'preview_texture_load_failed';
   const previewSurfaceStyle = {
     '--skincrafter-preview-bottom-offset': `${Math.max(0, footerHeight)}px`,
   } as React.CSSProperties;
@@ -108,6 +116,7 @@ export default function PreviewArea({
             model={model}
             showOverlay={showOverlay}
             autoRotate={autoRotate}
+            textureRequestRevision={previewRetryRevision}
             onError={handlePreviewError}
           />
         </div>
@@ -117,6 +126,17 @@ export default function PreviewArea({
         <p className="mt-3 text-sm font-semibold skincrafter-error-text" role="alert">
           {t(errorTranslationKey(activeError))}
         </p>
+      )}
+
+      {canRetryPreview && (
+        <PixelButton
+          className="mt-2 skincrafter-secondary-action"
+          icon="fa-arrows-rotate"
+          aria-label={t('action.retryPreview')}
+          onClick={retryPreview}
+        >
+          {t('action.retryPreview')}
+        </PixelButton>
       )}
 
       <div className="mt-4 preview-actions">

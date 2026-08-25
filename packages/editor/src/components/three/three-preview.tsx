@@ -17,6 +17,7 @@ interface ThreePreviewProps {
   model?: SkinModel;
   showOverlay?: boolean;
   autoRotate?: boolean;
+  textureRequestRevision?: number;
   style?: React.CSSProperties;
   onError?: (error: SkinCrafterError) => void;
 }
@@ -37,6 +38,7 @@ export default function ThreePreview({
   model = 'classic',
   showOverlay = true,
   autoRotate = true,
+  textureRequestRevision = 0,
   style,
   onError,
 }: ThreePreviewProps): JSX.Element {
@@ -85,7 +87,7 @@ export default function ThreePreview({
 
   useEffect(() => {
     runtimeRef.current?.setTexture(texture ?? defaultPreviewTextureUrl);
-  }, [texture]);
+  }, [texture, textureRequestRevision]);
 
   useEffect(() => {
     runtimeRef.current?.setModel(model);

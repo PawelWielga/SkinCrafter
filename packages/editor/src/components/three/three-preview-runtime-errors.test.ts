@@ -7,6 +7,7 @@ import {
 
 interface TextureRequest {
   texture: THREE.Texture;
+  onLoad?: (texture: THREE.Texture) => void;
   onError?: (error: unknown) => void;
 }
 
@@ -27,12 +28,12 @@ function createDependencies(requests: TextureRequest[]): ThreePreviewRuntimeDepe
     load: vi.fn(
       (
         _url: string,
-        _onLoad?: (texture: THREE.Texture) => void,
+        onLoad?: (texture: THREE.Texture) => void,
         _onProgress?: (event: ProgressEvent<EventTarget>) => void,
         onError?: (error: unknown) => void
       ) => {
         const texture = new THREE.Texture();
-        requests.push({ texture, onError });
+        requests.push({ texture, onLoad, onError });
         return texture;
       }
     ),
@@ -81,6 +82,9 @@ describe('ThreePreviewRuntime reliability errors', () => {
     requests[0].onError?.(staleCause);
     expect(onError).not.toHaveBeenCalled();
 
+    runtime.setTexture('skin-b.png');
+    expect(requests).toHaveLength(2);
+
     requests[1].onError?.(currentCause);
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith({
@@ -88,6 +92,51 @@ describe('ThreePreviewRuntime reliability errors', () => {
       textureUrl: 'skin-b.png',
       cause: currentCause,
     });
+
+    runtime.setTexture('skin-b.png');
+    expect(requests).toHaveLength(3);
+
+    runtime.dispose();
+  });
+
+  it('retries the same texture URL after the current request fails', () => {
+    const requests: TextureRequest[] = [];
+    const container = document.createElement('div');
+    const onError = vi.fn();
+    const runtime = new ThreePreviewRuntime(
+      container,
+      {
+        textureUrl: 'skin-a.png',
+        pose: 'default',
+        model: 'classic',
+        showOverlay: true,
+        autoRotate: true,
+        onError,
+      },
+      createDependencies(requests)
+    );
+
+    const failedTexture = requests[0].texture;
+    const failedDispose = vi.spyOn(failedTexture, 'dispose');
+    requests[0].onError?.(new Error('temporary network failure'));
+
+    expect(failedDispose).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    runtime.setTexture('skin-a.png');
+    expect(requests).toHaveLength(2);
+
+    requests[1].onLoad?.(requests[1].texture);
+    expect(runtime.getDiagnostics()).toMatchObject({
+      rendererAttached: true,
+      modelRevision: 1,
+      textureRevision: 1,
+      meshCount: 12,
+    });
+    expect(container.querySelectorAll('canvas')).toHaveLength(1);
+
+    runtime.setTexture('skin-a.png');
+    expect(requests).toHaveLength(2);
 
     runtime.dispose();
   });
