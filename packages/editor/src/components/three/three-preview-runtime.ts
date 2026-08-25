@@ -208,6 +208,7 @@ export class ThreePreviewRuntime {
           this.pendingTextures.delete(requestVersion);
         }
         if (!this.disposed && requestVersion === this.textureLoadVersion) {
+          this.requestedTextureUrl = null;
           this.onError?.({ code: 'texture_load_failed', textureUrl, cause: error });
         }
       }
