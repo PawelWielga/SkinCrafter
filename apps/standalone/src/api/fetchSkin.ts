@@ -60,7 +60,32 @@ interface DecodedTextures {
   };
 }
 
-const normalizeTextureUrl = (url: string): string => url.replace(/^http:\/\//, 'https://');
+const MINECRAFT_TEXTURE_HOST = 'textures.minecraft.net';
+
+const normalizeTextureUrl = (url: string, status: number): string => {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch (cause) {
+    throw new FetchSkinError('invalid_response', { status, cause });
+  }
+
+  const hasAllowedHost =
+    parsedUrl.hostname === MINECRAFT_TEXTURE_HOST &&
+    parsedUrl.port === '' &&
+    parsedUrl.username === '' &&
+    parsedUrl.password === '';
+
+  if (!hasAllowedHost || (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:')) {
+    throw new FetchSkinError('invalid_response', { status });
+  }
+
+  // Mojang texture payloads historically used http://textures.minecraft.net URLs.
+  // The standalone host accepts only that canonical Mojang texture host and upgrades
+  // those legacy URLs before the value reaches SkinPreview/Three.js.
+  parsedUrl.protocol = 'https:';
+  return parsedUrl.toString();
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -212,7 +237,7 @@ export default async function fetchSkin(username: string): Promise<FetchedSkin> 
   }
 
   return {
-    texture: normalizeTextureUrl(textureUrl),
+    texture: normalizeTextureUrl(textureUrl, profileRes.status),
     model: decodedSkin?.metadata?.model === 'slim' ? 'slim' : 'classic',
   };
 }
