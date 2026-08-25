@@ -31,7 +31,7 @@ function bytesToDataUrl(bytes: Uint8Array): string {
   return `data:image/png;base64,${btoa(binary)}`;
 }
 
-export async function fingerprintImportedSkinBytes(bytes: Uint8Array): Promise<string> {
+async function fingerprintImportedSkinBytes(bytes: Uint8Array): Promise<string> {
   const subtle = globalThis.crypto?.subtle;
   if (!subtle) {
     throw new InvalidInitialSkinError(
