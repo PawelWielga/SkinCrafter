@@ -116,11 +116,12 @@ export function getOptions(
   skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
 ): AppearanceOption[] {
   if (categoryId === 'race') {
-    return races.map((race) => ({
-      id: race,
-      labelKey: `option.race.${race}`,
-      textureLayers: getRaceTextureLayers(race, 'Male', assetBaseUrl),
-    }));
+    return races.flatMap((race) => {
+      const textureLayers = getRaceTextureLayers(race, skinModel, assetBaseUrl);
+      return textureLayers
+        ? [{ id: race, labelKey: `option.race.${race}`, textureLayers }]
+        : [];
+    });
   }
   if (categoryId === 'sex') {
     return getAvailableSexes(appearance.race as Race).map((sex) => sexOptions[sex]);
@@ -195,8 +196,10 @@ export function normalizeAppearance(
   skinModel?: SkinCrafterSkinModel
 ): AppearanceState {
   const next: AppearanceState = { ...defaultAppearance, ...(value ?? {}) };
-  const raceOptions = getOptions('race', next).map((option) => option.id);
-  if (!raceOptions.includes(next.race)) next.race = defaultAppearance.race;
+  const raceOptions = skinModel
+    ? getOptions('race', next, undefined, skinModel).map((option) => option.id)
+    : [...races];
+  if (!raceOptions.includes(next.race as (typeof races)[number])) next.race = defaultAppearance.race;
 
   const availableSexes = getOptions('sex', next).map((option) => option.id);
   if (!availableSexes.includes(next.sex)) next.sex = availableSexes[0] ?? defaultAppearance.sex;
@@ -307,7 +310,7 @@ function buildTextureInputsForLayer(
 ): TextureInput[] {
   if (layer === 'race') {
     return buildTextureInputsFromLayers(
-      getRaceTextureLayers(appearance.race as Race, appearance.sex, assetBaseUrl),
+      getRaceTextureLayers(appearance.race as Race, skinModel, assetBaseUrl),
       appearance.skinColor
     );
   }
@@ -388,7 +391,11 @@ export function isColorControlEffective(
 ): boolean {
   if (categoryId === 'skinColor') {
     return hasTintableTextureLayer(
-      getRaceTextureLayers(appearance.race as Race, appearance.sex, assetBaseUrl)
+      getRaceTextureLayers(
+        appearance.race as Race,
+        getSkinModelForAppearance(appearance),
+        assetBaseUrl
+      )
     );
   }
   if (categoryId === 'eyesColor') {
