@@ -14,8 +14,9 @@ test('mcskinview keeps decorative icons bundled without Font Awesome runtime req
 
   await page.goto('/mcskinview');
 
+  const skinViewPanel = page.locator('section');
   await expect(page.getByRole('button', { name: 'Load Skin' })).toBeVisible();
-  await expect(page.locator('svg[aria-hidden="true"][focusable="false"]')).toHaveCount(3);
+  await expect(skinViewPanel.locator('svg[aria-hidden="true"][focusable="false"]')).toHaveCount(3);
   await expect(
     page.locator('link[rel="stylesheet"][href*="cdnjs.cloudflare.com"], link[href*="font-awesome"]')
   ).toHaveCount(0);
