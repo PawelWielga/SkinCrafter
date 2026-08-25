@@ -20,6 +20,7 @@ const fetchSkinErrorTranslationKeys: Record<FetchSkinErrorCode, StandaloneTransl
 const UserIcon = ({ className }: { className: string }) => (
   <svg
     aria-hidden="true"
+    data-standalone-icon="user"
     focusable="false"
     viewBox="0 0 24 24"
     fill="none"
@@ -37,6 +38,7 @@ const UserIcon = ({ className }: { className: string }) => (
 const PlayerCardIcon = ({ className }: { className: string }) => (
   <svg
     aria-hidden="true"
+    data-standalone-icon="player-card"
     focusable="false"
     viewBox="0 0 24 24"
     fill="none"
@@ -55,6 +57,7 @@ const PlayerCardIcon = ({ className }: { className: string }) => (
 const DownloadIcon = ({ className }: { className: string }) => (
   <svg
     aria-hidden="true"
+    data-standalone-icon="download"
     focusable="false"
     viewBox="0 0 24 24"
     fill="none"
