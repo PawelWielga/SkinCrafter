@@ -30,7 +30,7 @@ Every package-owned appearance asset passes through these common files:
 
 | UI category | Texture location today | Owning data source today | Current production options | Notes for the next option |
 | --- | --- | --- | --- | --- |
-| Race | `src/assets/textures/race/<race>/` | `src/data/races.ts` + `src/data/raceTextureMap.ts` | Human, Bear, Orc, Zombie, Template | Add the stable race ID to `races.ts`, then add explicit Classic/Slim variants supported by that race. |
+| Race | `src/assets/textures/race/<race>/` | `src/data/races.ts` + `src/data/raceTextureMap.ts` | Human, Bear, Orc, Zombie | Add the stable selectable race ID to `races.ts`, then add explicit Classic/Slim variants supported by that race. `Template` is an internal texture-map/type entry, not a selectable production option. |
 | Sex | No independent texture folder | Derived from model variants in `src/data/raceTextureMap.ts` | Male, Female, None where supported | Sex availability follows the selected race/model variant. Do not create a disconnected sex texture registry. |
 | Skin color | No independent texture asset | `src/data/skinColorMap.ts` | Per-race palettes | Applies to tintable race layers. |
 | Eyes | `src/assets/textures/eyes/` | `src/data/appearance.ts` (`eyeTextureLayers`) | Classic, Small, Big | Uses the existing global eye color rather than wardrobe color slots. |
