@@ -8,13 +8,13 @@ This document captures the agreed direction for custom and community content pac
 
 SkinCrafter should support a portable content-pack format that lets creators add their own appearance elements without modifying the application source code.
 
-The same pack file should be usable in three scenarios:
+The same pack should be usable in three scenarios:
 
 1. a creator tests the pack locally in SkinCrafter,
 2. a user imports the pack manually,
 3. an approved pack is published by SkinCrafter as Community content and can be enabled without manual file import.
 
-The pack format should be a data format, not a plugin/code execution format.
+The pack format is a data format, not a plugin/code execution format.
 
 ## Product terminology
 
@@ -27,6 +27,41 @@ Content should be visibly distinguished by source:
 - **Custom**: content imported locally by the user.
 
 Imported/community cards should show a subtle source badge or equivalent indication. Pack name and author should be discoverable from the UI.
+
+## Supported archive formats
+
+SkinCrafter should officially accept both:
+
+- `.zip`, as the simplest format for non-technical creators,
+- `.scpack`, as the SkinCrafter-specific pack extension.
+
+Both formats use the same archive structure, manifest schema, validation rules and runtime behavior. `.scpack` is not a different binary format; it is a SkinCrafter-specific extension for the same ZIP-compatible content pack.
+
+Examples:
+
+```text
+fantasy-pack.zip
+fantasy-pack.scpack
+```
+
+The importer, validator, documentation tooling and Community ingestion tooling must treat both formats equivalently.
+
+The loader should also be tolerant of the two common ways users create ZIP archives:
+
+```text
+manifest.json
+textures/
+```
+
+and:
+
+```text
+fantasy-pack/
+  manifest.json
+  textures/
+```
+
+A single harmless top-level wrapper directory should therefore be accepted. Ambiguous archives containing multiple candidate manifests should be rejected with a clear validation error.
 
 ## Scope for 1.2.0
 
@@ -62,20 +97,12 @@ The external pack schema should map onto the existing SkinCrafter concepts as di
 
 Pack definitions should be converted into the same internal representation used by built-in content before they reach rendering and editor behavior.
 
-## Proposed file format
+## Archive structure
 
-A pack should be distributed as a single file such as:
-
-```text
-fantasy-pack.skincrafter-pack
-```
-
-The file may internally be a ZIP-compatible archive with a SkinCrafter-specific extension.
-
-Example structure:
+A minimal pack may look like:
 
 ```text
-fantasy-pack.skincrafter-pack
+fantasy-pack.scpack
 ├── manifest.json
 └── textures/
     ├── wizard-robe.png
@@ -84,6 +111,8 @@ fantasy-pack.skincrafter-pack
     ├── jacket-sleeves.png
     └── jacket-logo.png
 ```
+
+The same structure inside `fantasy-pack.zip` is equally valid.
 
 Only explicitly supported data files should be accepted. Arbitrary executable code must never be loaded from a pack.
 
@@ -233,6 +262,8 @@ Stable IDs are important for preserving selections when a pack is updated.
 
 The editor should expose a clear action such as **Import content pack** / **Load pack**.
 
+The file picker and drag-and-drop area should accept both `.zip` and `.scpack`.
+
 After a valid local pack is loaded:
 
 - its items appear in the normal supported categories,
@@ -248,6 +279,21 @@ The UI should eventually support pack-level management such as:
 - replace/update,
 - remove.
 
+## Beginner-friendly pack creation
+
+A non-technical creator should not be required to write JSON by hand.
+
+The Content Packs documentation page should eventually provide a browser-based pack generator where a creator can enter pack metadata, add items, select categories/models, choose PNG files and configure colors using forms.
+
+The generator should create a valid `.zip` download containing the generated `manifest.json` and textures. Advanced creators may still author the same format manually and optionally rename/use the archive as `.scpack`.
+
+This gives two supported authoring paths:
+
+- **simple**: use the SkinCrafter pack generator and download a ZIP,
+- **advanced**: author `manifest.json` and archive contents manually.
+
+Both paths produce the same logical pack format.
+
 ## Local-only processing
 
 Manual pack import should be processed in the browser by default.
@@ -257,7 +303,7 @@ A locally imported pack should not need to be uploaded to a SkinCrafter server i
 Conceptual flow:
 
 ```text
-user file
+user file (.zip or .scpack)
   -> browser archive reader
   -> pack validator
   -> normalized SkinCrafter content definitions
@@ -283,7 +329,7 @@ If persistence cannot be safely completed in the first implementation slice, man
 
 ## Community packs
 
-A creator should be able to send the same `.skincrafter-pack` file they used for local testing to the SkinCrafter maintainer for review.
+A creator should be able to send the same `.zip` or `.scpack` file used for local testing to the SkinCrafter maintainer for review.
 
 An approved pack should be publishable as **Community** content without manually rewriting every item into TypeScript registries.
 
@@ -332,7 +378,7 @@ Built-in SkinCrafter content can remain part of the editor package. Community pa
 
 The intended maintainer workflow should be close to:
 
-1. creator sends a `.skincrafter-pack`,
+1. creator sends a `.zip` or `.scpack`,
 2. maintainer reviews artwork, metadata, authorship/license and content quality,
 3. automated validation checks the archive,
 4. the pack is added to the Community catalog,
@@ -344,9 +390,11 @@ Tooling should reduce manual registry editing as much as practical.
 Possible repository commands:
 
 ```text
-npm run content:validate path/to/fantasy-pack.skincrafter-pack
-npm run content:add path/to/fantasy-pack.skincrafter-pack
+npm run content:validate path/to/fantasy-pack.scpack
+npm run content:add path/to/fantasy-pack.scpack
 ```
+
+The same commands should also accept `.zip`.
 
 These command names are design examples, not currently supported commands.
 
@@ -387,6 +435,7 @@ Manual import, documentation tooling and Community CI must reuse the same core v
 
 At minimum validation should cover:
 
+- supported archive extension (`.zip` or `.scpack`),
 - supported `formatVersion`,
 - required pack metadata,
 - valid/unique pack and item IDs,
@@ -418,22 +467,25 @@ or another suitable documentation route.
 It should explain:
 
 1. what a SkinCrafter Content Pack is,
-2. how to download an example pack/template,
-3. archive structure,
-4. `manifest.json`,
-5. texture requirements,
-6. Classic vs Slim,
-7. tintable vs fixed layers,
-8. color slots and palettes,
-9. supported categories,
-10. common validation errors,
-11. how to validate a pack before sharing it.
+2. the supported `.zip` and `.scpack` formats,
+3. how to create a pack using the simple browser generator,
+4. how to download an example pack/template,
+5. archive structure,
+6. `manifest.json`,
+7. texture requirements,
+8. Classic vs Slim,
+9. tintable vs fixed layers,
+10. color slots and palettes,
+11. supported categories,
+12. common validation errors,
+13. how to validate a pack before sharing it.
 
 The page should ideally include a browser-based **Validate my pack** action using the same validator as the editor importer.
 
 Example successful output:
 
 ```text
+✓ archive format supported
 ✓ manifest.json
 ✓ formatVersion 1
 ✓ 12 items
@@ -484,7 +536,7 @@ Before a pack is published as Community content, the maintainer workflow should 
 
 The application should expose authorship at a reasonable UI level, such as pack details or item source metadata.
 
-## Core vs Community vs Custom behavior
+## Built-in vs Community vs Custom behavior
 
 All three sources should ultimately enter the same editor/rendering pipeline.
 
@@ -494,7 +546,7 @@ Differences should be primarily around discovery, trust/source metadata and pers
 | --- | --- | --- | --- |
 | Built-in | editor package | available automatically | Built-in / normal |
 | Community | SkinCrafter catalog | enable/install | Community + author/pack |
-| Custom | local user file | import | Custom + author/pack |
+| Custom | local `.zip` / `.scpack` | import | Custom + author/pack |
 
 The compositor must not contain separate rendering implementations for these sources.
 
@@ -523,7 +575,8 @@ This is expected to be a feature set rather than one monolithic change. A practi
 
 1. **Pack schema and validator**
    - versioned manifest types,
-   - archive validation,
+   - `.zip` / `.scpack` archive handling,
+   - optional single top-level wrapper-directory handling,
    - texture validation reuse,
    - normalization into existing content definitions,
    - security/resource limits.
@@ -537,7 +590,7 @@ This is expected to be a feature set rather than one monolithic change. A practi
    - rendering through the existing compositor.
 
 3. **Manual import UX**
-   - file picker/drop handling,
+   - `.zip` / `.scpack` file picker and drag/drop handling,
    - validation result/errors,
    - Custom badges/source information,
    - enable/remove behavior.
@@ -547,8 +600,9 @@ This is expected to be a feature set rather than one monolithic change. A practi
    - restored packs on reload,
    - replacement/update behavior.
 
-5. **Content Packs documentation and browser validator**
-   - authoring guide,
+5. **Content Packs documentation, generator and browser validator**
+   - beginner-friendly form-based ZIP generator,
+   - advanced authoring guide,
    - downloadable example/template,
    - shared validation logic.
 
@@ -586,6 +640,6 @@ A stable format can later support features without changing the fundamental pack
 - remote pack installation by URL where safe and appropriate,
 - additional appearance categories,
 - custom race support after a dedicated design,
-- external ecosystem tooling that validates or authors `.skincrafter-pack` files.
+- external ecosystem tooling that validates or authors `.zip` and `.scpack` files.
 
-The key requirement is that 1.2.0 establishes a durable, versioned and safe data format instead of a one-off local PNG importer.
+The key requirement is that 1.2.0 establishes a durable, versioned, beginner-friendly and safe data format instead of a one-off local PNG importer.
