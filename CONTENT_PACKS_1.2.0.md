@@ -4,38 +4,63 @@
 
 This document captures the agreed direction for custom and community content packs planned for SkinCrafter 1.2.0.
 
+## Governing principle: self-sufficiency
+
+The most important architectural requirement is that the SkinCrafter creator remains self-sufficient.
+
+A clean SkinCrafter deployment must contain everything required to use the creator and all supported Content Pack features, excluding content explicitly supplied by the user.
+
+For Content Packs this means:
+
+- no separate backend is required,
+- no external database is required,
+- no third-party CDN is required,
+- no external service is required to validate, install, manage or render packs,
+- Community catalog data and Community pack files are deployed as static SkinCrafter-owned assets,
+- Custom packs are processed locally in the browser and never need to be uploaded,
+- pack runtime assets cannot depend on remote URLs,
+- packs cannot depend on other packs,
+- documentation, pack generator and validator are delivered with SkinCrafter,
+- maintainer/CI tooling required to ingest Community packs lives in the SkinCrafter repository.
+
+This does not prohibit optional host integrations whose purpose is inherently network-based, such as username lookup through PlayerDB. Such integrations must remain isolated so their failure or disappearance does not break the creator or Content Pack functionality.
+
+Self-sufficiency does not mean every Community texture must be included in the initial JavaScript bundle. Community packs may be lazy-loaded from static files deployed together with SkinCrafter and then cached locally.
+
 ## Goal
 
-SkinCrafter should support a portable content-pack format that lets creators add their own appearance elements without modifying the application source code.
+SkinCrafter should support a portable content-pack format that lets creators add their own appearance elements without modifying application source code.
 
-The same pack should be usable in three scenarios:
+The same logical pack must support three scenarios:
 
-1. a creator tests the pack locally in SkinCrafter,
+1. a creator tests the pack locally,
 2. a user imports the pack manually,
 3. an approved pack is published by SkinCrafter as Community content and can be enabled without manual file import.
 
-The pack format is a data format, not a plugin/code execution format.
+The pack format is strictly a data format, not a plugin or code-execution format.
 
 ## Product terminology
 
-Use **SkinCrafter Content Pack** as the product-level concept rather than limiting the feature to clothing.
+Use **SkinCrafter Content Pack** as the product-level term rather than limiting the feature to clothing.
 
-Content should be visibly distinguished by source:
+Content source is visible in the UI:
 
 - **Built-in**: content shipped as part of SkinCrafter,
 - **Community**: third-party content reviewed/approved and published through the SkinCrafter catalog,
 - **Custom**: content imported locally by the user.
 
-Imported/community cards should show a subtle source badge or equivalent indication. Pack name and author should be discoverable from the UI.
+Imported and Community items should have a subtle source badge or equivalent indication. Pack name and author should be discoverable from the item/pack UI.
+
+Community status is determined by the trusted SkinCrafter catalog, never by a field inside a user-supplied manifest. A Custom pack cannot obtain a Community badge merely by copying an official pack ID or metadata.
 
 ## Supported archive formats
 
-SkinCrafter should officially accept both:
+SkinCrafter officially accepts both:
 
 - `.zip`, as the simplest format for non-technical creators,
 - `.scpack`, as the SkinCrafter-specific pack extension.
 
-Both formats use the same archive structure, manifest schema, validation rules and runtime behavior. `.scpack` is not a different binary format; it is a SkinCrafter-specific extension for the same ZIP-compatible content pack.
+Both formats use the same ZIP-compatible archive structure, manifest schema, validation rules and runtime behavior. `.scpack` is only a SkinCrafter-specific extension, not a separate binary format.
 
 Examples:
 
@@ -44,9 +69,9 @@ fantasy-pack.zip
 fantasy-pack.scpack
 ```
 
-The importer, validator, documentation tooling and Community ingestion tooling must treat both formats equivalently.
+The importer, validator, generator, documentation tooling, CLI and Community ingestion tooling must treat both formats equivalently.
 
-The loader should also be tolerant of the two common ways users create ZIP archives:
+The loader should accept both common archive layouts:
 
 ```text
 manifest.json
@@ -61,13 +86,13 @@ fantasy-pack/
   textures/
 ```
 
-A single harmless top-level wrapper directory should therefore be accepted. Ambiguous archives containing multiple candidate manifests should be rejected with a clear validation error.
+A single harmless top-level wrapper directory is valid. Archives containing multiple candidate manifests or ambiguous roots must be rejected with a clear error.
 
 ## Scope for 1.2.0
 
-The first version should extend existing appearance categories rather than allow packs to invent arbitrary new categories.
+The first version extends existing appearance categories rather than allowing packs to invent arbitrary categories.
 
-Supported pack categories should initially be:
+Initially supported categories:
 
 - `eyes`
 - `hair`
@@ -77,29 +102,50 @@ Supported pack categories should initially be:
 - `shoes`
 - `accessory`
 
-Custom races are intentionally out of scope for the first version. Race definitions interact with base layers, supported sex/model combinations, skin color behavior and normalization, so they should be designed separately after the core pack mechanism is proven.
+Custom races are intentionally out of scope for the first Content Pack release because race definitions interact with base layers, sex/model combinations, skin color and normalization.
 
-Dynamic creation of entirely new editor categories is also out of scope for 1.2.0.
+Dynamic creation of new editor categories is also out of scope for 1.2.0.
 
-## Architectural principle
+## Rendering and content model
 
-A content pack must not introduce a parallel rendering/content model.
+A Content Pack must not introduce a parallel rendering model.
 
-The external pack schema should map onto the existing SkinCrafter concepts as directly as practical:
+External definitions should normalize into the same SkinCrafter concepts already used by built-in content:
 
-- `classic` / `slim` skin model compatibility,
+- `classic` / `slim` model compatibility,
 - ordered tintable layers,
 - optional fixed layer,
-- color slots,
-- palettes and deterministic default colors,
+- existing wardrobe color-slot behavior,
+- existing category colors where applicable,
 - existing texture composition pipeline,
 - existing preview/export parity guarantees.
 
-Pack definitions should be converted into the same internal representation used by built-in content before they reach rendering and editor behavior.
+Built-in, Community and Custom content must ultimately enter the same compositor and preview pipeline.
+
+### Eyes and hair colors
+
+For 1.2.0, `eyes` and `hair` continue to use the existing category-level color behavior (`eyesColor` / `hairColor`). Pack-provided eyes/hair may use tintable and fixed layers, but they do not introduce independent multi-slot color contracts in the first release.
+
+### Wardrobe colors
+
+`hat`, `shirt`, `pants`, `shoes` and `accessory` may define the same per-item color slots used by built-in wardrobe content, including ordered tintable layers, palettes, deterministic defaults and an optional fixed layer.
+
+## Pack self-containment
+
+Every `.zip` / `.scpack` must be self-contained.
+
+Runtime assets referenced by a pack must exist inside the archive. Packs must not:
+
+- load textures from HTTP/HTTPS URLs,
+- load runtime assets from third-party domains,
+- depend on another Content Pack,
+- require executable scripts or external code.
+
+Metadata such as author homepage or repository URL may be external links, because they are informational and are not required to render the pack.
 
 ## Archive structure
 
-A minimal pack may look like:
+Example:
 
 ```text
 fantasy-pack.scpack
@@ -114,13 +160,13 @@ fantasy-pack.scpack
 
 The same structure inside `fantasy-pack.zip` is equally valid.
 
-Only explicitly supported data files should be accepted. Arbitrary executable code must never be loaded from a pack.
+Only explicitly supported data files are accepted. Arbitrary executable or active content is rejected.
 
 ## Manifest direction
 
-The manifest format must be versioned independently from the SkinCrafter application version.
+The manifest format is versioned independently from SkinCrafter itself.
 
-Example top-level metadata:
+Conceptual metadata:
 
 ```json
 {
@@ -136,21 +182,29 @@ Example top-level metadata:
 }
 ```
 
-Potential optional metadata for future use:
+Rules:
 
-- description,
-- homepage,
-- pack icon,
-- author URL,
-- repository/source URL.
+- `formatVersion` describes the pack schema,
+- `version` is the pack release version and must use SemVer,
+- pack identity and pack version are separate concepts,
+- stable pack/item IDs are required for durable selections and upgrades,
+- the `skincrafter.*` pack-ID namespace is reserved for SkinCrafter-owned content/tooling.
 
-The exact schema should be finalized during implementation and backed by runtime validation and tests.
+Optional metadata may later include description, homepage, author URL, repository/source URL and pack icon.
+
+## Names and localization
+
+A creator must be able to provide a simple plain-text `name` without knowing SkinCrafter's internal translation keys.
+
+The manifest may additionally support optional localized labels. If a requested locale is unavailable, SkinCrafter falls back to the base `name`.
+
+Pack-provided labels are plain text only and must never be interpreted as HTML.
+
+The beginner pack generator may initially ask only for the base name and keep localization optional.
 
 ## Item definitions
 
-### Model-specific variants
-
-Content whose UVs differ between Classic and Slim should be able to define variants explicitly.
+Model-specific content must declare compatibility explicitly. There is no implicit Classic-to-Slim fallback.
 
 Conceptual example:
 
@@ -170,476 +224,331 @@ Conceptual example:
 }
 ```
 
-No implicit Classic fallback should be introduced. Missing model support means the item is unavailable for that model.
+Tintability, layer order and fixed/tintable meaning come from manifest metadata, not file naming conventions.
 
-### Tintable and fixed layers
+Wardrobe items may expose multiple color slots, mapping each tintable layer to a declared slot while preserving the same semantics as built-in content.
 
-The pack format should preserve the existing SkinCrafter distinction between tintable and fixed artwork.
+The exact JSON schema may be refined during implementation, but these semantic rules are fixed design constraints.
 
-Conceptual example:
+## Namespaced runtime identities
 
-```json
-{
-  "id": "red-eyes",
-  "category": "eyes",
-  "name": "Red Eyes",
-  "layers": {
-    "tintable": [
-      "textures/red-eyes.tintable.png"
-    ],
-    "fixed": "textures/red-eyes.fixed.png"
-  }
-}
-```
-
-Layer meaning must come from manifest metadata. File names must not be used to infer tintability, ordering or other semantics.
-
-### Multiple color slots
-
-Community/custom content should support the same multi-slot color model as built-in wardrobe content.
-
-Conceptual example:
-
-```json
-{
-  "id": "varsity-jacket",
-  "category": "shirt",
-  "name": "Varsity Jacket",
-  "skinModel": "classic",
-  "layers": {
-    "tintable": [
-      {
-        "texture": "textures/jacket-body.png",
-        "colorSlot": "primary"
-      },
-      {
-        "texture": "textures/jacket-sleeves.png",
-        "colorSlot": "secondary"
-      }
-    ],
-    "fixed": "textures/jacket-logo.png"
-  },
-  "colors": [
-    {
-      "id": "primary",
-      "name": "Jacket",
-      "default": "#4A6FA5",
-      "palette": ["#4A6FA5", "#A33A3A", "#2F8F4E"]
-    },
-    {
-      "id": "secondary",
-      "name": "Sleeves",
-      "default": "#FFFFFF",
-      "palette": ["#FFFFFF", "#111111"]
-    }
-  ]
-}
-```
-
-The final schema naming may differ, but it should preserve the existing semantics: ordered layers, declared color slots, palettes and deterministic defaults.
-
-## Namespaced identifiers
-
-Pack content must not be able to collide with built-in content or another pack simply by using the same local item ID.
-
-Authors should be allowed to use a short local ID such as:
+Local item IDs may remain short, for example:
 
 ```text
 wizard-robe
 ```
 
-SkinCrafter should create an internal namespaced identity based on the pack ID, category and local item ID, conceptually similar to:
+SkinCrafter creates a deterministic runtime identity using pack ID, category and local item ID, conceptually:
 
 ```text
 custom:someauthor.fantasy:shirt:wizard-robe
 ```
 
-The exact internal encoding is an implementation detail, but identity must remain deterministic and collision-resistant.
+The exact encoding is an implementation detail. It must prevent collisions between built-in content and different packs while remaining stable across compatible pack upgrades.
 
-Stable IDs are important for preserving selections when a pack is updated.
+Only one active version of a given pack ID may exist at a time.
 
 ## Manual import UX
 
-The editor should expose a clear action such as **Import content pack** / **Load pack**.
+The editor exposes a clear action such as **Import content pack** / **Load pack** and supports file picker plus drag-and-drop for `.zip` and `.scpack`.
 
-The file picker and drag-and-drop area should accept both `.zip` and `.scpack`.
+After successful import:
 
-After a valid local pack is loaded:
+- items appear in their normal categories,
+- no separate rendering mode is introduced,
+- imported items are marked as Custom,
+- pack name and author are visible/discoverable,
+- model-incompatible items are filtered consistently with built-ins.
 
-- its items appear in the normal supported categories,
-- the user does not enter a separate rendering mode,
-- imported items are visibly marked as Custom,
-- the pack name and author are available in the UI,
-- incompatible model variants are filtered consistently with built-in content.
-
-The UI should eventually support pack-level management such as:
+Pack management includes:
 
 - enable,
 - disable,
-- replace/update,
+- update/replace,
 - remove.
 
-## Beginner-friendly pack creation
+`Disable` keeps the pack installed and preserves user state but temporarily removes its items from active content.
 
-A non-technical creator should not be required to write JSON by hand.
+`Remove` deletes the stored pack bytes. References from saved state are handled as unresolved rather than silently rewritten, so reinstalling the same compatible pack can restore the selection.
 
-The Content Packs documentation page should eventually provide a browser-based pack generator where a creator can enter pack metadata, add items, select categories/models, choose PNG files and configure colors using forms.
+## Missing-pack and unresolved state
 
-The generator should create a valid `.zip` download containing the generated `manifest.json` and textures. Advanced creators may still author the same format manually and optionally rename/use the archive as `.scpack`.
+This is a required data-integrity rule.
 
-This gives two supported authoring paths:
+A valid saved reference to external content must not be destroyed merely because the corresponding pack is temporarily unavailable when state is parsed.
 
-- **simple**: use the SkinCrafter pack generator and download a ZIP,
-- **advanced**: author `manifest.json` and archive contents manually.
+Examples include:
 
-Both paths produce the same logical pack format.
+- Custom packs not yet restored from IndexedDB,
+- disabled Community packs,
+- removed packs,
+- temporary load/validation failures.
 
-## Local-only processing
+SkinCrafter should preserve such references as unresolved. An unresolved item is not rendered and may behave visually like `None`/fallback while unavailable, but the semantic reference remains intact.
 
-Manual pack import should be processed in the browser by default.
+When the matching pack becomes available again, SkinCrafter should resolve the reference automatically when compatible.
 
-A locally imported pack should not need to be uploaded to a SkinCrafter server in order to work.
+The current state parser/normalizer must therefore be adapted so external IDs are not eagerly replaced with built-in defaults before the runtime content registry is available.
 
-Conceptual flow:
+## Persistence ownership
 
-```text
-user file (.zip or .scpack)
-  -> browser archive reader
-  -> pack validator
-  -> normalized SkinCrafter content definitions
-  -> existing editor/compositor/preview pipeline
-```
+The reusable editor package must not directly own browser-specific persistence such as IndexedDB.
 
-Runtime assets can be exposed to the existing renderer through browser-managed URLs such as Blob URLs where appropriate.
+Pack parsing, schema validation, normalization, registry behavior and pack-management contracts may belong to the reusable editor package. Storage location remains host-owned.
 
-## Persistence
+The public architecture should support a host-agnostic Content Pack storage adapter (exact naming/API to be finalized during implementation). The standalone host supplies an IndexedDB-backed implementation.
 
-Users should not have to choose the same pack file again after every page reload.
+Persisted editor state references stable pack/item identities and does not embed PNG/archive bytes directly.
 
-For the standalone web application, persistent custom pack bytes/metadata should use a storage mechanism suited to binary content, preferably IndexedDB rather than `localStorage`.
+Blob/object URLs are runtime-only and must be recreated from persisted pack blobs after reload.
 
-This must respect the existing package boundary:
+## Pack updates and downgrades
 
-- the reusable editor package must not directly own browser persistence,
-- storage remains host-owned,
-- pack parsing/validation/schema logic may belong to the reusable package if it is part of the public editor contract,
-- the standalone host may provide the persistence adapter/storage implementation.
+If `someauthor.fantasy` version `1.0.0` is installed and `1.1.0` is imported/enabled, SkinCrafter recognizes this as an update of the same pack rather than a second unrelated pack.
 
-If persistence cannot be safely completed in the first implementation slice, manual import may land first, but the public contract should not make durable persistence unnecessarily difficult later.
+Stable item IDs preserve selections where the updated definitions remain compatible.
 
-## Community packs
+Importing an older version is treated as a deliberate downgrade and should require a clear user-facing warning/confirmation rather than happening silently.
 
-A creator should be able to send the same `.zip` or `.scpack` file used for local testing to the SkinCrafter maintainer for review.
+For Community publication, `(packId, version)` is immutable. Once a specific Community version is published, changing its bytes requires publishing a new version.
 
-An approved pack should be publishable as **Community** content without manually rewriting every item into TypeScript registries.
+## Community catalog
 
-The preferred long-term model is a separately addressable community catalog rather than permanently bundling every third-party texture into the core editor package.
+Community content is reviewed third-party content distributed as part of the self-sufficient SkinCrafter deployment.
 
-Conceptual hosted layout:
+The catalog is a static SkinCrafter-owned asset, not a backend service. A deployment may conceptually contain:
 
 ```text
-packs/
+app/
+content-packs/
   index.json
-  fantasy-pack/
-    manifest.json
-    textures/...
-  medieval-pack/
-    manifest.json
-    textures/...
+  fantasy-1.0.0.scpack
+  medieval-2.1.0.scpack
 ```
 
-The catalog could expose metadata such as:
+Community packs are lazy-loaded when enabled/needed, so they do not need to inflate the initial JavaScript bundle.
 
-```json
-{
-  "packs": [
-    {
-      "id": "someauthor.fantasy",
-      "name": "Fantasy Pack",
-      "author": "SomeAuthor",
-      "version": "1.2.0",
-      "manifest": "./fantasy-pack/manifest.json"
-    }
-  ]
-}
-```
+The catalog should contain enough trusted metadata to verify what is being installed, including at least pack ID, version, local/static pack path, expected byte size and SHA-256 digest.
 
-The exact hosting/distribution mechanism should be decided during implementation, but the important requirement is that Community content can be discovered and enabled without the user manually locating and importing a local file.
+After download, SkinCrafter verifies integrity before installing/enabling the pack.
 
-## Why community content should not all live in the core bundle
+Enabled Community packs should be cached locally so repeat use does not depend on the network when the browser already has valid data.
 
-Keeping the community catalog separately loadable avoids making every SkinCrafter user download every community texture.
+## Community author workflow
 
-This becomes important if the ecosystem grows to dozens of packs and hundreds or thousands of textures.
+A creator may send the same `.zip` or `.scpack` used for local testing to the maintainer.
 
-Built-in SkinCrafter content can remain part of the editor package. Community packs can be downloaded only when enabled/needed.
+Intended flow:
 
-## Community pack authoring workflow
+1. creator prepares/tests a pack,
+2. creator sends `.zip` or `.scpack`,
+3. maintainer reviews artwork, author metadata, license and quality,
+4. automated validation checks the archive,
+5. the pack is added to the static Community catalog,
+6. CI runs the same validation again,
+7. approved files are deployed with SkinCrafter,
+8. users can enable the pack without manually importing it.
 
-The intended maintainer workflow should be close to:
-
-1. creator sends a `.zip` or `.scpack`,
-2. maintainer reviews artwork, metadata, authorship/license and content quality,
-3. automated validation checks the archive,
-4. the pack is added to the Community catalog,
-5. CI performs the same validation again,
-6. once published, users can enable it from SkinCrafter without a manual file import.
-
-Tooling should reduce manual registry editing as much as practical.
-
-Possible repository commands:
+Tooling should minimize manual registry editing. Conceptual commands:
 
 ```text
 npm run content:validate path/to/fantasy-pack.scpack
 npm run content:add path/to/fantasy-pack.scpack
 ```
 
-The same commands should also accept `.zip`.
+The same commands accept `.zip`. Command names are design examples until implemented.
 
-These command names are design examples, not currently supported commands.
+## Beginner-friendly pack creation
 
-An eventual `content:add` workflow could:
+Non-technical creators should not be required to write JSON manually.
 
-- validate the archive,
-- validate all references and texture contracts,
-- detect pack/item ID conflicts,
-- copy or publish the pack into the community content location,
-- update the catalog/registry deterministically,
-- run pack/content tests.
+The Content Packs documentation area should provide a browser-based generator where a creator can:
 
-## Pack updates
+- enter pack metadata,
+- add items,
+- choose category,
+- choose Classic/Slim compatibility,
+- select PNG files,
+- configure supported colors/slots,
+- validate the result,
+- download a ready-to-use ZIP.
 
-Pack identity and pack version should be separate concepts.
+Advanced creators may author `manifest.json` manually and use either `.zip` or `.scpack`.
 
-If the user already has:
+Both paths create the same logical pack format.
 
-```text
-someauthor.fantasy 1.0.0
-```
+## Documentation and public validator
 
-and imports/enables:
+The standalone site should expose a Content Packs guide, for example under `/content-packs` or another suitable docs route.
 
-```text
-someauthor.fantasy 1.1.0
-```
+It should cover:
 
-SkinCrafter should recognize this as an update rather than an unrelated second pack.
+- what Content Packs are,
+- `.zip` and `.scpack`,
+- generator workflow,
+- example/template download,
+- archive layout,
+- `manifest.json`,
+- PNG requirements,
+- Classic vs Slim,
+- tintable vs fixed,
+- eyes/hair color behavior,
+- wardrobe color slots,
+- supported categories,
+- versioning and stable IDs,
+- common errors,
+- how to validate before sharing.
 
-Stable item IDs should preserve existing selections where the updated pack still contains compatible definitions.
+The page should expose **Validate my pack** using the same validation core as runtime import and CI.
 
-The UI should clearly communicate replacement/update behavior rather than silently keeping multiple conflicting revisions of the same pack ID.
+## Validation requirements
 
-## Validation
+Manual import, generator output, public validator, CLI and Community CI reuse the same core validation rules.
 
-Manual import, documentation tooling and Community CI must reuse the same core validation rules rather than implementing separate validators with different behavior.
+At minimum validation covers:
 
-At minimum validation should cover:
-
-- supported archive extension (`.zip` or `.scpack`),
+- accepted archive format,
+- unambiguous archive root,
 - supported `formatVersion`,
+- valid SemVer pack version,
 - required pack metadata,
-- valid/unique pack and item IDs,
+- pack-ID restrictions/reserved namespace,
+- unique item IDs,
 - supported categories,
 - referenced files exist,
-- only permitted file types are present,
-- PNG dimensions required by the SkinCrafter texture contract,
-- explicit alpha where required,
-- valid Classic/Slim metadata,
-- valid ordered tintable/fixed layer definitions,
-- valid color slots,
+- runtime assets are local to the archive,
+- no pack dependencies,
+- accepted file types,
+- required PNG dimensions and alpha behavior,
+- valid Classic/Slim definitions,
+- valid ordered tintable/fixed layers,
+- valid wardrobe color slots,
 - valid `#RRGGBB` palettes/defaults,
-- color slot references resolve correctly,
+- color-slot references resolve,
 - duplicate/conflicting definitions,
-- archive/file-size limits.
+- archive/file/resource limits.
 
-Validation errors should be actionable and reference the failing item/file whenever possible.
-
-## Public pack validator / documentation page
-
-The standalone site should provide a user-facing Content Packs documentation page, for example under a route such as:
-
-```text
-/content-packs
-```
-
-or another suitable documentation route.
-
-It should explain:
-
-1. what a SkinCrafter Content Pack is,
-2. the supported `.zip` and `.scpack` formats,
-3. how to create a pack using the simple browser generator,
-4. how to download an example pack/template,
-5. archive structure,
-6. `manifest.json`,
-7. texture requirements,
-8. Classic vs Slim,
-9. tintable vs fixed layers,
-10. color slots and palettes,
-11. supported categories,
-12. common validation errors,
-13. how to validate a pack before sharing it.
-
-The page should ideally include a browser-based **Validate my pack** action using the same validator as the editor importer.
-
-Example successful output:
-
-```text
-✓ archive format supported
-✓ manifest.json
-✓ formatVersion 1
-✓ 12 items
-✓ all required textures are 64×64
-✓ alpha requirements satisfied
-✓ Classic/Slim definitions valid
-
-Pack is valid.
-```
-
-Example error output:
-
-```text
-✗ shirt/wizard.png has invalid dimensions
-✗ item "armor" references a missing texture
-✗ duplicate item id "wizard"
-```
+Errors must be actionable and identify the failing file/item whenever possible.
 
 ## Security requirements
 
-Content packs are data, not executable plugins.
+Content Packs are untrusted data.
 
-The importer must reject unsupported executable/active content such as arbitrary JavaScript, HTML, CSS or WebAssembly.
+The importer must reject arbitrary JavaScript, HTML, CSS, WebAssembly and other executable/active content.
 
-Security review should include at least:
+Security controls include at least:
 
-- archive path traversal protection,
+- archive path-traversal protection,
 - ZIP bomb/decompression limits,
-- maximum archive size,
+- maximum compressed archive size,
 - maximum unpacked size,
 - maximum file count,
 - maximum per-file size,
-- strict accepted file extensions/types,
+- strict accepted extensions/types,
 - rejection of unexpected archive paths,
-- safe handling of malformed PNGs,
-- no execution of pack-provided scripts,
-- no trust in file names for semantic decisions.
+- malformed PNG handling,
+- no script execution,
+- no semantic trust in filenames,
+- no runtime fetches to pack-provided asset URLs.
 
-If SVG or other active document formats are considered in the future, they require a separate security decision and must not be implicitly accepted by a generic image loader.
+SVG or other active document formats require a separate explicit security decision and are not implicitly accepted as generic images.
 
 ## Authorship and licensing
 
-Community packs should preserve attribution instead of making third-party artwork appear to be authored by SkinCrafter.
+Community packs preserve attribution.
 
-The manifest should therefore have explicit author metadata and a license field or equivalent licensing declaration.
+The manifest contains author metadata and a license declaration. Before publication, the maintainer must verify that SkinCrafter may redistribute the submitted content under the declared terms.
 
-Before a pack is published as Community content, the maintainer workflow should include checking that SkinCrafter is allowed to redistribute the content under the declared terms.
+The application exposes authorship at an appropriate UI level such as pack details or item source metadata.
 
-The application should expose authorship at a reasonable UI level, such as pack details or item source metadata.
+## Built-in vs Community vs Custom
 
-## Built-in vs Community vs Custom behavior
-
-All three sources should ultimately enter the same editor/rendering pipeline.
-
-Differences should be primarily around discovery, trust/source metadata and persistence:
-
-| Source | Distribution | User action | Marking |
+| Source | Distribution | User action | Trust/source marking |
 | --- | --- | --- | --- |
-| Built-in | editor package | available automatically | Built-in / normal |
-| Community | SkinCrafter catalog | enable/install | Community + author/pack |
+| Built-in | editor/application assets | available automatically | Built-in / normal |
+| Community | static SkinCrafter catalog/assets | enable/install | Community + author/pack |
 | Custom | local `.zip` / `.scpack` | import | Custom + author/pack |
 
-The compositor must not contain separate rendering implementations for these sources.
-
-## Compatibility and serialization considerations
-
-Pack support will affect state normalization and persistence semantics because appearance selections may refer to content that is not always available.
-
-The implementation must explicitly define behavior for situations such as:
-
-- a saved state references a Custom pack that is not currently loaded,
-- a Community pack is disabled,
-- a pack update removes an item,
-- a selected item loses compatibility with the current skin model,
-- a pack changes a color-slot contract,
-- two installed sources attempt to expose colliding logical content.
-
-Persisted editor state must not embed arbitrary asset bytes directly.
-
-Where possible, saved state should reference stable pack/item identities while the host manages installed pack data separately.
-
-Schema/version migration must be deliberate if the public serialized SkinCrafter state needs to change.
+All three ultimately use one content registry and one rendering pipeline.
 
 ## Recommended implementation shape
 
-This is expected to be a feature set rather than one monolithic change. A practical breakdown is:
+This should be delivered as focused implementation units rather than one monolithic change:
 
-1. **Pack schema and validator**
-   - versioned manifest types,
-   - `.zip` / `.scpack` archive handling,
-   - optional single top-level wrapper-directory handling,
-   - texture validation reuse,
-   - normalization into existing content definitions,
-   - security/resource limits.
+1. **Pack schema and shared validator**
+   - versioned manifest,
+   - ZIP/`.scpack` reader,
+   - security/resource limits,
+   - self-containment checks,
+   - normalization into existing content concepts.
 
-2. **Runtime content registry**
-   - combine built-in and external items,
-   - namespaced identities,
-   - source metadata,
+2. **Runtime content registry and state compatibility**
+   - merge Built-in/Community/Custom sources,
+   - deterministic namespaced identities,
+   - source/trust metadata,
    - model filtering,
-   - color-slot integration,
-   - rendering through the existing compositor.
+   - color integration,
+   - unresolved external references,
+   - serialization/normalization changes.
 
-3. **Manual import UX**
-   - `.zip` / `.scpack` file picker and drag/drop handling,
-   - validation result/errors,
-   - Custom badges/source information,
-   - enable/remove behavior.
+3. **Public pack/storage contract**
+   - host-agnostic pack-management/storage interface,
+   - no browser persistence owned directly by reusable package.
 
-4. **Host persistence**
-   - standalone IndexedDB storage,
-   - restored packs on reload,
-   - replacement/update behavior.
+4. **Manual import and management UX**
+   - picker/drop,
+   - validation results,
+   - Custom badges,
+   - enable/disable/update/remove.
 
-5. **Content Packs documentation, generator and browser validator**
-   - beginner-friendly form-based ZIP generator,
-   - advanced authoring guide,
-   - downloadable example/template,
+5. **Standalone IndexedDB persistence**
+   - store Custom and cached Community pack blobs,
+   - recreate runtime URLs,
+   - restore packs before/alongside state resolution.
+
+6. **Documentation, generator and browser validator**
+   - beginner workflow,
+   - advanced authoring reference,
+   - example/template,
    - shared validation logic.
 
-6. **Community catalog**
-   - approved pack hosting/registry,
-   - discovery UI,
-   - enable/disable/update,
-   - CI validation and maintainer ingestion tooling.
-
-Keeping these as focused implementation units should make validation and public API changes easier to review.
+7. **Static Community catalog and ingestion tooling**
+   - static catalog/files in SkinCrafter deployment,
+   - SHA-256/size integrity metadata,
+   - lazy loading/cache,
+   - maintainer CLI and CI validation.
 
 ## Non-goals for the first release
 
-The initial content-pack feature should not attempt to provide:
+The initial Content Pack feature does not provide:
 
 - arbitrary JavaScript/plugin execution,
 - arbitrary new editor categories,
 - custom rendering engines,
 - custom Three.js models,
 - custom UI components supplied by packs,
-- remote third-party script execution,
-- automatic publication of unreviewed user packs into the Community catalog,
-- a full public marketplace,
-- custom races until their additional contract is designed explicitly.
+- external runtime texture URLs,
+- pack-to-pack dependencies,
+- automatic publication of unreviewed packs,
+- a public marketplace,
+- custom races before their contract is designed separately,
+- multi-slot eyes/hair color systems beyond existing category colors.
 
-## Future opportunities
+## Final design invariants
 
-A stable format can later support features without changing the fundamental pack concept, for example:
+Implementation issues for SkinCrafter 1.2.0 should preserve all of the following:
 
-- a larger public Community library,
-- pack browsing/search/filtering,
-- pack screenshots/icons/descriptions,
-- update notifications,
-- author pages,
-- remote pack installation by URL where safe and appropriate,
-- additional appearance categories,
-- custom race support after a dedicated design,
-- external ecosystem tooling that validates or authors `.zip` and `.scpack` files.
+1. The creator and Content Pack system are self-sufficient and require no external service/backend.
+2. `.zip` and `.scpack` are equivalent supported pack containers.
+3. Packs are self-contained, data-only and safe to process as untrusted input.
+4. Built-in, Community and Custom items use the same runtime/rendering model.
+5. Community is a trusted source designation granted by SkinCrafter's static catalog, not by user metadata.
+6. Community packs are static deployable assets and may be lazy-loaded/cached rather than bundled eagerly.
+7. Custom files stay local to the browser unless a user independently chooses to send/share them.
+8. Host-specific storage stays outside the reusable editor package.
+9. Missing external content must not silently destroy saved semantic references.
+10. Stable pack/item IDs and explicit versions allow safe updates and restoration.
+11. The same validator rules drive import, author tooling and CI.
+12. A non-technical creator can build a valid pack without manually writing JSON.
 
-The key requirement is that 1.2.0 establishes a durable, versioned, beginner-friendly and safe data format instead of a one-off local PNG importer.
+This document is the design source of truth for breaking the feature into tracking/implementation issues for SkinCrafter 1.2.0.
