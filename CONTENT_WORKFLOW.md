@@ -22,6 +22,7 @@ Use this section as the first stop when adding production content. It describes 
 Every package-owned appearance asset passes through these common files:
 
 - runtime PNG files live under `packages/editor/src/assets/textures/`;
+- `packages/editor/src/assets/textures/README.md` contains the lower-level texture-authoring subset of this workflow and must stay consistent with this document;
 - every runtime asset is imported and assigned a stable logical `textures/...` path in `packages/editor/src/assetResolver.ts`;
 - semantic options are owned by `packages/editor/src/data/` and exposed through `packages/editor/src/data/appearance.ts`;
 - user-visible editor labels live in `packages/editor/src/i18n/translations.ts` and must exist in both English and Polish;
@@ -74,8 +75,8 @@ For a normal new hat, shirt, pants, shoe or accessory, use this sequence.
 5. **Place the files in the semantic texture directory.** Use an existing category directory when one exists. For the first content in a category that has no production texture directory yet, create a clear package-owned directory below `src/assets/textures/` rather than placing assets in the standalone host.
 6. **Register every PNG in `src/assetResolver.ts`.** Add a `?url&no-inline` import and a stable logical `textures/...` key. Code and data must reference the logical key, never a root-relative application URL.
 7. **Add the option to its owning data source.** Extend the category's semantic option list and add its `defineWardrobeItemVariants()` entry. For `shoes` or `accessory`, the first implementation also needs a new editor-owned source and a matching branch in `appearance.ts` because those categories currently expose only `None`.
-8. **Declare the model explicitly.** Every resolved wardrobe variant uses `defineWardrobeItem({ skinModel, textureLayers, ... })`. There is no `all` model and no Classic fallback.
-9. **Declare color slots when tintable.** Every tintable wardrobe layer references a declared `colorSlot`; every declared slot is used, has a non-empty `#RRGGBB` palette and has a deterministic `defaultColor` present in that palette.
+8. **Declare the model explicitly.** Every texture-backed wardrobe variant uses `defineWardrobeItem({ skinModel, textureLayers, ... })`, including fixed-only items. There is no `all` model and no Classic fallback.
+9. **Declare color slots when tintable.** Every tintable wardrobe layer references a declared `colorSlot`; every declared slot is used, has a non-empty `#RRGGBB` palette and has a deterministic `defaultColor` present in that palette. Fixed-only items omit `colorSlots`.
 10. **Add English and Polish labels.** Add the option label and any new color-slot labels to `src/i18n/translations.ts`.
 11. **Update regression coverage.** Test logical asset resolution, layer order, model filtering, tint/fixed behavior, slot defaults/sharing/independence and UI selection for the new option as applicable.
 12. **Validate the packed-package path.** Run the content validation described later in this document. If PNG bytes were added or materially changed, also run the performance baseline check.
@@ -207,6 +208,8 @@ Do not derive order from directory layout, file names, suffixes or colors. A fil
 
 For non-wardrobe appearance content such as race or eyes, tintable layers may omit `colorSlot` and receive the category's existing color value. For wardrobe content, **every tintable layer must reference a declared logical `colorSlot`**.
 
+Tinting preserves source alpha exactly. The authored RGB intensity supplies shading while the selected color supplies the user-controlled hue: pure black stays the darkest shade and pure white receives the full selected color. Do not flatten details that must keep their authored RGB into a tintable layer; place those pixels in the fixed layer instead.
+
 Example with two independently colorable regions and one fixed overlay:
 
 ```ts
@@ -271,7 +274,7 @@ The persisted wire format is schema v2. Schema v1 and older states are migrated 
 3. Split independently colorable regions into separate tintable layers when they need different logical slots. Put authored-color pixels that must never change into the optional fixed overlay.
 4. Put files below `packages/editor/src/assets/textures/` in the appropriate semantic directory.
 5. Add `?url&no-inline` imports and stable logical `textures/...` entries to `packages/editor/src/assetResolver.ts`. Never use root-relative `/textures/...` paths.
-6. Reference typed logical paths from the data layer. Use `defineTextureLayers()` for ordered tintable/fixed declarations. For wardrobe items wrap the layers in `defineWardrobeItem({ skinModel, textureLayers, colorSlots })` when tintable layers exist. The model is mandatory and has no fallback.
+6. Reference typed logical paths from the data layer. Use `defineTextureLayers()` for ordered tintable/fixed declarations. For every texture-backed wardrobe item, wrap the layers in `defineWardrobeItem({ skinModel, textureLayers, ... })`; add `colorSlots` only when tintable layers require them. The model is mandatory and has no fallback.
 7. If one semantic option supports both models, create one explicit definition per model and group them with `defineWardrobeItemVariants()`. A model-independent PNG may be referenced by both when its UVs are valid for both geometries.
 8. Run the package and consumer validation described below.
 
@@ -291,7 +294,7 @@ A content change that affects arms, outer-arm layers or model-dependent UVs must
 2. Register any new asset paths in `assetResolver.ts` and map them through package data. Do not import assets from a host application.
 3. Choose the internal layer contract deliberately. Declaration order is render order; the optional fixed overlay is always last.
 4. For wardrobe tintable layers, assign a `colorSlot` to every layer and define each unique slot once on the wardrobe item with label, default and palette data.
-5. Wrap texture-backed wardrobe items in `defineWardrobeItem()` with the required `classic` or `slim` model. Use explicit variants for both models rather than an implicit `all` value.
+5. Wrap every texture-backed wardrobe variant in `defineWardrobeItem()` with the required `classic` or `slim` model, whether the item is fixed-only or tintable. Use explicit variants for both models rather than an implicit `all` value.
 6. Add the option label and any new slot labels to both English and Polish translations.
 7. Verify appearance and wardrobe-color normalization/default behavior.
 8. Add tests for expected layer order, slot sharing/independence, model compatibility, tint behavior and `assetBaseUrl` resolution.
