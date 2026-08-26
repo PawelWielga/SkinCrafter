@@ -119,7 +119,7 @@ defineWardrobeItem({
 });
 ```
 
-## Adding the first real option to an currently empty category
+## Adding the first real option to a currently empty category
 
 `hair`, `shoes` and `accessory` already exist in the public appearance/category model, but current production content exposes only `None`. Do not confuse "the category exists" with "the category already has a content registry".
 
