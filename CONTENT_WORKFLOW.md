@@ -111,11 +111,11 @@ The same mapping is used for imported-skin activation, so editing a color/model 
 
 ## UI structure
 
-A texture-backed item and its active color slots are one logical UI structure.
+A texture-backed item and its color control are one logical UI structure.
 
 - Race renders Skin Color inside the Race card when the selected race definition is tintable.
 - Eyes renders Eye Color inside the Eyes card.
-- Hair will render Hair Color inside the Hair card once a real tintable hair definition exists.
+- Hair renders Hair Color inside the Hair card even while the only option is `None`, so the semantic preference remains visible without inventing a fake hair texture. A future tintable hair definition uses the same `primary` slot metadata for composition.
 - Wardrobe keeps its existing contextual palettes inside the selected wardrobe item card.
 
 Do not recreate visual grouping with sibling CSS such as `:has()` when the controls belong to the same logical item.
