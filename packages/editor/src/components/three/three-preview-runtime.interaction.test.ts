@@ -68,18 +68,11 @@ function createHarness(): RuntimeHarness {
 
   const textureRequests: TextureRequest[] = [];
   const textureLoader = {
-    load: vi.fn(
-      (
-        _url: string,
-        onLoad?: (texture: THREE.Texture) => void,
-        _onProgress?: (event: ProgressEvent<EventTarget>) => void,
-        _onError?: (error: unknown) => void
-      ) => {
-        const texture = new THREE.Texture();
-        textureRequests.push({ texture, onLoad });
-        return texture;
-      }
-    ),
+    load: vi.fn((_url: string, onLoad?: (texture: THREE.Texture) => void) => {
+      const texture = new THREE.Texture();
+      textureRequests.push({ texture, onLoad });
+      return texture;
+    }),
   } as unknown as THREE.TextureLoader;
 
   const resizeObserver = {
@@ -197,12 +190,11 @@ describe('ThreePreviewRuntime pointer rotation', () => {
       clientY: 50,
     });
 
-    expect(runtime.getDiagnostics()).toMatchObject({
-      rotationX: expect.closeTo(0.2, 5),
-      rotationY: expect.closeTo(0.3, 5),
-      rotationZ: 0,
-      isDragging: true,
-    });
+    const dragging = runtime.getDiagnostics();
+    expect(dragging.rotationX).toBeCloseTo(0.2, 5);
+    expect(dragging.rotationY).toBeCloseTo(0.3, 5);
+    expect(dragging.rotationZ).toBe(0);
+    expect(dragging.isDragging).toBe(true);
 
     dispatchPointer(harness.container, 'pointerup', { pointerId: 7, clientX: 50, clientY: 50 });
     expect(harness.releasePointerCapture).toHaveBeenCalledWith(7);
