@@ -10,7 +10,9 @@ import OptionCard from './optionCard';
 import PanelSection from './panelSection';
 import {
   appearanceCategories,
+  getColorControlBindingForOwner,
   getOptions,
+  isAppearanceColorSubcontrol,
   isColorControlEffective,
   textureLayerCategories,
   type AppearanceCategoryId,
@@ -40,23 +42,25 @@ interface WardrobeProps {
   skinModel?: SkinCrafterSkinModel;
 }
 
-interface WardrobeColorPalettesProps {
+interface TextureItemColorPalettesProps {
   colorSlots: readonly WardrobeColorSlotDefinition[];
   colors?: Readonly<Record<string, string>>;
   onChange: (slotId: string, color: string) => void;
   t: (key: TranslationKey) => string;
+  testId?: string;
 }
 
-export function WardrobeColorPalettes({
+export function TextureItemColorPalettes({
   colorSlots,
   colors,
   onChange,
   t,
-}: WardrobeColorPalettesProps): React.JSX.Element | null {
+  testId = 'texture-item-color-palettes',
+}: TextureItemColorPalettesProps): React.JSX.Element | null {
   if (colorSlots.length === 0) return null;
 
   return (
-    <div className="mt-2 space-y-2" data-testid="wardrobe-color-palettes">
+    <div className="mt-2 space-y-2" data-testid={testId}>
       {colorSlots.map((slot) => {
         const selectedColor = colors?.[slot.id] ?? slot.defaultColor;
         const label = t(slot.labelKey);
@@ -90,6 +94,12 @@ export function WardrobeColorPalettes({
   );
 }
 
+export function WardrobeColorPalettes(
+  props: Omit<TextureItemColorPalettesProps, 'testId'>
+): React.JSX.Element | null {
+  return <TextureItemColorPalettes {...props} testId="wardrobe-color-palettes" />;
+}
+
 interface LayerDragGhost {
   x: number;
   y: number;
@@ -116,9 +126,7 @@ export default function Wardrobe({
   skinModel,
 }: WardrobeProps): React.JSX.Element {
   const [draggingLayer, setDraggingLayer] = useState<TextureLayerCategoryId | null>(null);
-  const [previewLayerOrder, setPreviewLayerOrder] = useState<TextureLayerCategoryId[] | null>(
-    null
-  );
+  const [previewLayerOrder, setPreviewLayerOrder] = useState<TextureLayerCategoryId[] | null>(null);
   const [dropHint, setDropHint] = useState<LayerDropHint | null>(null);
   const [dragGhost, setDragGhost] = useState<LayerDragGhost | null>(null);
   const draggingLayerRef = useRef<TextureLayerCategoryId | null>(null);
@@ -136,21 +144,17 @@ export default function Wardrobe({
   );
   const fixedCategories = useMemo(
     () => appearanceCategories.filter(
-      (category) =>
-        !isTextureLayerCategory(category.id)
-        && isColorControlEffective(category.id, appearance, assetBaseUrl)
+      (category) => !isTextureLayerCategory(category.id) && !isAppearanceColorSubcontrol(category.id)
     ),
-    [appearance, assetBaseUrl]
+    []
   );
 
-  const renderedLayerOrder =
-    draggingLayer && previewLayerOrder ? previewLayerOrder : textureLayerOrder;
+  const renderedLayerOrder = draggingLayer && previewLayerOrder ? previewLayerOrder : textureLayerOrder;
 
   const layerCategories = useMemo(
-    () =>
-      renderedLayerOrder
-        .map((layer) => categoriesById.get(layer))
-        .filter((category): category is AppearanceCategory => Boolean(category)),
+    () => renderedLayerOrder
+      .map((layer) => categoriesById.get(layer))
+      .filter((category): category is AppearanceCategory => Boolean(category)),
     [categoriesById, renderedLayerOrder]
   );
 
@@ -169,9 +173,7 @@ export default function Wardrobe({
       const previousTop = previousLayerPositionsRef.current.get(rawLayer);
       nextPositions.set(rawLayer, nextTop);
 
-      if (previousTop === undefined || previousTop === nextTop || typeof card.animate !== 'function') {
-        return;
-      }
+      if (previousTop === undefined || previousTop === nextTop || typeof card.animate !== 'function') return;
 
       if (typeof card.getAnimations === 'function') {
         card
@@ -200,13 +202,7 @@ export default function Wardrobe({
     const listTop = list.getBoundingClientRect().top;
     return [...list.querySelectorAll<HTMLElement>('[data-layer-id]')].flatMap((card) => {
       const rawLayer = card.dataset.layerId as AppearanceCategoryId | undefined;
-      if (
-        !rawLayer ||
-        !isTextureLayerCategory(rawLayer) ||
-        rawLayer === sourceLayer
-      ) {
-        return [];
-      }
+      if (!rawLayer || !isTextureLayerCategory(rawLayer) || rawLayer === sourceLayer) return [];
 
       const rect = card.getBoundingClientRect();
       return [{ layer: rawLayer, top: rect.top - listTop, bottom: rect.bottom - listTop }];
@@ -252,9 +248,7 @@ export default function Wardrobe({
 
     const next = createLayerPreviewOrder(textureLayerOrder, sourceLayer, targetLayer, position);
     previewLayerOrderRef.current = next;
-    setPreviewLayerOrder((current) =>
-      current && layerOrdersEqual(current, next) ? current : next
-    );
+    setPreviewLayerOrder((current) => current && layerOrdersEqual(current, next) ? current : next);
     setDropHint({ targetLayer, position });
   };
 
@@ -263,18 +257,13 @@ export default function Wardrobe({
     const shouldCommit = next && !layerOrdersEqual(next, textureLayerOrder);
     clearLayerDrag();
 
-    if (shouldCommit && next) {
-      onLayerOrderChange(next);
-    }
+    if (shouldCommit && next) onLayerOrderChange(next);
   };
 
   const nudgeLayer = (layer: TextureLayerCategoryId, direction: -1 | 1): void => {
     const currentIndex = textureLayerOrder.indexOf(layer);
     const nextIndex = currentIndex + direction;
-
-    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= textureLayerOrder.length) {
-      return;
-    }
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= textureLayerOrder.length) return;
 
     const next = [...textureLayerOrder];
     [next[currentIndex], next[nextIndex]] = [next[nextIndex], next[currentIndex]];
@@ -309,9 +298,7 @@ export default function Wardrobe({
   };
 
   const finishLayerDrag = (): void => {
-    if (draggingLayerRef.current) {
-      clearLayerDrag();
-    }
+    if (draggingLayerRef.current) clearLayerDrag();
   };
 
   const allowLayerDrop = (event: React.DragEvent<HTMLDivElement>): void => {
@@ -320,9 +307,7 @@ export default function Wardrobe({
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     const hint = findCurrentLayerDropHint(event.clientY);
-    if (hint) {
-      updateLayerPreview(hint.targetLayer, hint.position);
-    }
+    if (hint) updateLayerPreview(hint.targetLayer, hint.position);
   };
 
   const dropLayer = (event: React.DragEvent<HTMLDivElement>): void => {
@@ -355,9 +340,7 @@ export default function Wardrobe({
     event.preventDefault();
     setDragGhost({ x: event.clientX, y: event.clientY, pointerType: 'touch' });
     const hint = findCurrentLayerDropHint(event.clientY);
-    if (hint) {
-      updateLayerPreview(hint.targetLayer, hint.position);
-    }
+    if (hint) updateLayerPreview(hint.targetLayer, hint.position);
   };
 
   const finishTouchLayerDrag = (event: React.PointerEvent<HTMLDivElement>): void => {
@@ -385,9 +368,17 @@ export default function Wardrobe({
     const layerIndex = layerCategory ? textureLayerOrder.indexOf(layerCategory) : -1;
     const isDropTarget = layerCategory && dropHint?.targetLayer === layerCategory;
     const selectedOption = options.find((option) => appearance[category.id] === option.id);
-    const colorSlots = layerCategory ? selectedOption?.colorSlots ?? [] : [];
-    const selectedColors = layerCategory && selectedOption
+    const colorBinding = getColorControlBindingForOwner(category.id);
+    const appearanceColorSlots = colorBinding
+      && isColorControlEffective(colorBinding.colorControlId, appearance, assetBaseUrl)
+      ? selectedOption?.textureItem?.colorSlots?.filter((slot) => slot.id === colorBinding.slotId) ?? []
+      : [];
+    const wardrobeColorSlots = layerCategory ? selectedOption?.textureItem?.colorSlots ?? [] : [];
+    const selectedWardrobeColors = layerCategory && selectedOption
       ? wardrobeColors?.[layerCategory]?.[selectedOption.id]
+      : undefined;
+    const selectedAppearanceColors = colorBinding
+      ? { [colorBinding.slotId]: appearance[colorBinding.colorControlId] }
       : undefined;
 
     return (
@@ -399,9 +390,7 @@ export default function Wardrobe({
           layerCategory === draggingLayer ? 'is-dragging' : ''
         } ${isDropTarget ? `drop-${dropHint.position}` : ''}`}
         data-layer-id={layerCategory ?? undefined}
-        onPointerDown={
-          layerCategory ? (event) => startTouchLayerDrag(event, layerCategory) : undefined
-        }
+        onPointerDown={layerCategory ? (event) => startTouchLayerDrag(event, layerCategory) : undefined}
         onPointerMove={layerCategory ? moveTouchLayerDrag : undefined}
         onPointerUp={layerCategory ? finishTouchLayerDrag : undefined}
         onPointerCancel={layerCategory ? cancelTouchLayerDrag : undefined}
@@ -433,9 +422,7 @@ export default function Wardrobe({
             <button
               type="button"
               className="layer-order-nudge"
-              aria-label={`${t('action.moveLayerDown')} ${t(
-                category.labelKey as TranslationKey
-              )}`}
+              aria-label={`${t('action.moveLayerDown')} ${t(category.labelKey as TranslationKey)}`}
               title={t('action.moveLayerDown')}
               disabled={layerIndex >= textureLayerOrder.length - 1}
               onClick={() => nudgeLayer(layerCategory, 1)}
@@ -446,11 +433,9 @@ export default function Wardrobe({
         )}
 
         <div
-          className={
-            category.control === 'color'
-              ? 'mt-2 flex flex-wrap gap-1.5'
-              : 'mt-2 grid grid-cols-2 lg:grid-cols-3 gap-1.5'
-          }
+          className={category.control === 'color'
+            ? 'mt-2 flex flex-wrap gap-1.5'
+            : 'mt-2 grid grid-cols-2 lg:grid-cols-3 gap-1.5'}
           role="group"
           aria-label={t(category.labelKey as TranslationKey)}
         >
@@ -490,10 +475,20 @@ export default function Wardrobe({
           })}
         </div>
 
-        {layerCategory && selectedOption && colorSlots.length > 0 && (
+        {colorBinding && appearanceColorSlots.length > 0 && (
+          <TextureItemColorPalettes
+            colorSlots={appearanceColorSlots}
+            colors={selectedAppearanceColors}
+            t={t}
+            testId={`appearance-color-palettes-${category.id}`}
+            onChange={(_slotId, color) => onAppearanceChange(colorBinding.colorControlId, color)}
+          />
+        )}
+
+        {layerCategory && selectedOption && wardrobeColorSlots.length > 0 && (
           <WardrobeColorPalettes
-            colorSlots={colorSlots}
-            colors={selectedColors}
+            colorSlots={wardrobeColorSlots}
+            colors={selectedWardrobeColors}
             t={t}
             onChange={(slotId, color) =>
               onWardrobeColorChange?.(layerCategory, selectedOption.id, slotId, color)
