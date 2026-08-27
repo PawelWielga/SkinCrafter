@@ -448,12 +448,12 @@ export function buildTextureInputsForCategories(
 export function isColorControlEffective(
   categoryId: AppearanceCategoryId,
   appearance: AppearanceState,
-  assetBaseUrl?: string
+  assetBaseUrl?: string,
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
 ): boolean {
   const binding = getColorControlBinding(categoryId);
   if (!binding) return true;
 
-  const skinModel = getSkinModelForAppearance(appearance);
   const option = getOptions(binding.ownerCategoryId, appearance, assetBaseUrl, skinModel)
     .find((candidate) => candidate.id === appearance[binding.ownerCategoryId]);
   return Boolean(option?.textureItem?.colorSlots?.some((slot) => slot.id === binding.slotId));
