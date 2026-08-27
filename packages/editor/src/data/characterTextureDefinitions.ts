@@ -108,3 +108,7 @@ export function getEyeColorPalette(): readonly string[] {
 export function getHairColorPalette(): readonly string[] {
   return hairColorSlot.palette;
 }
+
+export function getHairColorSlotDefinition(): TextureItemColorSlotDefinition {
+  return hairColorSlot;
+}
