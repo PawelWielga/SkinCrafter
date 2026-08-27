@@ -107,7 +107,7 @@ const NBar: React.FC<NBarProps> = ({
             {t('nav.skinView')}
           </NavLink>
           {onLanguageChange && (
-            <details ref={languageMenuRef} className="group relative">
+            <details ref={languageMenuRef} className="group relative ml-auto sm:ml-0">
               <summary
                 className="pixel-button pixel-border flex h-9 min-w-16 cursor-pointer list-none items-center justify-center gap-2 bg-green-700 px-3 py-1 text-white transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-green-800 [&::-webkit-details-marker]:hidden"
                 aria-label={`${t('nav.language')}: ${selectedLanguage.label}`}
