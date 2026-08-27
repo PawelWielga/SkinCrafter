@@ -18,6 +18,16 @@ interface NBarProps {
 
 const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, key);
 const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
+const languageFlags: Record<Language, string> = {
+  en: '🇬🇧',
+  pl: '🇵🇱',
+};
+const languageDisplayNames = new Intl.DisplayNames([defaultLanguage], { type: 'language' });
+
+export const getLanguageOptionLabel = (language: Language): string => {
+  const displayName = languageDisplayNames.of(language) ?? language.toUpperCase();
+  return `${languageFlags[language]} ${displayName}`;
+};
 
 export const getEnvironmentBadge = (baseUrl: string): string | null =>
   baseUrl === '/dev/' ? 'DEV' : null;
@@ -75,17 +85,17 @@ const NBar: React.FC<NBarProps> = ({
             {t('nav.skinView')}
           </NavLink>
           {onLanguageChange && (
-            <label className="flex items-center gap-2 text-sm">
-              <span>{t('nav.language')}</span>
+            <label>
+              <span className="sr-only">{t('nav.language')}</span>
               <select
-                className="bg-green-700 text-white pixel-border px-2 py-1"
+                className="min-w-36 cursor-pointer bg-green-700 text-white pixel-border px-3 py-1.5 pr-8 font-medium transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-green-800"
                 value={language}
                 onChange={(event) => onLanguageChange(event.target.value as Language)}
                 aria-label={t('nav.language')}
               >
                 {languages.map((item) => (
                   <option key={item} value={item}>
-                    {item.toUpperCase()}
+                    {getLanguageOptionLabel(item)}
                   </option>
                 ))}
               </select>
