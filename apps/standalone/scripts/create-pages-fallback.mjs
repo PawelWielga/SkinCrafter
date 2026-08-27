@@ -14,7 +14,8 @@ const fallbackHtml = `<!DOCTYPE html>
       (function (location) {
         var previewBase = '/dev/';
         var base =
-          location.pathname === '/dev' || location.pathname.startsWith(previewBase)
+          location.pathname.startsWith(previewBase) &&
+          location.pathname !== previewBase
             ? previewBase
             : '/';
         var target = location.pathname + location.search + location.hash;
