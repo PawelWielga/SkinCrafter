@@ -19,11 +19,11 @@ import { getShirtDefinition, shirts } from './shirtTextureMap';
 import {
   buildTextureInputsFromItem,
   type ResolvedTextureItemDefinition,
+  type TextureItemColorSlotDefinition,
 } from './textureItemDefinitions';
 import {
   isWardrobeItemCompatible,
   type ResolvedWardrobeItemDefinition,
-  type WardrobeColorSlotDefinition,
 } from './wardrobeDefinitions';
 import type { SkinCrafterSkinModel } from '../publicTypes';
 import type { TextureInput } from '../utils/combineTextures';
@@ -49,7 +49,7 @@ export interface AppearanceOption {
   /** @deprecated UI compatibility projection; textureItem is the source of truth. */
   textureLayers?: ResolvedTextureLayers | null;
   /** @deprecated UI compatibility projection; textureItem is the source of truth. */
-  colorSlots?: readonly WardrobeColorSlotDefinition[];
+  colorSlots?: readonly TextureItemColorSlotDefinition[];
 }
 
 export interface AppearanceCategory {
@@ -153,10 +153,6 @@ const sexOptions: Record<Sex, AppearanceOption> = {
 
 function getSkinModelForAppearance(appearance: AppearanceState): SkinCrafterSkinModel {
   return appearance.sex === 'Female' ? 'slim' : 'classic';
-}
-
-function isTextureLayerCategory(layer: AppearanceCategoryId): layer is TextureLayerCategoryId {
-  return textureLayerCategories.includes(layer as TextureLayerCategoryId);
 }
 
 function textureItemOption(
