@@ -6,8 +6,8 @@ import Wardrobe from './wardrobe';
 
 const t = (key: TranslationKey): string => translate('en', key);
 
-describe('eye color grouping', () => {
-  it('keeps eye color immediately after eyes with the icons used by the shared-frame styles', () => {
+describe('appearance color grouping', () => {
+  it('renders eye color as a real sub-control inside the Eyes card', () => {
     render(
       <Wardrobe
         appearance={{ ...defaultAppearance }}
@@ -21,16 +21,31 @@ describe('eye color grouping', () => {
     const eyesCard = screen
       .getByRole('heading', { name: t('category.eyes') })
       .closest<HTMLElement>('.wardrobe-option-card');
-    const eyeColorCard = screen
-      .getByRole('heading', { name: t('category.eyesColor') })
-      .closest<HTMLElement>('.wardrobe-option-card');
+    const eyeColorGroup = screen.getByRole('group', { name: t('category.eyesColor') });
 
     expect(eyesCard).not.toBeNull();
-    expect(eyeColorCard).not.toBeNull();
-    expect(eyesCard?.nextElementSibling).toBe(eyeColorCard);
+    expect(screen.queryByRole('heading', { name: t('category.eyesColor') })).not.toBeInTheDocument();
+    expect(eyesCard?.contains(eyeColorGroup)).toBe(true);
     expect(eyesCard?.querySelector('[data-skincrafter-icon="fa-eye"]')).not.toBeNull();
-    expect(
-      eyeColorCard?.querySelector('[data-skincrafter-icon="fa-eye-dropper"]')
-    ).not.toBeNull();
+  });
+
+  it('uses the same owner-card structure for skin color and hides ineffective hair color', () => {
+    render(
+      <Wardrobe
+        appearance={{ ...defaultAppearance }}
+        textureLayerOrder={normalizeTextureLayerOrder(null)}
+        onAppearanceChange={vi.fn()}
+        onLayerOrderChange={vi.fn()}
+        t={t}
+      />
+    );
+
+    const raceCard = screen
+      .getByRole('heading', { name: t('category.race') })
+      .closest<HTMLElement>('.wardrobe-option-card');
+    const skinColorGroup = screen.getByRole('group', { name: t('category.skinColor') });
+
+    expect(raceCard?.contains(skinColorGroup)).toBe(true);
+    expect(screen.queryByRole('group', { name: t('category.hairColor') })).not.toBeInTheDocument();
   });
 });
