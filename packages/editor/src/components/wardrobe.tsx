@@ -21,9 +21,10 @@ import {
   type TextureLayerCategoryId,
   type WardrobeColorState,
 } from '../data/appearance';
+import { getHairColorSlotDefinition } from '../data/characterTextureDefinitions';
+import type { TextureItemColorSlotDefinition } from '../data/textureItemDefinitions';
 import type { TranslationKey } from '../i18n/translations';
 import type { SkinCrafterSkinModel } from '../publicTypes';
-import type { WardrobeColorSlotDefinition } from '../data/wardrobeDefinitions';
 
 interface WardrobeProps {
   appearance: AppearanceState;
@@ -43,7 +44,7 @@ interface WardrobeProps {
 }
 
 interface TextureItemColorPalettesProps {
-  colorSlots: readonly WardrobeColorSlotDefinition[];
+  colorSlots: readonly TextureItemColorSlotDefinition[];
   colors?: Readonly<Record<string, string>>;
   onChange: (slotId: string, color: string) => void;
   t: (key: TranslationKey) => string;
@@ -369,10 +370,15 @@ export default function Wardrobe({
     const isDropTarget = layerCategory && dropHint?.targetLayer === layerCategory;
     const selectedOption = options.find((option) => appearance[category.id] === option.id);
     const colorBinding = getColorControlBindingForOwner(category.id);
-    const appearanceColorSlots = colorBinding
-      && isColorControlEffective(colorBinding.colorControlId, appearance, assetBaseUrl)
+    const selectedItemColorSlots = colorBinding
       ? selectedOption?.textureItem?.colorSlots?.filter((slot) => slot.id === colorBinding.slotId) ?? []
       : [];
+    const appearanceColorSlots = colorBinding
+      && isColorControlEffective(colorBinding.colorControlId, appearance, assetBaseUrl, skinModel)
+      ? selectedItemColorSlots
+      : colorBinding && category.id === 'hair' && selectedOption?.id === 'None'
+        ? [getHairColorSlotDefinition()]
+        : [];
     const wardrobeColorSlots = layerCategory ? selectedOption?.textureItem?.colorSlots ?? [] : [];
     const selectedWardrobeColors = layerCategory && selectedOption
       ? wardrobeColors?.[layerCategory]?.[selectedOption.id]
