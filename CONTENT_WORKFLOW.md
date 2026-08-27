@@ -1,57 +1,39 @@
-# Wardrobe content workflow
+# Texture-backed content workflow
 
-This is the contributor workflow for adding or changing SkinCrafter appearance categories, options and texture assets in `packages/editor`.
+This is the contributor workflow for adding or changing SkinCrafter appearance content in `packages/editor`.
 
-The goal is to make content work routine without bypassing package isolation, Minecraft skin correctness, preview/export parity or the performance baseline established in #119. Tintability is always explicit metadata. Runtime code must never infer authoring intent from pixel RGB values or file names.
+The package uses one internal texture-item contract for character content and wardrobe content. Race, Eyes and wardrobe items all resolve through the same model/layer/color-slot validation and the same low-level `TextureInput[]` builder. Hair is already wired into the same registry and currently contains only `None`; adding the first real hair item must not require a new compositor branch.
 
-## Current content contract
+Runtime code must never infer tinting, layer order or model compatibility from PNG colors, file names or directory names. Those decisions are explicit metadata.
 
-SkinCrafter uses two small registries at the current content scale:
+## Source of truth
 
-1. `packages/editor/src/assetResolver.ts` is the typed logical-path -> packaged-URL manifest. Every package-owned runtime asset used by code must be registered there and imported with `?url&no-inline`.
-2. Files below `packages/editor/src/data/` map semantic appearance choices to typed logical paths. Texture-backed wardrobe items use `WardrobeItemDefinition`, which requires one explicit `skinModel: 'classic' | 'slim'` for the whole logical item and may declare color slots used by its tintable layers.
+The current authoring path is deliberately small and typed:
 
-A second schema/manifest system is not justified today. TypeScript definitions, source validators, unit tests, package verification and the external-consumer smoke test provide the required checks while the content set remains small.
+1. `packages/editor/src/assetResolver.ts` maps stable logical `textures/...` paths to package-owned emitted assets and supports `assetBaseUrl` overrides.
+2. `packages/editor/src/data/textureLayers.ts` defines ordered tintable layers plus an optional fixed overlay.
+3. `packages/editor/src/data/textureItemDefinitions.ts` owns the neutral `TextureItemDefinition` / `TextureItemVariants` contract, validation, model-specific resolution and `buildTextureInputsFromItem()`.
+4. Category-specific files add only semantic metadata and option registries:
+   - `raceTextureMap.ts` owns race -> available sex/model and skin palettes;
+   - `characterTextureDefinitions.ts` owns Eyes and the Hair registry;
+   - wardrobe maps such as `hatTextureMap.ts`, `shirtTextureMap.ts` and `pantsTextureMap.ts` expose item definitions. `wardrobeDefinitions.ts` is only a compatibility alias layer over the neutral contract.
+5. `appearance.ts` maps semantic controls to their owning visual layer and uses one resolver registry before calling the shared builder.
 
-If content volume later makes the same metadata drift across many files, create a focused issue before introducing a generated manifest. That issue must define migration, validation and build implications explicitly.
+Do not introduce a second manifest/schema/compositor path for a new texture-backed option.
 
-## Asset classes
+## Neutral texture item contract
 
-The source folder is `packages/editor/src/assets/textures/`, but not every PNG below it is a Minecraft skin atlas.
-
-| Asset class | Location today | Dimension contract | Alpha contract | Notes |
-| --- | --- | --- | --- | --- |
-| Runtime Minecraft skin layer | Every texture PNG outside `textures/preview/` | Exactly 64×64 | PNG must have an explicit alpha channel. Individual pixels may be transparent, translucent or opaque. | Composited pixel-exactly into generated skins. |
-| Preview-only fallback | `textures/preview/` | No artificial 64×64 requirement | Alpha is optional. | UI fallback only, never a semantic wardrobe layer. |
-| Future non-skin asset | Must have an explicitly documented location/contract before addition | Define for that asset type | Define explicitly | Do not silently put it under the skin-atlas rules. |
-
-`packages/editor/scripts/verify-texture-atlases.mjs` runs from `verify:package` and therefore from the package build. It validates PNG headers, classifies preview assets separately and requires runtime layers to be 64×64 with explicit alpha.
-
-## Ordered tintable and fixed layers
-
-A texture-backed option declares one ordered texture contract:
-
-- zero or more `tintable` layers, emitted strictly in declaration order;
-- at most one optional `fixed` layer, always emitted after every tintable layer.
-
-At least one authored layer is required. Valid examples include fixed-only, one tintable layer, many tintable layers, or many tintable layers followed by a fixed overlay.
-
-Do not derive order from directory layout, file names, suffixes or colors. A file named `detail.fixed.png` is still tintable when its declaration says so, and a file named `overlay.tintable.png` is still fixed when it is the `fixed` declaration. Names are authoring hints only.
-
-For non-wardrobe appearance content such as race or eyes, tintable layers may omit `colorSlot` and receive the category's existing color value. For wardrobe content, **every tintable layer must reference a declared logical `colorSlot`**.
-
-Example with two independently colorable regions and one fixed overlay:
+Every real texture-backed item must declare exactly one model:
 
 ```ts
-defineWardrobeItem({
+defineTextureItem({
   skinModel: 'classic',
   textureLayers: defineTextureLayers({
-    tintable: [
-      { texture: 'textures/top/example-body.png', colorSlot: 'primary' },
-      { texture: 'textures/top/example-trim.png', colorSlot: 'secondary' },
-      { texture: 'textures/top/example-logo-shadow.png', colorSlot: 'primary' },
-    ],
-    fixed: 'textures/top/example-logo.png',
+    tintable: {
+      texture: 'textures/example/body.tintable.png',
+      colorSlot: 'primary',
+    },
+    fixed: 'textures/example/detail.fixed.png',
   }),
   colorSlots: [
     {
@@ -60,118 +42,180 @@ defineWardrobeItem({
       defaultColor: '#4A6FA5',
       palette: ['#4A6FA5', '#A33A3A', '#2F8F4E'],
     },
-    {
-      id: 'secondary',
-      labelKey: 'wardrobeColor.secondary',
-      defaultColor: '#D6B15D',
-      palette: ['#D6B15D', '#7047A3'],
-    },
   ],
 });
 ```
 
-Several tintable layers may reference the same slot. They then receive exactly the same selected color and the UI renders one palette for that slot, not one palette per layer. Different slots are independent.
+The validator enforces the shared rules for Race, Eyes, Hair and wardrobe:
 
-Every declared slot must be used by at least one tintable layer. Slot IDs must be unique within the item, palettes must be non-empty `#RRGGBB` values, and `defaultColor` must be present in the palette. A fixed-only wardrobe item must not declare color slots.
+- `skinModel` is mandatory and must be `classic` or `slim`;
+- at least one texture layer must exist through `defineTextureLayers()`;
+- tintable layers are emitted in declaration order;
+- the optional fixed layer is emitted last and is never tinted;
+- every tintable layer must reference a declared `colorSlot`;
+- every declared slot must be used;
+- slot IDs must be unique and non-empty;
+- palettes must be non-empty `#RRGGBB` values;
+- `defaultColor` must be present in its palette;
+- fixed-only items must not declare color slots.
 
-The fixed layer is never tinted. Gray, white, black and chromatic pixels may exist in any authored file; RGB has no semantic meaning. If a detail must keep its authored RGB, put it in the fixed layer instead of adding grayscale detection or magic-color heuristics.
+Several tintable layers may share a slot. They receive one selected color and the UI renders one logical palette for that slot. Different slots remain independent.
 
-All internal layers still belong to one logical wardrobe category. Reordering `shirt`, `pants`, `hat`, `shoes` or `accessory` moves the whole item's internal group together. Internal tintable layers are never independent draggable entries.
+## Classic and Slim variants
+
+There is no implicit model fallback. If one semantic option supports both models, declare both variants explicitly:
+
+```ts
+defineTextureItemVariants({
+  classic: defineTextureItem({
+    skinModel: 'classic',
+    textureLayers: classicLayers,
+    colorSlots,
+  }),
+  slim: defineTextureItem({
+    skinModel: 'slim',
+    textureLayers: slimLayers,
+    colorSlots,
+  }),
+});
+```
+
+A model-independent PNG may be referenced from both definitions only when its UVs are correct for both geometries. If artwork touches model-dependent arm/outer-arm regions, author separate Classic/Slim assets.
+
+Colorable variants of the same semantic item must expose the same color-slot contract. This keeps semantic item state stable when the model changes.
+
+## Character controls and color ownership
+
+Public/runtime appearance fields stay compatible:
+
+```ts
+AppearanceState.race
+AppearanceState.sex
+AppearanceState.skinColor
+AppearanceState.eyes
+AppearanceState.eyesColor
+AppearanceState.hair
+AppearanceState.hairColor
+```
+
+Internally, color and model controls are mapped declaratively to their visual owner:
+
+- `race`, `sex`, `skinColor` -> `race` visual layer;
+- `eyes`, `eyesColor` -> `eyes` visual layer;
+- `hair`, `hairColor` -> `hair` visual layer;
+- wardrobe item/color edits -> their wardrobe category.
+
+Character color fields are adapters onto texture-item color slots (`skin`, `iris`, `primary`). Do not add a special tint algorithm for a new character option. The selected definition plus slot mapping must be enough for `buildTextureInputsFromItem()`.
+
+The same mapping is used for imported-skin activation, so editing a color/model sub-control activates the complete owning visual layer rather than only an individual source texture.
+
+## UI structure
+
+A texture-backed item and its active color slots are one logical UI structure.
+
+- Race renders Skin Color inside the Race card when the selected race definition is tintable.
+- Eyes renders Eye Color inside the Eyes card.
+- Hair will render Hair Color inside the Hair card once a real tintable hair definition exists.
+- Wardrobe keeps its existing contextual palettes inside the selected wardrobe item card.
+
+Do not recreate visual grouping with sibling CSS such as `:has()` when the controls belong to the same logical item.
+
+Public state remains separate for compatibility; the shared UI structure is an internal rendering concern.
 
 ## Wardrobe color state
 
-Wardrobe colors live outside `AppearanceState` in the generic nested `WardrobeColorState` contract:
+Wardrobe still persists its generic nested slot state separately from `AppearanceState`:
 
 ```ts
 type WardrobeColorState = Partial<
-  Record<
-    TextureLayerCategoryId,
-    Record<itemId, Record<colorSlot, string>>
-  >
+  Record<TextureLayerCategoryId, Record<string, Record<string, string>>>
 >;
 ```
 
-Conceptually the path is `category -> selected option -> color slot`. Do not add fields such as `shirtPrimaryColor`, `pantsSecondaryColor` or option-specific React state.
+The path is `category -> item option -> color slot`. Do not add item-specific public fields such as `shirtPrimaryColor`.
 
-The package normalizes this structure from item declarations. Missing known slots receive their declared defaults. Unknown items/slots and unsupported palette values are removed deterministically. Stored colors for an option remain available while another option in the same category is selected, so switching away and back restores the previous choices.
+Normalization derives known items/slots/defaults from texture-item definitions. Unknown slots/items are removed, invalid palette values fall back deterministically, and colors remain stored per semantic item when another option is selected.
 
-The persisted wire format is schema v2. Schema v1 and older states are migrated through `parseSkinCrafterState()` and receive current slot defaults without special-case host code. Adding a future slot to an existing item therefore requires a stable `defaultColor`; older v2 saves that do not contain the new slot normalize to that default.
+The public serialized schema remains v2. Old states must continue to normalize/migrate through `parseSkinCrafterState()` without a host-side migration for this refactor.
 
-## Adding a new texture asset
+## Adding a new runtime texture asset
 
-1. Decide whether the file is a runtime skin atlas or a non-skin asset.
-2. For a runtime layer, author a 64×64 PNG using the canonical Minecraft skin UV layout. Keep an explicit alpha channel. Do not resize or smooth the atlas at runtime.
-3. Split independently colorable regions into separate tintable layers when they need different logical slots. Put authored-color pixels that must never change into the optional fixed overlay.
-4. Put files below `packages/editor/src/assets/textures/` in the appropriate semantic directory.
-5. Add `?url&no-inline` imports and stable logical `textures/...` entries to `packages/editor/src/assetResolver.ts`. Never use root-relative `/textures/...` paths.
-6. Reference typed logical paths from the data layer. Use `defineTextureLayers()` for ordered tintable/fixed declarations. For wardrobe items wrap the layers in `defineWardrobeItem({ skinModel, textureLayers, colorSlots })` when tintable layers exist. The model is mandatory and has no fallback.
-7. If one semantic option supports both models, create one explicit definition per model and group them with `defineWardrobeItemVariants()`. A model-independent PNG may be referenced by both when its UVs are valid for both geometries.
-8. Run the package and consumer validation described below.
+1. Author a 64x64 PNG using the Minecraft skin atlas and keep an explicit alpha channel.
+2. Split recolorable regions into tintable layer files. Put authored-color details that must stay unchanged in the optional fixed overlay.
+3. Add the source file under `packages/editor/src/assets/textures/` in the semantic directory.
+4. Register it in `assetResolver.ts` using a stable logical `textures/...` path and a package-owned `?url&no-inline` import. Never use root-relative `/textures/...` paths.
+5. Reference the logical path from a `defineTextureLayers()` declaration.
+6. Wrap the layers in `defineTextureItem()` and, when appropriate, `defineTextureItemVariants()`.
+7. Add the semantic option to the owning Race/Eyes/Hair/wardrobe registry. Do not change the compositor merely because another option was added to an existing category.
+8. Add English, Polish and any other currently supported package translations for new labels.
+9. Add focused data/UI tests and run the full repository validation.
 
-## Classic and Slim
-
-Every runtime layer uses the full 64×64 Minecraft atlas. If artwork touches UV regions whose geometry differs between Classic and Slim, author the correct model-specific variant rather than resampling or reinterpreting pixels at runtime.
-
-Missing or unsupported model metadata is invalid; runtime definition validation rejects it instead of silently assuming Classic. The wardrobe UI exposes only definitions compatible with the active model, normalization removes incompatible selections after a model change, and the compositor independently filters incompatible definitions as a final correctness boundary.
-
-`WardrobeColorState` is keyed by semantic item rather than skin model. If both Classic and Slim variants of one item are colorable, they must therefore declare the same ordered color-slot contract, including IDs, labels, defaults and palettes. A fixed-only variant may coexist with a colorable variant because only the colorable model contributes slot state.
-
-A content change that affects arms, outer-arm layers or model-dependent UVs must exercise both model paths and preserve the contract in `RENDERER_PARITY.md`. Current packaged `Hoodie` artwork paints model-dependent arm UVs and is explicitly Classic-only. `Duck` and `Pants` each have explicit Classic and Slim definitions that intentionally reuse the same model-independent PNG.
+`textures/preview/default.png` is a preview-only fallback and is not a texture item.
 
 ## Adding a new option to an existing category
 
-1. Add the semantic option ID to the owning data source.
-2. Register any new asset paths in `assetResolver.ts` and map them through package data. Do not import assets from a host application.
-3. Choose the internal layer contract deliberately. Declaration order is render order; the optional fixed overlay is always last.
-4. For wardrobe tintable layers, assign a `colorSlot` to every layer and define each unique slot once on the wardrobe item with label, default and palette data.
-5. Wrap texture-backed wardrobe items in `defineWardrobeItem()` with the required `classic` or `slim` model. Use explicit variants for both models rather than an implicit `all` value.
-6. Add the option label and any new slot labels to both English and Polish translations.
-7. Verify appearance and wardrobe-color normalization/default behavior.
-8. Add tests for expected layer order, slot sharing/independence, model compatibility, tint behavior and `assetBaseUrl` resolution.
-9. If the category is reorderable, confirm all internal layers remain adjacent and move as one logical category entry.
+For an existing texture-backed category, most work should now be declarative:
+
+1. add the stable semantic option ID;
+2. add/register assets;
+3. define model-specific `TextureItemDefinition` variants;
+4. define color slots if the item is tintable;
+5. add translations;
+6. add tests for model compatibility, layer order, tint/fixed behavior and `assetBaseUrl` resolution.
+
+Adding another Eyes, Hair or wardrobe option must not require another branch in `buildTextureInputs*()`.
+
+Race keeps one additional semantic relationship: race -> available sex/model. Update that metadata in `raceTextureMap.ts` when adding a race.
 
 ## Adding a new category
 
-A new category is not only an asset addition. `AppearanceCategoryId`, `AppearanceState`, layer order and persisted/public state can all be affected, so category work must be reviewed as an API/schema change.
+A new category can affect `AppearanceCategoryId`, public state, layer order and persistence, so it is not ordinary content authoring.
 
-1. Use a focused issue that explicitly justifies the public-state change and compatibility impact.
-2. Update `AppearanceCategoryId`, `appearanceCategories` and `defaultAppearance`.
-3. Decide whether the category is a choice or global color control.
-4. Implement its option source and compositor mapping in the package data layer.
-5. If it is independently reorderable, update `TextureLayerCategoryId`, `textureLayerCategories` and normalization/migration expectations. Internal item layers remain private to the category.
-6. Add labels in both `en` and `pl`.
-7. Review persisted-state compatibility. Advance the schema and add an explicit migration when current-state normalization cannot preserve old semantics safely.
-8. Review exported TypeScript types. Ordinary feature/content work must not bump the package version automatically.
-9. Exercise UI, normalization, generation, preview, save output and controlled/persisted state.
+Use a focused issue and explicitly review:
 
-Host-specific storage, APIs or routing never belong in this contract.
+1. public/state compatibility;
+2. the semantic control(s) and owning visual layer;
+3. whether the category is reorderable;
+4. the resolver entry in the visual-layer registry;
+5. persistence/schema implications;
+6. localization, UI, imported-skin activation and generation coverage.
 
-## Preview and export parity
+A new category may require compositor registry plumbing. A new option in an existing category should not.
 
-There is one composition contract. `buildTextureInputs*()` produces ordered logical inputs and `combineTextures()` performs pixel composition. For every wardrobe option, tintable layers are emitted in declaration order and the optional fixed overlay follows them unchanged.
+## Asset and atlas requirements
 
-The generated 64×64 PNG is the authoritative output used by `onSkinChange` / `onSave`, and the editor preview displays that same generated output. Do not add a preview-only wardrobe compositor.
+Every runtime skin-layer PNG outside `textures/preview/` must be exactly 64x64 with an explicit alpha channel. `packages/editor/scripts/verify-texture-atlases.mjs` validates this during package verification/build.
 
-Regression coverage relevant to content changes includes:
+Composition is pixel-preserving: do not resize, smooth or resample runtime layers. RGB values do not decide tintability. Source RGB provides shading for tintable pixels while source alpha is preserved; fixed-layer RGB/alpha is preserved unchanged.
 
-- `src/data/textureLayers.test.ts` for canonical ordered layer declarations and host URL resolution;
-- `src/data/wardrobeDefinitions.test.ts` for required model/color-slot metadata and invalid definitions;
-- `src/data/appearance.test.ts` for layer ordering, slot tint mapping, defaults, model filtering and `assetBaseUrl`;
-- `src/components/wardrobe.texture-layers.test.tsx` for contextual accessible palettes, model-aware filtering and re-selection behavior;
-- `src/stateSerialization.test.ts` for old-state migration and future-slot defaulting;
-- `src/utils/combineTextures.layer-composition.test.ts` for no-smoothing tint composition and unchanged fixed overlays;
-- `src/SkinCrafterEditor.preview-output.test.tsx` for preview/generated-output parity;
-- package verification and `test:consumer` for packed/installed consumption without private imports.
+## Preview, export and imported-skin parity
 
-## Reference content
+There is one composition path:
 
-`Human / Male` remains the reference mixed base option: a global skin color tints its declared tintable layer and the fixed layer is drawn afterward unchanged.
+`TextureItemDefinition` -> resolved texture item -> `buildTextureInputsFromItem()` -> `combineTextures()`.
 
-`Hoodie` is the first wardrobe color-slot implementation. Its existing Classic atlas is declared as one tintable layer using the `primary` slot. The architecture and tests intentionally support many tintable layers and many slots even though the first production item currently needs one slot. `Duck` and `Pants` remain fixed-only examples and therefore expose no contextual color palette.
+Generated 64x64 PNG output is authoritative for preview, `onSkinChange` and `onSave`. Do not add a preview-only or imported-skin-only texture compositor.
 
-## Required validation for content PRs
+For imported skins, an edit activates only its owning visual layer. The imported PNG remains the immutable base for all untouched visual layers. Model semantics and stale-async protection must remain unchanged.
 
-From the repository root, run the normal `AGENTS.md` validation baseline:
+## Relevant regression coverage
+
+Important tests include:
+
+- `src/data/textureItemDefinitions.test.ts` for the neutral validator, explicit model behavior and shared builder;
+- `src/data/appearance.test.ts` for control -> visual-layer mapping, composition and normalization;
+- `src/data/wardrobeDefinitions.test.ts` for the wardrobe compatibility aliases and slot behavior;
+- `src/components/wardrobe.texture-layers.test.tsx` for contextual palettes and layer-order behavior;
+- `src/components/wardrobe.eye-color-grouping.test.tsx` for real character item/sub-control DOM grouping;
+- `src/SkinCrafterEditor.importedSkin.owner-layers.test.tsx` for imported-skin owner activation;
+- `src/stateSerialization.test.ts` for persisted-state compatibility;
+- `src/utils/combineTextures.layer-composition.test.ts` for pixel composition;
+- `tests/e2e/eye-color-grouping.spec.ts` for browser-level grouping/accessibility;
+- package verification and `test:consumer` for installed-package behavior.
+
+## Required validation
+
+From the repository root:
 
 ```bash
 npm audit --omit=dev --audit-level=high
@@ -182,44 +226,35 @@ npm run build
 npm run test:consumer
 ```
 
-CI parity additionally includes the full dependency audit and dead-code check configured by repository workflows.
-
-`npm run build` includes `verify:package`, which includes source texture checks and package/consumer type validation.
-
-When a change adds or materially changes asset bytes, also run:
+CI parity also runs:
 
 ```bash
-npm run test:performance
+npm audit --audit-level=high
+npm run check:dead-code
 ```
 
-Compare it in the same environment with `P3_PERFORMANCE_BASELINE.md`. New content may legitimately increase asset count or package bytes; the delta must be visible rather than hidden behind speculative optimization.
+When asset bytes or the asset pipeline materially change, run the applicable performance/content validation documented by the repository.
 
-For UV/model-sensitive artwork, include the relevant Classic/Slim renderer-parity checks described in `RENDERER_PARITY.md`.
+## Package and release rules
 
-## Public package and release rules
+All editor content stays package-owned. The standalone host must not duplicate editor texture definitions, composition logic or assets.
 
-Content code stays inside `@dihor/skincrafter-editor`; the standalone site is only a host. New content must not require private `dist` imports, host-specific APIs/storage, root-relative SkinCrafter asset URLs, duplicated assets outside the package or a second preview/export implementation.
-
-A content PR does not bump `packages/editor/package.json` automatically. Version/release changes are an explicit owner decision.
+This internal refactor does not change the public package contract and does not authorize a version bump or release. Package version/release changes require an explicit maintainer instruction.
 
 ## Merge checklist
 
-Before merging a wardrobe-content change, confirm:
+Before merging texture-backed content changes, confirm:
 
-- every runtime skin layer is a valid 64×64 PNG with explicit alpha;
-- every texture-backed wardrobe item declares exactly one valid `classic` or `slim` model;
-- every tintable wardrobe layer references one declared color slot;
-- color slots are unique, used, palette-backed and have deterministic defaults;
-- tintable layers render in declaration order and the optional fixed layer is last and untinted;
-- multiple layers sharing a slot use the same color and render only one contextual palette;
-- different slots can change independently without altering unrelated item state;
-- `None` and fixed-only items expose no contextual palette;
-- all internal layers remain one reorderable logical category;
-- no RGB, file-name or directory heuristic decides tintability or order;
-- option/slot labels exist in both English and Polish;
-- old persisted states migrate safely and missing future slots receive defaults;
-- `assetBaseUrl`, non-root routes, cache-safe package assets and `npm pack` remain valid;
-- preview and generated/exported PNG use the same composition result;
-- Classic/Slim behavior is covered when artwork touches model-dependent UVs;
-- required unit, E2E, build and external-consumer validation passes;
-- no package-version or release change is hidden inside routine feature/content work.
+- every runtime atlas is valid 64x64 PNG content with explicit alpha;
+- every item/variant declares exactly one valid model;
+- no Classic/Slim fallback exists;
+- every tintable layer references a declared slot and every slot is used;
+- tintable layers keep declaration order and fixed stays last/untinted;
+- model variants expose compatible slot contracts;
+- item color controls render inside their logical owner structure;
+- imported-skin control edits activate the correct owning visual layer;
+- persisted/public state remains compatible unless a separate breaking change was explicitly approved;
+- `assetBaseUrl`, package assets and external-consumer behavior remain valid;
+- preview and exported PNG use the same generated result;
+- required unit, E2E, build and consumer checks pass;
+- no package-version/release change is hidden in routine content work.
