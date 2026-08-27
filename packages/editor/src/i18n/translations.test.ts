@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { translations } from './translations';
+import { defaultLanguage, languages, translations } from './translations';
 
-describe('Polish translations', () => {
+describe('translations', () => {
+  it('keeps every registered locale aligned with the default-language keys', () => {
+    const defaultKeys = Object.keys(translations[defaultLanguage]).sort();
+
+    for (const language of languages) {
+      expect(Object.keys(translations[language]).sort()).toEqual(defaultKeys);
+    }
+  });
+
+  it('derives the supported language list from the locale registry', () => {
+    expect(languages).toEqual(Object.keys(translations));
+  });
+
   it('uses Polish diacritics in localized UI copy', () => {
     expect(translations.pl).toMatchObject({
       'nav.skinView': 'Podgląd',
