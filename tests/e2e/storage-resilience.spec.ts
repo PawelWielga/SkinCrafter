@@ -30,9 +30,10 @@ test('creator remains usable when browser storage is unavailable', async ({ page
   await expect(hoodie).toHaveAttribute('aria-pressed', 'true');
   await expect(editor).toHaveAttribute('data-skincrafter-generation-status', 'ready');
 
-  const languageSelect = page.locator('nav select');
-  await languageSelect.selectOption('pl');
-  await expect(languageSelect).toHaveValue('pl');
+  const languageMenu = page.locator('nav summary');
+  await languageMenu.click();
+  await page.getByRole('menuitemradio', { name: 'Polski' }).click();
+  await expect(languageMenu).toHaveAttribute('aria-label', 'Jezyk: Polski');
   await expect(page.getByRole('button', { name: 'Bluza' })).toHaveAttribute(
     'aria-pressed',
     'true'
