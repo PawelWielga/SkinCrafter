@@ -19,7 +19,7 @@ There is nothing to install. SkinCrafter runs directly in your web browser.
 - preview changes live on an interactive 3D Minecraft model,
 - save the finished skin as a Minecraft-compatible PNG file,
 - use the built-in skin viewer to preview an existing player's skin by Minecraft username,
-- use the application in Polish or English.
+- use the application in English, Polish or Brazilian Portuguese.
 
 ## Who is it for?
 
