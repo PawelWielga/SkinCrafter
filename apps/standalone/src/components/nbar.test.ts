@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEnvironmentBadge, getLanguageOptionLabel } from './nbar';
+import { getEnvironmentBadge, getLanguageOption } from './nbar';
 
 describe('standalone environment badge', () => {
   it('is hidden for the production root build', () => {
@@ -12,9 +12,9 @@ describe('standalone environment badge', () => {
 });
 
 describe('standalone language selector', () => {
-  it('shows flags and full language names in the default language', () => {
-    expect(getLanguageOptionLabel('en')).toBe('🇬🇧 English');
-    expect(getLanguageOptionLabel('pl')).toBe('🇵🇱 Polish');
-    expect(getLanguageOptionLabel('pt-BR')).toBe('🇧🇷 Brazilian Portuguese');
+  it('shows compact native language labels with country flags', () => {
+    expect(getLanguageOption('en')).toEqual({ flag: '🇬🇧', label: 'English' });
+    expect(getLanguageOption('pl')).toEqual({ flag: '🇵🇱', label: 'Polski' });
+    expect(getLanguageOption('pt-BR')).toEqual({ flag: '🇧🇷', label: 'Português' });
   });
 });
