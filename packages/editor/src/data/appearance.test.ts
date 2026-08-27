@@ -3,15 +3,16 @@ import {
   appearanceCategories,
   buildTextureInputs,
   buildTextureInputsForCategories,
-  buildTextureInputsFromLayers,
   defaultAppearance,
   getOptions,
+  getVisualLayerForControl,
   isColorControlEffective,
   normalizeAppearance,
   normalizeTextureLayerOrder,
   normalizeWardrobeColors,
   textureLayerCategories,
 } from './appearance';
+import { buildTextureInputsFromItem } from './textureItemDefinitions';
 
 describe('appearance model', () => {
   it('exposes all wardrobe categories', () => {
@@ -19,6 +20,15 @@ describe('appearance model', () => {
       'race', 'sex', 'skinColor', 'eyes', 'eyesColor', 'hair', 'hairColor',
       'hat', 'shirt', 'pants', 'shoes', 'accessory',
     ]);
+  });
+
+  it('maps semantic controls to their owning visual layer declaratively', () => {
+    expect(getVisualLayerForControl('race')).toBe('race');
+    expect(getVisualLayerForControl('sex')).toBe('race');
+    expect(getVisualLayerForControl('skinColor')).toBe('race');
+    expect(getVisualLayerForControl('eyesColor')).toBe('eyes');
+    expect(getVisualLayerForControl('hairColor')).toBe('hair');
+    expect(getVisualLayerForControl('shirt')).toBe('shirt');
   });
 
   it('uses None as the no-texture option for optional categories', () => {
@@ -119,17 +129,33 @@ describe('appearance model', () => {
     });
   });
 
-  it('builds arbitrary tintable layers in declaration order with per-slot tints and fixed last', () => {
-    const inputs = buildTextureInputsFromLayers(
+  it('builds arbitrary texture item layers in declaration order with per-slot tints and fixed last', () => {
+    const inputs = buildTextureInputsFromItem(
       {
-        tintable: [
-          { texture: '/looks-fixed.png', colorSlot: 'primary' },
-          { texture: '/looks-tintable.png', colorSlot: 'secondary' },
-          { texture: '/also-fixed-name.png', colorSlot: 'primary' },
+        skinModel: 'classic',
+        textureLayers: {
+          tintable: [
+            { texture: '/looks-fixed.png', colorSlot: 'primary' },
+            { texture: '/looks-tintable.png', colorSlot: 'secondary' },
+            { texture: '/also-fixed-name.png', colorSlot: 'primary' },
+          ],
+          fixed: '/looks-tintable-final.png',
+        },
+        colorSlots: [
+          {
+            id: 'primary',
+            labelKey: 'wardrobeColor.primary',
+            defaultColor: '#4A6FA5',
+            palette: ['#4A6FA5', '#A33A3A'],
+          },
+          {
+            id: 'secondary',
+            labelKey: 'wardrobeColor.secondary',
+            defaultColor: '#D6B15D',
+            palette: ['#D6B15D', '#2F8F4E'],
+          },
         ],
-        fixed: '/looks-tintable-final.png',
       },
-      undefined,
       { primary: '#A33A3A', secondary: '#2F8F4E' }
     );
 
