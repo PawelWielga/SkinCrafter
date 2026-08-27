@@ -21,6 +21,7 @@ const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
 const languageFlags: Record<Language, string> = {
   en: '🇬🇧',
   pl: '🇵🇱',
+  'pt-BR': '🇧🇷',
 };
 const languageDisplayNames = new Intl.DisplayNames([defaultLanguage], { type: 'language' });
 
