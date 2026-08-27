@@ -21,7 +21,6 @@ import {
   type TextureLayerCategoryId,
   type WardrobeColorState,
 } from '../data/appearance';
-import { getHairColorSlotDefinition } from '../data/characterTextureDefinitions';
 import type { TextureItemColorSlotDefinition } from '../data/textureItemDefinitions';
 import type { TranslationKey } from '../i18n/translations';
 import type { SkinCrafterSkinModel } from '../publicTypes';
@@ -376,9 +375,7 @@ export default function Wardrobe({
     const appearanceColorSlots = colorBinding
       && isColorControlEffective(colorBinding.colorControlId, appearance, assetBaseUrl, skinModel)
       ? selectedItemColorSlots
-      : colorBinding && category.id === 'hair' && selectedOption?.id === 'None'
-        ? [getHairColorSlotDefinition()]
-        : [];
+      : [];
     const wardrobeColorSlots = layerCategory ? selectedOption?.textureItem?.colorSlots ?? [] : [];
     const selectedWardrobeColors = layerCategory && selectedOption
       ? wardrobeColors?.[layerCategory]?.[selectedOption.id]
