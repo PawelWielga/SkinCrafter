@@ -44,7 +44,7 @@ const LanguageFlag: React.FC<{ src: string }> = ({ src }) => (
     src={src}
     alt=""
     aria-hidden="true"
-    className="h-[18px] w-6 shrink-0 object-cover"
+    className="h-[14px] w-6 shrink-0 object-contain"
   />
 );
 
