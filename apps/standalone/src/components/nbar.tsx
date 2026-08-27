@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   defaultLanguage,
@@ -16,8 +16,20 @@ interface NBarProps {
   t?: (key: TranslationKey) => string;
 }
 
+interface LanguageOption {
+  flag: string;
+  label: string;
+}
+
 const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, key);
 const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
+const languageOptions: Record<Language, LanguageOption> = {
+  en: { flag: '🇬🇧', label: 'English' },
+  pl: { flag: '🇵🇱', label: 'Polski' },
+  'pt-BR': { flag: '🇧🇷', label: 'Português' },
+};
+
+export const getLanguageOption = (language: Language): LanguageOption => languageOptions[language];
 
 export const getEnvironmentBadge = (baseUrl: string): string | null =>
   baseUrl === '/dev/' ? 'DEV' : null;
@@ -31,6 +43,14 @@ const NBar: React.FC<NBarProps> = ({
   onLanguageChange,
   t = fallbackT,
 }) => {
+  const languageMenuRef = useRef<HTMLDetailsElement>(null);
+  const selectedLanguage = getLanguageOption(language);
+
+  const handleLanguageChange = (nextLanguage: Language) => {
+    languageMenuRef.current?.removeAttribute('open');
+    onLanguageChange?.(nextLanguage);
+  };
+
   return (
     <nav className="bg-green-800 text-white px-4 py-3 shadow-md">
       <div className="container mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -75,21 +95,45 @@ const NBar: React.FC<NBarProps> = ({
             {t('nav.skinView')}
           </NavLink>
           {onLanguageChange && (
-            <label className="flex items-center gap-2 text-sm">
-              <span>{t('nav.language')}</span>
-              <select
-                className="bg-green-700 text-white pixel-border px-2 py-1"
-                value={language}
-                onChange={(event) => onLanguageChange(event.target.value as Language)}
+            <details ref={languageMenuRef} className="group relative">
+              <summary
+                className="flex h-9 min-w-16 cursor-pointer list-none items-center justify-center gap-2 rounded-sm border border-white/35 bg-green-700 px-2.5 text-lg transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-green-800 [&::-webkit-details-marker]:hidden"
+                aria-label={`${t('nav.language')}: ${selectedLanguage.label}`}
+              >
+                <span aria-hidden="true">{selectedLanguage.flag}</span>
+                <span className="text-xs transition-transform group-open:rotate-180" aria-hidden="true">
+                  ▾
+                </span>
+              </summary>
+              <div
+                className="absolute right-0 z-50 mt-2 min-w-44 overflow-hidden rounded-md border border-slate-200 bg-white py-1 text-slate-900 shadow-xl"
+                role="menu"
                 aria-label={t('nav.language')}
               >
-                {languages.map((item) => (
-                  <option key={item} value={item}>
-                    {item.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {languages.map((item) => {
+                  const option = getLanguageOption(item);
+                  const isSelected = item === language;
+
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none ${
+                        isSelected ? 'font-semibold' : ''
+                      }`}
+                      role="menuitemradio"
+                      aria-checked={isSelected}
+                      onClick={() => handleLanguageChange(item)}
+                    >
+                      <span className="text-base" aria-hidden="true">
+                        {option.flag}
+                      </span>
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
           )}
         </div>
       </div>

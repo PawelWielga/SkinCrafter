@@ -81,13 +81,13 @@ describe('standalone app package integration', () => {
       </MemoryRouter>
     );
 
-    const languageSelect = screen.getByRole('combobox');
-
-    fireEvent.change(languageSelect, { target: { value: 'pl' } });
+    fireEvent.click(screen.getByLabelText('Language: English'));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Polski' }));
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'pl');
     expect(document.documentElement).toHaveAttribute('lang', 'pl');
 
-    fireEvent.change(languageSelect, { target: { value: 'en' } });
+    fireEvent.click(screen.getByLabelText('Jezyk: Polski'));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'English' }));
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'en');
     expect(document.documentElement).toHaveAttribute('lang', 'en');
   });
@@ -128,7 +128,8 @@ describe('standalone app package integration', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'pl' } });
+    fireEvent.click(screen.getByLabelText('Language: English'));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Polski' }));
 
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'pl');
     expect(document.documentElement).toHaveAttribute('lang', 'pl');
