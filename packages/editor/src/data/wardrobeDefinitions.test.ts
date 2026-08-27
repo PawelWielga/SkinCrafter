@@ -94,11 +94,11 @@ describe('wardrobe item definitions', () => {
     });
   });
 
-  it('rejects tintable wardrobe layers without declared color slots', () => {
+  it('rejects tintable layers without declared color slots through the shared texture-item validator', () => {
     expect(() => defineWardrobeItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({ tintable: 'textures/eyes/small.tintable.png' }),
-    })).toThrow('Every tintable wardrobe item must define at least one color slot.');
+    })).toThrow('Every tintable texture item must define at least one color slot.');
   });
 
   it('rejects tintable layers that reference an unknown slot', () => {
@@ -111,7 +111,7 @@ describe('wardrobe item definitions', () => {
         },
       }),
       colorSlots: [primarySlot],
-    })).toThrow('Every tintable wardrobe layer must reference a declared colorSlot.');
+    })).toThrow('Every tintable texture layer must reference a declared colorSlot.');
   });
 
   it('rejects duplicate and unused color slots', () => {
@@ -124,7 +124,7 @@ describe('wardrobe item definitions', () => {
         },
       }),
       colorSlots: [primarySlot, primarySlot],
-    })).toThrow('Wardrobe color slot "primary" is defined more than once.');
+    })).toThrow('Texture item color slot "primary" is defined more than once.');
 
     expect(() => defineWardrobeItem({
       skinModel: 'classic',
@@ -135,7 +135,7 @@ describe('wardrobe item definitions', () => {
         },
       }),
       colorSlots: [primarySlot, secondarySlot],
-    })).toThrow('Wardrobe color slot "secondary" is not used by any tintable layer.');
+    })).toThrow('Texture item color slot "secondary" is not used by any tintable layer.');
   });
 
   it('rejects a variant whose registry key disagrees with its declared model', () => {
@@ -145,7 +145,7 @@ describe('wardrobe item definitions', () => {
     });
 
     expect(() => defineWardrobeItemVariants({ classic: slim })).toThrow(
-      'Wardrobe variant "classic" must declare the same skinModel.'
+      'Texture item variant "classic" must declare the same skinModel.'
     );
   });
 
@@ -155,7 +155,7 @@ describe('wardrobe item definitions', () => {
     } as unknown as WardrobeItemDefinition;
 
     expect(() => defineWardrobeItem(invalid)).toThrow(
-      'A wardrobe item must define skinModel as "classic" or "slim".'
+      'A texture item must define skinModel as "classic" or "slim".'
     );
   });
 
@@ -166,7 +166,7 @@ describe('wardrobe item definitions', () => {
     } as unknown as WardrobeItemDefinition;
 
     expect(() => defineWardrobeItem(invalid)).toThrow(
-      'A wardrobe item must define skinModel as "classic" or "slim".'
+      'A texture item must define skinModel as "classic" or "slim".'
     );
   });
 
