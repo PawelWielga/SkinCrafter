@@ -4,6 +4,19 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'],
+[contenteditable='plaintext-only'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .pixel-border {
   border-width: 2px;
   border-style: solid;
