@@ -15,5 +15,6 @@ describe('standalone language selector', () => {
   it('shows flags and full language names in the default language', () => {
     expect(getLanguageOptionLabel('en')).toBe('🇬🇧 English');
     expect(getLanguageOptionLabel('pl')).toBe('🇵🇱 Polish');
+    expect(getLanguageOptionLabel('pt-BR')).toBe('🇧🇷 Brazilian Portuguese');
   });
 });
