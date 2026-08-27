@@ -1,28 +1,40 @@
 import { getHatDefinition, hats } from './hatTextureMap';
 import { getPantsDefinition, pants } from './pantsTextureMap';
-import { getAvailableSexes, getRaceTextureLayers, type Sex } from './raceTextureMap';
+import {
+  eyes,
+  getEyeColorPalette,
+  getEyeDefinition,
+  getHairColorPalette,
+  getHairDefinition,
+  hairStyles,
+} from './characterTextureDefinitions';
+import {
+  getAvailableSexes,
+  getRaceSkinColors,
+  getRaceTextureItem,
+  type Sex,
+} from './raceTextureMap';
 import races, { type Race } from './races';
 import { getShirtDefinition, shirts } from './shirtTextureMap';
-import skinColorMap from './skinColorMap';
 import {
-  defineTextureLayers,
-  hasTintableTextureLayer,
-  resolveTextureLayers,
-  type ResolvedTextureLayers,
-} from './textureLayers';
+  buildTextureInputsFromItem,
+  type ResolvedTextureItemDefinition,
+  type TextureItemColorSlotDefinition,
+} from './textureItemDefinitions';
 import {
   isWardrobeItemCompatible,
   type ResolvedWardrobeItemDefinition,
-  type WardrobeColorSlotDefinition,
 } from './wardrobeDefinitions';
 import type { SkinCrafterSkinModel } from '../publicTypes';
 import type { TextureInput } from '../utils/combineTextures';
+import type { ResolvedTextureLayers } from './textureLayers';
 
 export type AppearanceCategoryId =
   | 'race' | 'sex' | 'skinColor' | 'eyes' | 'eyesColor' | 'hair' | 'hairColor'
   | 'hat' | 'shirt' | 'pants' | 'shoes' | 'accessory';
 
 export type TextureLayerCategoryId = Extract<AppearanceCategoryId, 'hat' | 'shirt' | 'pants' | 'shoes' | 'accessory'>;
+export type AppearanceVisualLayerId = 'race' | 'eyes' | 'hair' | TextureLayerCategoryId;
 export type AppearanceState = Record<AppearanceCategoryId, string>;
 export type AppearanceControl = 'choice' | 'color';
 export type WardrobeColorState = Partial<
@@ -33,8 +45,11 @@ export interface AppearanceOption {
   id: string;
   labelKey: string;
   color?: string;
+  textureItem?: ResolvedTextureItemDefinition | null;
+  /** @deprecated UI compatibility projection; textureItem is the source of truth. */
   textureLayers?: ResolvedTextureLayers | null;
-  colorSlots?: readonly WardrobeColorSlotDefinition[];
+  /** @deprecated UI compatibility projection; textureItem is the source of truth. */
+  colorSlots?: readonly TextureItemColorSlotDefinition[];
 }
 
 export interface AppearanceCategory {
@@ -42,6 +57,12 @@ export interface AppearanceCategory {
   labelKey: string;
   icon: string;
   control: AppearanceControl;
+}
+
+export interface AppearanceColorControlBinding {
+  ownerCategoryId: Extract<AppearanceVisualLayerId, 'race' | 'eyes' | 'hair'>;
+  colorControlId: Extract<AppearanceCategoryId, 'skinColor' | 'eyesColor' | 'hairColor'>;
+  slotId: string;
 }
 
 export const appearanceCategories: AppearanceCategory[] = [
@@ -59,39 +80,94 @@ export const appearanceCategories: AppearanceCategory[] = [
   { id: 'accessory', labelKey: 'category.accessory', icon: 'fa-gem', control: 'choice' },
 ];
 
+export const appearanceColorControlBindings: readonly AppearanceColorControlBinding[] = [
+  { ownerCategoryId: 'race', colorControlId: 'skinColor', slotId: 'skin' },
+  { ownerCategoryId: 'eyes', colorControlId: 'eyesColor', slotId: 'iris' },
+  { ownerCategoryId: 'hair', colorControlId: 'hairColor', slotId: 'primary' },
+];
+
+const visualLayerByControl: Record<AppearanceCategoryId, AppearanceVisualLayerId> = {
+  race: 'race',
+  sex: 'race',
+  skinColor: 'race',
+  eyes: 'eyes',
+  eyesColor: 'eyes',
+  hair: 'hair',
+  hairColor: 'hair',
+  hat: 'hat',
+  shirt: 'shirt',
+  pants: 'pants',
+  shoes: 'shoes',
+  accessory: 'accessory',
+};
+
+export function getVisualLayerForControl(categoryId: AppearanceCategoryId): AppearanceVisualLayerId {
+  return visualLayerByControl[categoryId];
+}
+
+export function getColorControlBindingForOwner(
+  categoryId: AppearanceCategoryId
+): AppearanceColorControlBinding | null {
+  return appearanceColorControlBindings.find((binding) => binding.ownerCategoryId === categoryId) ?? null;
+}
+
+export function getColorControlBinding(
+  categoryId: AppearanceCategoryId
+): AppearanceColorControlBinding | null {
+  return appearanceColorControlBindings.find((binding) => binding.colorControlId === categoryId) ?? null;
+}
+
+export function isAppearanceColorSubcontrol(categoryId: AppearanceCategoryId): boolean {
+  return getColorControlBinding(categoryId) !== null;
+}
+
 export const defaultAppearance: AppearanceState = {
-  race: 'Human', sex: 'Male', skinColor: skinColorMap.Human[0], eyes: 'Classic', eyesColor: '#2F5D9B',
-  hair: 'None', hairColor: '#4A2F20', hat: 'None', shirt: 'None', pants: 'None', shoes: 'None', accessory: 'None',
+  race: 'Human',
+  sex: 'Male',
+  skinColor: getRaceSkinColors('Human')[0],
+  eyes: 'Classic',
+  eyesColor: getEyeColorPalette()[0],
+  hair: 'None',
+  hairColor: getHairColorPalette()[0],
+  hat: 'None',
+  shirt: 'None',
+  pants: 'None',
+  shoes: 'None',
+  accessory: 'None',
 };
 
 export const appearanceLayerOrder: AppearanceCategoryId[] = ['race', 'sex', 'eyes', 'hair', 'hat', 'shirt', 'pants', 'shoes', 'accessory'];
 export const textureLayerCategories: TextureLayerCategoryId[] = ['hat', 'shirt', 'pants', 'shoes', 'accessory'];
 
-const noneOption: AppearanceOption = { id: 'None', labelKey: 'option.none', textureLayers: null };
+const noneOption: AppearanceOption = {
+  id: 'None',
+  labelKey: 'option.none',
+  textureItem: null,
+  textureLayers: null,
+};
 const sexOptions: Record<Sex, AppearanceOption> = {
-  Male: { id: 'Male', labelKey: 'option.sex.Male', textureLayers: null },
-  Female: { id: 'Female', labelKey: 'option.sex.Female', textureLayers: null },
+  Male: { id: 'Male', labelKey: 'option.sex.Male', textureItem: null, textureLayers: null },
+  Female: { id: 'Female', labelKey: 'option.sex.Female', textureItem: null, textureLayers: null },
   None: noneOption,
 };
-
-const eyeTextureLayers = {
-  Classic: defineTextureLayers({
-    tintable: 'textures/eyes/clasic.tintable.png',
-    fixed: 'textures/eyes/clasic.fixed.png',
-  }),
-  Small: defineTextureLayers({ tintable: 'textures/eyes/small.tintable.png' }),
-  Big: defineTextureLayers({
-    tintable: 'textures/eyes/big.tintable.png',
-    fixed: 'textures/eyes/big.fixed.png',
-  }),
-} as const;
 
 function getSkinModelForAppearance(appearance: AppearanceState): SkinCrafterSkinModel {
   return appearance.sex === 'Female' ? 'slim' : 'classic';
 }
 
-function isTextureLayerCategory(layer: AppearanceCategoryId): layer is TextureLayerCategoryId {
-  return textureLayerCategories.includes(layer as TextureLayerCategoryId);
+function textureItemOption(
+  id: string,
+  labelKey: string,
+  definition: ResolvedTextureItemDefinition | null
+): AppearanceOption[] {
+  if (!definition) return [];
+  return [{
+    id,
+    labelKey,
+    textureItem: definition,
+    textureLayers: definition.textureLayers,
+    ...(definition.colorSlots ? { colorSlots: definition.colorSlots } : {}),
+  }];
 }
 
 function wardrobeOption(
@@ -101,12 +177,23 @@ function wardrobeOption(
   skinModel: SkinCrafterSkinModel
 ): AppearanceOption[] {
   if (!definition || !isWardrobeItemCompatible(definition, skinModel)) return [];
-  return [{
-    id,
-    labelKey,
-    textureLayers: definition.textureLayers,
-    ...(definition.colorSlots ? { colorSlots: definition.colorSlots } : {}),
-  }];
+  return textureItemOption(id, labelKey, definition);
+}
+
+function colorOptions(colors: readonly string[], keyPrefix = 'option.color'): AppearanceOption[] {
+  const labelKeyByColor: Record<string, string> = {
+    '#2F5D9B': `${keyPrefix}.blue`,
+    '#2F8F4E': `${keyPrefix}.green`,
+    '#5B3A29': `${keyPrefix}.brown`,
+    '#4A2F20': `${keyPrefix}.brown`,
+    '#D6B15D': `${keyPrefix}.blond`,
+    '#1F1A17': `${keyPrefix}.black`,
+  };
+  return colors.map((color) => ({
+    id: color,
+    labelKey: labelKeyByColor[color] ?? `option.skinColor.${color}`,
+    color,
+  }));
 }
 
 export function getOptions(
@@ -116,76 +203,55 @@ export function getOptions(
   skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
 ): AppearanceOption[] {
   if (categoryId === 'race') {
-    return races.flatMap((race) => {
-      const textureLayers = getRaceTextureLayers(race, skinModel, assetBaseUrl);
-      return textureLayers
-        ? [{ id: race, labelKey: `option.race.${race}`, textureLayers }]
-        : [];
-    });
+    return races.flatMap((race) => textureItemOption(
+      race,
+      `option.race.${race}`,
+      getRaceTextureItem(race, skinModel, assetBaseUrl)
+    ));
   }
   if (categoryId === 'sex') {
     return getAvailableSexes(appearance.race as Race).map((sex) => sexOptions[sex]);
   }
   if (categoryId === 'skinColor') {
-    const race = appearance.race as keyof typeof skinColorMap;
-    return skinColorMap[race].map((color) => ({ id: color, labelKey: `option.skinColor.${color}`, color }));
+    return getRaceSkinColors(appearance.race as Race).map((color) => ({
+      id: color,
+      labelKey: `option.skinColor.${color}`,
+      color,
+    }));
   }
   if (categoryId === 'eyes') {
-    return [
-      { id: 'Classic', labelKey: 'option.eyes.Classic', textureLayers: resolveTextureLayers(eyeTextureLayers.Classic, assetBaseUrl) },
-      { id: 'Small', labelKey: 'option.eyes.Small', textureLayers: resolveTextureLayers(eyeTextureLayers.Small, assetBaseUrl) },
-      { id: 'Big', labelKey: 'option.eyes.Big', textureLayers: resolveTextureLayers(eyeTextureLayers.Big, assetBaseUrl) },
-    ];
+    return eyes.flatMap((eye) => textureItemOption(
+      eye,
+      `option.eyes.${eye}`,
+      getEyeDefinition(eye, skinModel, assetBaseUrl)
+    ));
   }
-  if (categoryId === 'eyesColor') {
-    return [
-      { id: '#2F5D9B', labelKey: 'option.color.blue', color: '#2F5D9B' },
-      { id: '#2F8F4E', labelKey: 'option.color.green', color: '#2F8F4E' },
-      { id: '#5B3A29', labelKey: 'option.color.brown', color: '#5B3A29' },
-    ];
+  if (categoryId === 'eyesColor') return colorOptions(getEyeColorPalette());
+  if (categoryId === 'hair') {
+    return hairStyles.flatMap((hair) => hair === 'None'
+      ? [noneOption]
+      : textureItemOption(hair, `option.hair.${hair}`, getHairDefinition(hair, skinModel, assetBaseUrl)));
   }
-  if (categoryId === 'hair') return [noneOption];
-  if (categoryId === 'hairColor') {
-    return [
-      { id: '#4A2F20', labelKey: 'option.color.brown', color: '#4A2F20' },
-      { id: '#D6B15D', labelKey: 'option.color.blond', color: '#D6B15D' },
-      { id: '#1F1A17', labelKey: 'option.color.black', color: '#1F1A17' },
-    ];
-  }
+  if (categoryId === 'hairColor') return colorOptions(getHairColorPalette());
   if (categoryId === 'hat') {
     return hats.flatMap((hat) =>
       hat === 'None'
         ? [noneOption]
-        : wardrobeOption(
-            hat,
-            `option.hat.${hat}`,
-            getHatDefinition(hat, skinModel, assetBaseUrl),
-            skinModel
-          )
+        : wardrobeOption(hat, `option.hat.${hat}`, getHatDefinition(hat, skinModel, assetBaseUrl), skinModel)
     );
   }
   if (categoryId === 'shirt') {
     return shirts.flatMap((shirt) =>
       shirt === 'None'
         ? [noneOption]
-        : wardrobeOption(
-            shirt,
-            `option.shirt.${shirt}`,
-            getShirtDefinition(shirt, skinModel, assetBaseUrl),
-            skinModel
-          )
+        : wardrobeOption(shirt, `option.shirt.${shirt}`, getShirtDefinition(shirt, skinModel, assetBaseUrl), skinModel)
     );
   }
   if (categoryId === 'pants') {
     return pants.flatMap((item) =>
       item === 'None'
         ? [noneOption]
-        : wardrobeOption(
-            item,
-            `option.pants.${item}`,
-            getPantsDefinition(item, skinModel, assetBaseUrl),
-            skinModel
-          )
+        : wardrobeOption(item, `option.pants.${item}`, getPantsDefinition(item, skinModel, assetBaseUrl), skinModel)
     );
   }
   return [noneOption];
@@ -221,7 +287,7 @@ function collectWardrobeOptions(category: TextureLayerCategoryId): AppearanceOpt
   for (const skinModel of ['classic', 'slim'] as const) {
     for (const option of getOptions(category, defaultAppearance, undefined, skinModel)) {
       const existing = options.get(option.id);
-      if (!existing || (!existing.colorSlots?.length && option.colorSlots?.length)) {
+      if (!existing || (!existing.textureItem?.colorSlots?.length && option.textureItem?.colorSlots?.length)) {
         options.set(option.id, option);
       }
     }
@@ -237,10 +303,11 @@ export function normalizeWardrobeColors(
   for (const category of textureLayerCategories) {
     const itemColors: Record<string, Record<string, string>> = {};
     for (const option of collectWardrobeOptions(category)) {
-      if (!option.colorSlots?.length) continue;
+      const colorSlots = option.textureItem?.colorSlots ?? [];
+      if (colorSlots.length === 0) continue;
 
       const slotColors: Record<string, string> = {};
-      for (const slot of option.colorSlots) {
+      for (const slot of colorSlots) {
         const candidate = value?.[category]?.[option.id]?.[slot.id];
         slotColors[slot.id] = typeof candidate === 'string' && slot.palette.includes(candidate)
           ? candidate
@@ -249,9 +316,7 @@ export function normalizeWardrobeColors(
       itemColors[option.id] = slotColors;
     }
 
-    if (Object.keys(itemColors).length > 0) {
-      next[category] = itemColors;
-    }
+    if (Object.keys(itemColors).length > 0) next[category] = itemColors;
   }
 
   return next;
@@ -273,65 +338,74 @@ export function normalizeTextureLayerOrder(value: readonly string[] | null | und
   const validLayers = new Set<TextureLayerCategoryId>(textureLayerCategories);
   const next: TextureLayerCategoryId[] = [];
   (value ?? []).forEach((layer) => {
-    if (validLayers.has(layer as TextureLayerCategoryId) && !next.includes(layer as TextureLayerCategoryId)) next.push(layer as TextureLayerCategoryId);
+    if (validLayers.has(layer as TextureLayerCategoryId) && !next.includes(layer as TextureLayerCategoryId)) {
+      next.push(layer as TextureLayerCategoryId);
+    }
   });
   textureLayerCategories.forEach((layer) => { if (!next.includes(layer)) next.push(layer); });
   return next;
 }
 
-export function buildTextureInputsFromLayers(
-  layers: ResolvedTextureLayers | null | undefined,
-  tint?: string,
-  slotColors?: Readonly<Record<string, string>>
-): TextureInput[] {
-  if (!layers) return [];
+interface TextureItemCompositionContext {
+  appearance: AppearanceState;
+  assetBaseUrl: string | undefined;
+  skinModel: SkinCrafterSkinModel;
+  wardrobeColors: WardrobeColorState;
+}
 
-  const inputs: TextureInput[] = [];
-  for (const layer of layers.tintable ?? []) {
-    const layerTint = layer.colorSlot ? slotColors?.[layer.colorSlot] : tint;
-    inputs.push({
-      url: layer.texture,
-      role: 'tintable',
-      tint: layerTint ?? tint ?? '#FFFFFF',
-    });
-  }
-  if (layers.fixed) {
-    inputs.push({ url: layers.fixed, role: 'fixed' });
-  }
-  return inputs;
+interface ResolvedTextureItemSelection {
+  item: ResolvedTextureItemDefinition | null;
+  colors?: Readonly<Record<string, string>>;
+}
+
+type TextureItemResolver = (context: TextureItemCompositionContext) => ResolvedTextureItemSelection;
+
+function createAppearanceItemResolver(
+  categoryId: Extract<AppearanceVisualLayerId, 'race' | 'eyes' | 'hair'>
+): TextureItemResolver {
+  const colorBinding = getColorControlBindingForOwner(categoryId);
+  return ({ appearance, assetBaseUrl, skinModel }) => {
+    const option = getOptions(categoryId, appearance, assetBaseUrl, skinModel)
+      .find((candidate) => candidate.id === appearance[categoryId]);
+    const colors = colorBinding
+      ? { [colorBinding.slotId]: appearance[colorBinding.colorControlId] }
+      : undefined;
+    return { item: option?.textureItem ?? null, colors };
+  };
+}
+
+function createWardrobeItemResolver(categoryId: TextureLayerCategoryId): TextureItemResolver {
+  return ({ appearance, assetBaseUrl, skinModel, wardrobeColors }) => {
+    const option = getOptions(categoryId, appearance, assetBaseUrl, skinModel)
+      .find((candidate) => candidate.id === appearance[categoryId]);
+    return {
+      item: option?.textureItem ?? null,
+      colors: wardrobeColors[categoryId]?.[appearance[categoryId]],
+    };
+  };
+}
+
+const textureItemResolvers: Record<AppearanceVisualLayerId, TextureItemResolver> = {
+  race: createAppearanceItemResolver('race'),
+  eyes: createAppearanceItemResolver('eyes'),
+  hair: createAppearanceItemResolver('hair'),
+  hat: createWardrobeItemResolver('hat'),
+  shirt: createWardrobeItemResolver('shirt'),
+  pants: createWardrobeItemResolver('pants'),
+  shoes: createWardrobeItemResolver('shoes'),
+  accessory: createWardrobeItemResolver('accessory'),
+};
+
+function orderedTextureLayers(textureLayerOrder: readonly string[]): AppearanceVisualLayerId[] {
+  return ['race', 'eyes', 'hair', ...normalizeTextureLayerOrder(textureLayerOrder)];
 }
 
 function buildTextureInputsForLayer(
-  layer: AppearanceCategoryId,
-  appearance: AppearanceState,
-  assetBaseUrl: string | undefined,
-  skinModel: SkinCrafterSkinModel,
-  wardrobeColors: WardrobeColorState
+  layer: AppearanceVisualLayerId,
+  context: TextureItemCompositionContext
 ): TextureInput[] {
-  if (layer === 'race') {
-    return buildTextureInputsFromLayers(
-      getRaceTextureLayers(appearance.race as Race, skinModel, assetBaseUrl),
-      appearance.skinColor
-    );
-  }
-  if (layer === 'sex') return [];
-  if (layer === 'eyes') {
-    const option = getOptions('eyes', appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance.eyes);
-    return buildTextureInputsFromLayers(option?.textureLayers, appearance.eyesColor);
-  }
-  if (layer === 'hair') {
-    const option = getOptions('hair', appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance.hair);
-    return buildTextureInputsFromLayers(option?.textureLayers, appearance.hairColor);
-  }
-  if (!isTextureLayerCategory(layer)) return [];
-
-  const option = getOptions(layer, appearance, assetBaseUrl, skinModel).find((item) => item.id === appearance[layer]);
-  const slotColors = wardrobeColors[layer]?.[appearance[layer]];
-  return buildTextureInputsFromLayers(option?.textureLayers, undefined, slotColors);
-}
-
-function orderedTextureLayers(textureLayerOrder: readonly string[]): AppearanceCategoryId[] {
-  return ['race', 'sex', 'eyes', 'hair', ...normalizeTextureLayerOrder(textureLayerOrder)];
+  const selection = textureItemResolvers[layer](context);
+  return buildTextureInputsFromItem(selection.item, selection.colors);
 }
 
 export function buildTextureInputs(
@@ -341,10 +415,13 @@ export function buildTextureInputs(
   skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance),
   wardrobeColors?: WardrobeColorState
 ): TextureInput[] {
-  const normalizedWardrobeColors = normalizeWardrobeColors(wardrobeColors);
-  return orderedTextureLayers(textureLayerOrder).flatMap((layer) =>
-    buildTextureInputsForLayer(layer, appearance, assetBaseUrl, skinModel, normalizedWardrobeColors)
-  );
+  const context: TextureItemCompositionContext = {
+    appearance,
+    assetBaseUrl,
+    skinModel,
+    wardrobeColors: normalizeWardrobeColors(wardrobeColors),
+  };
+  return orderedTextureLayers(textureLayerOrder).flatMap((layer) => buildTextureInputsForLayer(layer, context));
 }
 
 export function buildTextureInputsForCategories(
@@ -355,56 +432,29 @@ export function buildTextureInputsForCategories(
   skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance),
   wardrobeColors?: WardrobeColorState
 ): TextureInput[] {
-  const active = new Set(activeCategories);
-  const normalizedWardrobeColors = normalizeWardrobeColors(wardrobeColors);
-  const shouldIncludeLayer = (layer: AppearanceCategoryId): boolean => {
-    if (layer === 'race') {
-      return active.has('race') || active.has('sex') || active.has('skinColor');
-    }
-    if (layer === 'sex') {
-      return false;
-    }
-    if (layer === 'eyes') {
-      return active.has('eyes') || active.has('eyesColor');
-    }
-    if (layer === 'hair') {
-      return active.has('hair') || active.has('hairColor');
-    }
-    return active.has(layer);
+  const activeLayers = new Set(activeCategories.map(getVisualLayerForControl));
+  const context: TextureItemCompositionContext = {
+    appearance,
+    assetBaseUrl,
+    skinModel,
+    wardrobeColors: normalizeWardrobeColors(wardrobeColors),
   };
 
   return orderedTextureLayers(textureLayerOrder)
-    .filter(shouldIncludeLayer)
-    .flatMap((layer) => buildTextureInputsForLayer(
-      layer,
-      appearance,
-      assetBaseUrl,
-      skinModel,
-      normalizedWardrobeColors
-    ));
+    .filter((layer) => activeLayers.has(layer))
+    .flatMap((layer) => buildTextureInputsForLayer(layer, context));
 }
 
 export function isColorControlEffective(
   categoryId: AppearanceCategoryId,
   appearance: AppearanceState,
-  assetBaseUrl?: string
+  assetBaseUrl?: string,
+  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
 ): boolean {
-  if (categoryId === 'skinColor') {
-    return hasTintableTextureLayer(
-      getRaceTextureLayers(
-        appearance.race as Race,
-        getSkinModelForAppearance(appearance),
-        assetBaseUrl
-      )
-    );
-  }
-  if (categoryId === 'eyesColor') {
-    const option = getOptions('eyes', appearance, assetBaseUrl).find((item) => item.id === appearance.eyes);
-    return hasTintableTextureLayer(option?.textureLayers);
-  }
-  if (categoryId === 'hairColor') {
-    const option = getOptions('hair', appearance, assetBaseUrl).find((item) => item.id === appearance.hair);
-    return hasTintableTextureLayer(option?.textureLayers);
-  }
-  return true;
+  const binding = getColorControlBinding(categoryId);
+  if (!binding) return true;
+
+  const option = getOptions(binding.ownerCategoryId, appearance, assetBaseUrl, skinModel)
+    .find((candidate) => candidate.id === appearance[binding.ownerCategoryId]);
+  return Boolean(option?.textureItem?.colorSlots?.some((slot) => slot.id === binding.slotId));
 }

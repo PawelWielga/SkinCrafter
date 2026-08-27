@@ -311,15 +311,25 @@ The editor root is `.skincrafter-editor`. `className` and `style` are applied to
 
 Editor icons are bundled package-owned inline SVGs. An embedding host does not need Font Awesome or another global icon stylesheet. Layer ordering uses browser-native drag-and-drop inside the editor plus ordinary focusable up/down buttons for keyboard operation; the package does not install compatibility globals on `window`.
 
+## Internal texture-backed content
+
+Contributors use one internal texture-item path for Race, Eyes, future real Hair items and wardrobe content. `src/data/textureItemDefinitions.ts` owns the neutral `TextureItemDefinition` / `TextureItemVariants` contract, validates explicit `classic`/`slim` model metadata and color slots, resolves assets, and builds ordered `TextureInput[]` through `buildTextureInputsFromItem()`.
+
+Character fields such as `skinColor`, `eyesColor` and `hairColor` remain in the public `AppearanceState` for source/wire compatibility. Internally they are adapters onto color slots owned by the selected Race/Eyes/Hair texture item. The same declarative control -> visual-layer ownership mapping drives imported-skin activation, so a color/model edit activates its complete logical visual layer without a separate tint/compositor algorithm.
+
+Wardrobe definition helpers remain available internally as compatibility aliases over the neutral contract; they are not a second schema. Adding a new option to an existing texture-backed category should normally be asset + typed definition + translations + tests, without another compositor branch.
+
+See the repository-level `CONTENT_WORKFLOW.md` and `src/assets/textures/README.md` for the authoring contract, Classic/Slim rules, tintable/fixed layer ordering and validation checklist.
+
 ## Assets and non-root routes
 
-SkinCrafter-owned wardrobe PNGs are part of the package artifact, but they are emitted as separate cache-safe hashed files rather than embedded as base64 payloads in `dist/index.js`. The editor JavaScript therefore grows with logical asset references, not with the binary size of every texture, and the browser only requests texture files that are actually used by preview/composition or option thumbnails.
+SkinCrafter-owned texture PNGs are part of the package artifact, but they are emitted as separate cache-safe hashed files rather than embedded as base64 payloads in `dist/index.js`. The editor JavaScript therefore grows with logical asset references, not with the binary size of every texture, and the browser only requests texture files that are actually used by preview/composition or option thumbnails.
 
 Default package asset URLs are relative to the emitted editor module. A normal bundler such as Vite can therefore carry the installed package assets into an application served from `/character`, `/account/character`, or another non-root base without SkinCrafter assuming `/textures/...` or `/assets/...` at the application root. The packed `.tgz` includes the emitted PNG files under `dist/assets/`; their hashed filenames are intentionally cacheable as immutable build artifacts and may change when the underlying texture bytes change.
 
 If a host intentionally serves a compatible asset set itself, pass `assetBaseUrl`, for example `/character/skincrafter-assets/` or an absolute CDN prefix. All logical texture paths are then resolved below that prefix instead of using the package-emitted URL. The override must mirror the logical `textures/...` layout used by SkinCrafter. Package assets remain available in the distributable artifact as the default fallback, but their bytes are not duplicated inside the JavaScript bundle.
 
-When adding a new wardrobe texture, add it to `packages/editor/src/assets/textures` and the typed manifest in `src/assetResolver.ts`. Keep the logical path stable unless the corresponding wardrobe mapping is intentionally changed. Package verification checks that wardrobe PNGs are emitted as separate hashed files, referenced by the runtime bundle, included by `npm pack`, and never reintroduced as inline PNG data URLs. The external-consumer smoke test also builds the packed package below `/character/` so route-relative asset regressions fail CI.
+When adding a new texture-backed option, add its PNG layers to `packages/editor/src/assets/textures`, register the typed logical paths in `src/assetResolver.ts`, and define the item through the shared texture-item contract. Keep logical paths stable unless the owning semantic mapping is intentionally changed. Package verification checks that runtime PNGs are emitted as separate hashed files, referenced by the runtime bundle, included by `npm pack`, and never reintroduced as inline PNG data URLs. The external-consumer smoke test also builds the packed package below `/character/` so route-relative asset regressions fail CI.
 
 ## Release/versioning policy
 

@@ -9,7 +9,7 @@ import {
   textureLayerCategories,
 } from './appearance';
 
-describe('wardrobe content workflow contract', () => {
+describe('texture-backed content workflow contract', () => {
   it('keeps the documented Human/Male mixed reference content wired end-to-end', () => {
     const assetBaseUrl = '/character/skincrafter-assets/';
     const appearance = { ...defaultAppearance, race: 'Human', sex: 'Male' };
@@ -19,10 +19,21 @@ describe('wardrobe content workflow contract', () => {
 
     expect(humanOption?.textureLayers).toEqual({
       tintable: [
-        { texture: '/character/skincrafter-assets/textures/race/human/male.tintable.png' },
+        {
+          texture: '/character/skincrafter-assets/textures/race/human/male.tintable.png',
+          colorSlot: 'skin',
+        },
       ],
       fixed: '/character/skincrafter-assets/textures/race/human/male.fixed.png',
     });
+    expect(humanOption?.textureItem?.colorSlots).toEqual([
+      {
+        id: 'skin',
+        labelKey: 'category.skinColor',
+        defaultColor: '#D5BAAA',
+        palette: ['#D5BAAA', '#E0AC69', '#C68642'],
+      },
+    ]);
     expect(skinCrafterAssetPaths).toEqual(
       expect.arrayContaining([
         'textures/race/human/male.tintable.png',
