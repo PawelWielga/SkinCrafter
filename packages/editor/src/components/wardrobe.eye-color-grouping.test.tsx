@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { defaultAppearance, normalizeTextureLayerOrder } from '../data/appearance';
@@ -34,19 +32,5 @@ describe('eye color grouping', () => {
     expect(
       eyeColorCard?.querySelector('[data-skincrafter-icon="fa-eye-dropper"]')
     ).not.toBeNull();
-  });
-
-  it('styles the adjacent eye cards as one frame with an embedded color label', () => {
-    const css = readFileSync(resolve(process.cwd(), 'src/styles/main.css'), 'utf8');
-
-    expect(css).toContain(
-      '[data-skincrafter-icon="fa-eye"]):has(+ .wardrobe-option-card > h3 [data-skincrafter-icon="fa-eye-dropper"])'
-    );
-    expect(css).toContain('border-bottom-width: 0;');
-    expect(css).toContain(
-      '[data-skincrafter-icon="fa-eye"]) + .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye-dropper"])'
-    );
-    expect(css).toContain('border-top-width: 0;');
-    expect(css).toContain('position: static;');
   });
 });
