@@ -53,7 +53,7 @@ function CharacterEditor() {
 
 `SkinCrafterEditor` supports:
 
-- `locale`: host-controlled `en` or `pl`. The package does not own a language selector.
+- `locale`: host-controlled `en`, `pl` or `pt-BR`. The package does not own a language selector.
 - `initialSkin`: initial semantic appearance/layer-order/wardrobe-color input, or an existing 64x64 Minecraft PNG supplied as `Blob` with explicit `classic`/`slim` model metadata.
 - `value` + `onStateChange`: fully host-controlled semantic editor state.
 - `persistence`: optional host storage adapter for semantic appearance, layer-order and wardrobe-color state. `load()` may explicitly report `loaded`, `empty` or `incompatible`; `incompatible` keeps the editor usable in memory while suppressing persistence writes for that mount. Exceptions from `load()` or `save()` are isolated from the editor lifecycle, reported through `onError`, and disable persistence for the remainder of that editor mount. `save()` receives the current versioned serialized state. The package never reads or writes `localStorage` directly.
