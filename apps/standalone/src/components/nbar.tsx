@@ -19,6 +19,11 @@ interface NBarProps {
 const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, key);
 const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
 
+export const getEnvironmentBadge = (baseUrl: string): string | null =>
+  baseUrl === '/dev/' ? 'DEV' : null;
+
+const environmentBadge = getEnvironmentBadge(import.meta.env.BASE_URL);
+
 const NBar: React.FC<NBarProps> = ({
   logoSrc = defaultLogoSrc,
   logoAlt = 'SkinCrafter logo',
@@ -38,13 +43,15 @@ const NBar: React.FC<NBarProps> = ({
               style={{ imageRendering: 'pixelated' }}
             />
           </div>
-          <span
-            className="pixel-border bg-amber-500 px-2 py-0.5 text-xs font-bold uppercase tracking-normal text-green-950 shadow-sm"
-            title={t('nav.workInProgress')}
-            aria-label={t('nav.workInProgress')}
-          >
-            WIP
-          </span>
+          {environmentBadge && (
+            <span
+              className="pixel-border bg-amber-500 px-2 py-0.5 text-xs font-bold uppercase tracking-normal text-green-950 shadow-sm"
+              title={environmentBadge}
+              aria-label={environmentBadge}
+            >
+              {environmentBadge}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <NavLink
