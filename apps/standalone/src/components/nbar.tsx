@@ -118,17 +118,17 @@ const NBar: React.FC<NBarProps> = ({
                     <button
                       key={item}
                       type="button"
-                      className={`flex w-full items-center justify-between gap-5 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none ${
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none ${
                         isSelected ? 'font-semibold' : ''
                       }`}
                       role="menuitemradio"
                       aria-checked={isSelected}
                       onClick={() => handleLanguageChange(item)}
                     >
-                      <span>{option.label}</span>
                       <span className="text-base" aria-hidden="true">
                         {option.flag}
                       </span>
+                      <span>{option.label}</span>
                     </button>
                   );
                 })}
