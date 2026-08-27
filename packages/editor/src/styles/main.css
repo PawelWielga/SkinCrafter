@@ -61,6 +61,36 @@
 .skincrafter-editor .wardrobe-option-card { margin-top: .45rem; }
 .skincrafter-editor .wardrobe-option-card h3 { font-size: .78rem; left: .55rem; line-height: 1rem; margin-bottom: .25rem; max-width: calc(100% - 1rem); min-height: 1rem; top: .45rem; }
 .skincrafter-editor .wardrobe-option-card h3 .skincrafter-icon { font-size: .72rem; margin-right: .35rem; }
+.skincrafter-editor .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye"]):has(+ .wardrobe-option-card > h3 [data-skincrafter-icon="fa-eye-dropper"]) {
+  border-bottom-width: 0;
+  box-shadow: 4px 0 0 rgba(0, 0, 0, 0.1);
+  padding-bottom: .25rem;
+}
+.skincrafter-editor .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye"]) + .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye-dropper"]) {
+  border-top-width: 0;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+  margin-top: 0;
+  padding-top: .25rem;
+}
+.skincrafter-editor .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye"]) + .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye-dropper"]) > h3 {
+  background: transparent;
+  font-size: .75rem;
+  font-weight: 600;
+  left: auto;
+  line-height: 1rem;
+  margin: .1rem 0 .2rem;
+  max-width: none;
+  min-height: 0;
+  padding: 0;
+  position: static;
+  top: auto;
+}
+.skincrafter-editor .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye"]) + .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye-dropper"]) > h3 .skincrafter-icon {
+  display: none;
+}
+.skincrafter-editor .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye"]) + .wardrobe-option-card:has(> h3 [data-skincrafter-icon="fa-eye-dropper"]) > div[role="group"] {
+  margin-top: .25rem;
+}
 .skincrafter-editor .layer-order-card { padding-left: 2.4rem; transition: opacity .15s ease, box-shadow .15s ease; }
 .skincrafter-editor .layer-order-card.is-dragging { opacity: .34; }
 .skincrafter-editor .layer-order-card.drop-before::before,
