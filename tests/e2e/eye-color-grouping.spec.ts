@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('appearance color palettes are real sub-controls inside their owner cards', async ({ page }) => {
+test('appearance color palettes follow their selected owner items', async ({ page }) => {
   await page.goto('/');
 
   const eyesCard = page.getByRole('heading', { name: 'Eyes' }).locator('..');
@@ -12,7 +12,8 @@ test('appearance color palettes are real sub-controls inside their owner cards',
   await expect(hairCard).toBeVisible();
   await expect(eyesCard.getByRole('group', { name: 'Eye Color' })).toBeVisible();
   await expect(raceCard.getByRole('group', { name: 'Skin Color' })).toBeVisible();
-  await expect(hairCard.getByRole('group', { name: 'Hair Color' })).toBeVisible();
+  await expect(hairCard.getByRole('button', { name: 'None' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: 'Hair Color' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Eye Color' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Hair Color' })).toHaveCount(0);
 
