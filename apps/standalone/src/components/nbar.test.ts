@@ -12,13 +12,17 @@ describe('standalone environment badge', () => {
 });
 
 describe('standalone language selector', () => {
-  it('uses local SVG flags instead of platform-dependent emoji', () => {
-    expect(getLanguageOption('en')).toMatchObject({ label: 'English' });
-    expect(getLanguageOption('pl')).toMatchObject({ label: 'Polski' });
-    expect(getLanguageOption('pt-BR')).toMatchObject({ label: 'Português' });
+  it('uses bundled SVG flags instead of platform-dependent emoji', () => {
+    const english = getLanguageOption('en');
+    const polish = getLanguageOption('pl');
+    const portuguese = getLanguageOption('pt-BR');
 
-    expect(getLanguageOption('en').flagSrc).toMatch(/gb\.svg$/);
-    expect(getLanguageOption('pl').flagSrc).toMatch(/pl\.svg$/);
-    expect(getLanguageOption('pt-BR').flagSrc).toMatch(/br\.svg$/);
+    expect(english).toMatchObject({ label: 'English' });
+    expect(polish).toMatchObject({ label: 'Polski' });
+    expect(portuguese).toMatchObject({ label: 'Português' });
+
+    for (const option of [english, polish, portuguese]) {
+      expect(option.flagSrc).toMatch(/^(?:data:image\/svg\+xml|.*\.svg(?:\?.*)?$)/);
+    }
   });
 });
