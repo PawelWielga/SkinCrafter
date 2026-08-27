@@ -47,6 +47,8 @@ describe('standalone language selector', () => {
 
     expect(selected?.className).toContain('bg-green-700');
     expect(selected?.className).toContain('text-white');
+    expect(selected?.className).toContain('hover:bg-green-800');
+    expect(selected?.className).toContain('focus:bg-green-800');
     expect(selected?.className).not.toContain('bg-amber-500');
 
     for (const option of [english, portuguese]) {
