@@ -239,14 +239,20 @@ test('Polish and English creator UI stay usable without mobile horizontal overfl
 
   await page.goto('/');
 
-  const languageSelect = page.locator('nav select');
+  const languageMenu = page.locator('nav summary');
   const editor = page.getByTestId('skincrafter-editor');
-  await expect(languageSelect).toBeVisible();
+  await expect(languageMenu).toBeVisible();
   await expect(editor).toBeVisible();
 
-  for (const locale of ['pl', 'en']) {
-    await languageSelect.selectOption(locale);
-    await expect(languageSelect).toHaveValue(locale);
+  const locales = [
+    { label: 'Polski', triggerLabel: 'Jezyk: Polski' },
+    { label: 'English', triggerLabel: 'Language: English' },
+  ];
+
+  for (const locale of locales) {
+    await languageMenu.click();
+    await page.getByRole('menuitemradio', { name: locale.label }).click();
+    await expect(languageMenu).toHaveAttribute('aria-label', locale.triggerLabel);
     await expectNoHorizontalOverflow(page);
 
     const unnamedVisibleButtons = await editor.locator('button:visible').evaluateAll((buttons) =>
