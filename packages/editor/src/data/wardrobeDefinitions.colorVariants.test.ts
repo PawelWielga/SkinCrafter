@@ -42,7 +42,7 @@ describe('wardrobe color contracts across model variants', () => {
       classic: colorableVariant('classic'),
       slim: colorableVariant('slim', ['#4A6FA5', '#2F8F4E']),
     })).toThrow(
-      'Colorable wardrobe variants for one item must define identical color slots across skin models.'
+      'Colorable texture item variants must define identical color slots across skin models.'
     );
   });
 
