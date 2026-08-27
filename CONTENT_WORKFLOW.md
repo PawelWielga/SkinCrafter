@@ -115,7 +115,7 @@ A texture-backed item and its color control are one logical UI structure.
 
 - Race renders Skin Color inside the Race card when the selected race definition is tintable.
 - Eyes renders Eye Color inside the Eyes card.
-- Hair renders Hair Color inside the Hair card even while the only option is `None`, so the semantic preference remains visible without inventing a fake hair texture. A future tintable hair definition uses the same `primary` slot metadata for composition.
+- Hair renders Hair Color inside the Hair card only when the selected hair definition exposes the tintable `primary` color slot. With `Hair=None`, no Hair Color palette is shown.
 - Wardrobe keeps its existing contextual palettes inside the selected wardrobe item card.
 
 Do not recreate visual grouping with sibling CSS such as `:has()` when the controls belong to the same logical item.
