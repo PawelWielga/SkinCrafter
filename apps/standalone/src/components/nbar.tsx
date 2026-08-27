@@ -7,6 +7,9 @@ import {
   type Language,
   type TranslationKey,
 } from '@dihor/skincrafter-editor';
+import brazilFlag from '../assets/flags/br.svg';
+import unitedKingdomFlag from '../assets/flags/gb.svg';
+import polandFlag from '../assets/flags/pl.svg';
 
 interface NBarProps {
   logoSrc?: string;
@@ -17,16 +20,16 @@ interface NBarProps {
 }
 
 interface LanguageOption {
-  flag: string;
+  flagSrc: string;
   label: string;
 }
 
 const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, key);
 const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
 const languageOptions: Record<Language, LanguageOption> = {
-  en: { flag: '🇬🇧', label: 'English' },
-  pl: { flag: '🇵🇱', label: 'Polski' },
-  'pt-BR': { flag: '🇧🇷', label: 'Português' },
+  en: { flagSrc: unitedKingdomFlag, label: 'English' },
+  pl: { flagSrc: polandFlag, label: 'Polski' },
+  'pt-BR': { flagSrc: brazilFlag, label: 'Português' },
 };
 
 export const getLanguageOption = (language: Language): LanguageOption => languageOptions[language];
@@ -35,6 +38,15 @@ export const getEnvironmentBadge = (baseUrl: string): string | null =>
   baseUrl === '/dev/' ? 'DEV' : null;
 
 const environmentBadge = getEnvironmentBadge(import.meta.env.BASE_URL);
+
+const LanguageFlag: React.FC<{ src: string }> = ({ src }) => (
+  <img
+    src={src}
+    alt=""
+    aria-hidden="true"
+    className="h-[18px] w-6 shrink-0 object-cover"
+  />
+);
 
 const NBar: React.FC<NBarProps> = ({
   logoSrc = defaultLogoSrc,
@@ -100,9 +112,7 @@ const NBar: React.FC<NBarProps> = ({
                 className="pixel-button pixel-border flex h-9 min-w-16 cursor-pointer list-none items-center justify-center gap-2 bg-green-700 px-3 py-1 text-white transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-green-800 [&::-webkit-details-marker]:hidden"
                 aria-label={`${t('nav.language')}: ${selectedLanguage.label}`}
               >
-                <span className="text-base" aria-hidden="true">
-                  {selectedLanguage.flag}
-                </span>
+                <LanguageFlag src={selectedLanguage.flagSrc} />
                 <span className="text-xs transition-transform group-open:rotate-180" aria-hidden="true">
                   ▾
                 </span>
@@ -129,9 +139,7 @@ const NBar: React.FC<NBarProps> = ({
                       aria-checked={isSelected}
                       onClick={() => handleLanguageChange(item)}
                     >
-                      <span className="text-base" aria-hidden="true">
-                        {option.flag}
-                      </span>
+                      <LanguageFlag src={option.flagSrc} />
                       <span>{option.label}</span>
                     </button>
                   );
