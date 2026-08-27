@@ -138,7 +138,8 @@ const raceTextureMap: Record<Race, RaceDefinition> = {
 };
 
 export function getAvailableSexes(race: Race): Sex[] {
-  return Object.values(raceTextureMap[race].sexes).flatMap((sex) => sex ? [sex] : []);
+  const sexes = Object.values(raceTextureMap[race].sexes).flatMap((sex) => sex ? [sex] : []);
+  return [...new Set(sexes)];
 }
 
 export function getRaceSkinColors(race: Race): readonly string[] {
