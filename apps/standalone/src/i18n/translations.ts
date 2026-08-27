@@ -47,6 +47,18 @@ const standaloneTranslations: Record<Language, Record<StandaloneOnlyTranslationK
     'notFound.description': 'Ten adres nie prowadzi do żadnej strony SkinCraftera.',
     'notFound.backToCreator': 'Wróć do kreatora',
   },
+  'pt-BR': {
+    'skinView.error.usernameRequired': 'Digite um nome de usuário do Minecraft.',
+    'skinView.error.playerNotFound': 'Jogador do Minecraft não encontrado.',
+    'skinView.error.skinTextureMissing': 'Este jogador não possui uma textura de skin disponível.',
+    'skinView.error.network': 'Não foi possível acessar o PlayerDB. Verifique sua conexão e tente novamente.',
+    'skinView.error.serviceUnavailable': 'O PlayerDB está temporariamente indisponível. Tente novamente mais tarde.',
+    'skinView.error.rateLimited': 'Muitas consultas de jogadores. Tente novamente em instantes.',
+    'skinView.error.invalidResponse': 'O PlayerDB retornou uma resposta inesperada. Tente novamente mais tarde.',
+    'notFound.title': 'Página não encontrada',
+    'notFound.description': 'Este endereço não aponta para uma página do SkinCrafter.',
+    'notFound.backToCreator': 'Voltar ao criador',
+  },
 };
 
 function isStandaloneOnlyTranslationKey(
