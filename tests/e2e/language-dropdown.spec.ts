@@ -22,6 +22,8 @@ test('language dropdown follows the standalone pixel button styling', async ({ p
   await expect(english).toHaveClass(/pixel-border/);
   await expect(english).toHaveClass(/bg-green-700/);
   await expect(english).toHaveClass(/text-white/);
+  await expect(english).toHaveClass(/hover:bg-green-800/);
+  await expect(english).toHaveClass(/focus:bg-green-800/);
   await expect(polish).toHaveClass(/bg-gray-100/);
   await expect(polish).toHaveClass(/text-gray-700/);
 });
