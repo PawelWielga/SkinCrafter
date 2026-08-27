@@ -12,9 +12,13 @@ describe('standalone environment badge', () => {
 });
 
 describe('standalone language selector', () => {
-  it('shows compact native language labels with country flags', () => {
-    expect(getLanguageOption('en')).toEqual({ flag: '🇬🇧', label: 'English' });
-    expect(getLanguageOption('pl')).toEqual({ flag: '🇵🇱', label: 'Polski' });
-    expect(getLanguageOption('pt-BR')).toEqual({ flag: '🇧🇷', label: 'Português' });
+  it('uses local SVG flags instead of platform-dependent emoji', () => {
+    expect(getLanguageOption('en')).toMatchObject({ label: 'English' });
+    expect(getLanguageOption('pl')).toMatchObject({ label: 'Polski' });
+    expect(getLanguageOption('pt-BR')).toMatchObject({ label: 'Português' });
+
+    expect(getLanguageOption('en').flagSrc).toMatch(/gb\.svg$/);
+    expect(getLanguageOption('pl').flagSrc).toMatch(/pl\.svg$/);
+    expect(getLanguageOption('pt-BR').flagSrc).toMatch(/br\.svg$/);
   });
 });
