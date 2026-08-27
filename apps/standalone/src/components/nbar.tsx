@@ -18,16 +18,17 @@ interface NBarProps {
 
 const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, key);
 const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
-const languageFlags: Record<Language, string> = {
-  en: '🇬🇧',
-  pl: '🇵🇱',
-  'pt-BR': '🇧🇷',
+const languageRegions: Record<Language, { flag: string; region: string }> = {
+  en: { flag: '🇬🇧', region: 'GB' },
+  pl: { flag: '🇵🇱', region: 'PL' },
+  'pt-BR': { flag: '🇧🇷', region: 'BR' },
 };
-const languageDisplayNames = new Intl.DisplayNames([defaultLanguage], { type: 'language' });
+const regionDisplayNames = new Intl.DisplayNames([defaultLanguage], { type: 'region' });
 
 export const getLanguageOptionLabel = (language: Language): string => {
-  const displayName = languageDisplayNames.of(language) ?? language.toUpperCase();
-  return `${languageFlags[language]} ${displayName}`;
+  const { flag, region } = languageRegions[language];
+  const displayName = regionDisplayNames.of(region) ?? region;
+  return `${flag} ${displayName}`;
 };
 
 export const getEnvironmentBadge = (baseUrl: string): string | null =>
