@@ -7,7 +7,7 @@ on:
     types: [completed]
 
 concurrency:
-  group: github-pages-production
+  group: github-pages-deploy
   cancel-in-progress: false
 
 permissions: {}
@@ -98,6 +98,18 @@ jobs:
           path: apps/standalone/dist
           github-token: ${{ github.token }}
           run-id: ${{ needs.gate.outputs.build_run_id }}
+      - name: Checkout current Pages branch
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages-current
+          persist-credentials: false
+      - name: Preserve current dev preview
+        shell: bash
+        run: |
+          if [[ -d gh-pages-current/dev ]]; then
+            cp -a gh-pages-current/dev apps/standalone/dist/dev
+          fi
       - name: Deploy validated standalone site
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
