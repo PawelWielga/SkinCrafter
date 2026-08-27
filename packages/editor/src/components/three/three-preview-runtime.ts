@@ -72,6 +72,10 @@ export interface ThreePreviewRuntimeDiagnostics {
   overlayVisible: boolean[];
   cameraDistance: number;
   rotation: number;
+  rotationX: number;
+  rotationY: number;
+  rotationZ: number;
+  isDragging: boolean;
 }
 
 const CHARACTER_CENTER_Y = 0;
@@ -79,6 +83,12 @@ const CHARACTER_CAMERA_DISTANCE = 44;
 const MIN_CAMERA_DISTANCE = 24;
 const MAX_CAMERA_DISTANCE = 72;
 const WHEEL_ZOOM_SPEED = 0.04;
+const MANUAL_ROTATION_RADIANS_PER_PIXEL = 0.01;
+const MAX_MANUAL_TILT_RADIANS = THREE.MathUtils.degToRad(50);
+const AUTO_ROTATE_RADIANS_PER_SECOND = 0.6;
+const INITIAL_FRAME_DELTA_SECONDS = 1 / 60;
+const MAX_FRAME_DELTA_SECONDS = 0.05;
+const AUTO_TILT_RETURN_DAMPING = 8;
 const HEAD_OVERLAY_EXPAND = 1;
 const BODY_OVERLAY_EXPAND = 0.5;
 const RIGHT_ARM_X = -6;
@@ -122,6 +132,7 @@ export class ThreePreviewRuntime {
   private readonly onError?: (error: ThreePreviewRuntimeError) => void;
   private readonly disposedTextures = new WeakSet<THREE.Texture>();
   private readonly pendingTextures = new Map<number, THREE.Texture>();
+  private readonly initialCursor: string;
 
   private parts = emptyModelParts();
   private modelMeshes: BoxMesh[] = [];
@@ -137,6 +148,11 @@ export class ThreePreviewRuntime {
   private cameraDistance = CHARACTER_CAMERA_DISTANCE;
   private modelRevision = 0;
   private textureRevision = 0;
+  private activePointerId: number | null = null;
+  private lastPointerX = 0;
+  private lastPointerY = 0;
+  private isDragging = false;
+  private previousFrameTimestamp: number | null = null;
 
   constructor(
     private readonly container: HTMLElement,
@@ -148,6 +164,7 @@ export class ThreePreviewRuntime {
     this.showOverlay = options.showOverlay;
     this.autoRotate = options.autoRotate;
     this.onError = options.onError;
+    this.initialCursor = container.style.cursor;
 
     const width = container.clientWidth || 1;
     const height = container.clientHeight || 1;
@@ -179,6 +196,12 @@ export class ThreePreviewRuntime {
     this.resizeObserver.observe(container);
     dependencies.addWindowResizeListener(this.handleResize);
     container.addEventListener('wheel', this.handleWheel, { passive: false });
+    container.addEventListener('pointerdown', this.handlePointerDown);
+    container.addEventListener('pointermove', this.handlePointerMove);
+    container.addEventListener('pointerup', this.handlePointerUp);
+    container.addEventListener('pointercancel', this.handlePointerCancel);
+    container.addEventListener('lostpointercapture', this.handleLostPointerCapture);
+    container.style.cursor = 'grab';
 
     this.handleResize();
     this.scheduleAnimationFrame();
@@ -255,17 +278,35 @@ export class ThreePreviewRuntime {
       overlayVisible: this.getOverlayMeshes().map((mesh) => mesh.visible),
       cameraDistance: this.cameraDistance,
       rotation: this.group.rotation.y,
+      rotationX: this.group.rotation.x,
+      rotationY: this.group.rotation.y,
+      rotationZ: this.group.rotation.z,
+      isDragging: this.isDragging,
     };
   }
 
   dispose(): void {
     if (this.disposed) return;
+    const activePointerId = this.activePointerId;
     this.disposed = true;
     this.textureLoadVersion += 1;
 
     this.container.removeEventListener('wheel', this.handleWheel);
+    this.container.removeEventListener('pointerdown', this.handlePointerDown);
+    this.container.removeEventListener('pointermove', this.handlePointerMove);
+    this.container.removeEventListener('pointerup', this.handlePointerUp);
+    this.container.removeEventListener('pointercancel', this.handlePointerCancel);
+    this.container.removeEventListener('lostpointercapture', this.handleLostPointerCapture);
     this.dependencies.removeWindowResizeListener(this.handleResize);
     this.resizeObserver.disconnect();
+
+    if (activePointerId !== null) {
+      this.releasePointerCapture(activePointerId);
+    }
+    this.activePointerId = null;
+    this.isDragging = false;
+    this.previousFrameTimestamp = null;
+    this.container.style.cursor = this.initialCursor;
 
     if (this.animationFrameId !== null) {
       this.dependencies.cancelAnimationFrame(this.animationFrameId);
@@ -311,16 +352,108 @@ export class ThreePreviewRuntime {
     this.camera.updateProjectionMatrix();
   };
 
-  private scheduleAnimationFrame(): void {
-    this.animationFrameId = this.dependencies.requestAnimationFrame(() => {
-      if (this.disposed) return;
-      if (this.autoRotate) {
-        this.group.rotation.y += 0.01;
-      }
-      this.renderer.render(this.scene, this.camera);
-      this.scheduleAnimationFrame();
-    });
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    if (this.disposed || this.activePointerId !== null) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    this.activePointerId = event.pointerId;
+    this.lastPointerX = event.clientX;
+    this.lastPointerY = event.clientY;
+    this.isDragging = true;
+    this.container.style.cursor = 'grabbing';
+    this.capturePointer(event.pointerId);
+    event.preventDefault();
+  };
+
+  private readonly handlePointerMove = (event: PointerEvent): void => {
+    if (this.disposed || !this.isDragging || event.pointerId !== this.activePointerId) return;
+
+    const deltaX = event.clientX - this.lastPointerX;
+    const deltaY = event.clientY - this.lastPointerY;
+    this.lastPointerX = event.clientX;
+    this.lastPointerY = event.clientY;
+
+    this.group.rotation.y += deltaX * MANUAL_ROTATION_RADIANS_PER_PIXEL;
+    this.group.rotation.x = THREE.MathUtils.clamp(
+      this.group.rotation.x + deltaY * MANUAL_ROTATION_RADIANS_PER_PIXEL,
+      -MAX_MANUAL_TILT_RADIANS,
+      MAX_MANUAL_TILT_RADIANS
+    );
+    this.group.rotation.z = 0;
+    event.preventDefault();
+  };
+
+  private readonly handlePointerUp = (event: PointerEvent): void => {
+    this.finishPointerInteraction(event.pointerId, true);
+  };
+
+  private readonly handlePointerCancel = (event: PointerEvent): void => {
+    this.finishPointerInteraction(event.pointerId, false);
+  };
+
+  private readonly handleLostPointerCapture = (event: PointerEvent): void => {
+    this.finishPointerInteraction(event.pointerId, false);
+  };
+
+  private finishPointerInteraction(pointerId: number, releaseCapture: boolean): void {
+    if (this.disposed || pointerId !== this.activePointerId) return;
+    this.activePointerId = null;
+    this.isDragging = false;
+    this.container.style.cursor = 'grab';
+
+    if (releaseCapture) {
+      this.releasePointerCapture(pointerId);
+    }
   }
+
+  private capturePointer(pointerId: number): void {
+    try {
+      this.container.setPointerCapture?.(pointerId);
+    } catch {
+      // The pointer may have ended before capture was established.
+    }
+  }
+
+  private releasePointerCapture(pointerId: number): void {
+    try {
+      if (this.container.hasPointerCapture?.(pointerId) === false) return;
+      this.container.releasePointerCapture?.(pointerId);
+    } catch {
+      // The browser may already have released capture for a cancelled pointer.
+    }
+  }
+
+  private scheduleAnimationFrame(): void {
+    this.animationFrameId = this.dependencies.requestAnimationFrame(this.handleAnimationFrame);
+  }
+
+  private readonly handleAnimationFrame = (timestamp: number): void => {
+    if (this.disposed) return;
+
+    const deltaSeconds =
+      this.previousFrameTimestamp === null
+        ? INITIAL_FRAME_DELTA_SECONDS
+        : THREE.MathUtils.clamp(
+            (timestamp - this.previousFrameTimestamp) / 1000,
+            0,
+            MAX_FRAME_DELTA_SECONDS
+          );
+    this.previousFrameTimestamp = timestamp;
+
+    if (this.autoRotate && !this.isDragging) {
+      this.group.rotation.y += AUTO_ROTATE_RADIANS_PER_SECOND * deltaSeconds;
+      this.group.rotation.x = THREE.MathUtils.damp(
+        this.group.rotation.x,
+        0,
+        AUTO_TILT_RETURN_DAMPING,
+        deltaSeconds
+      );
+      this.group.rotation.z = 0;
+    }
+
+    this.renderer.render(this.scene, this.camera);
+    this.scheduleAnimationFrame();
+  };
 
   private getClampedDpr(): number {
     return Math.min(this.dependencies.getDevicePixelRatio(), 2);
