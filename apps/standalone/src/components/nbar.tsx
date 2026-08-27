@@ -17,9 +17,10 @@ interface NBarProps {
 }
 
 const fallbackT = (key: TranslationKey): string => translate(defaultLanguage, key);
+const defaultLogoSrc = `${import.meta.env.BASE_URL}logo.png`;
 
 const NBar: React.FC<NBarProps> = ({
-  logoSrc = '/logo.png',
+  logoSrc = defaultLogoSrc,
   logoAlt = 'SkinCrafter logo',
   language = 'en',
   onLanguageChange,
