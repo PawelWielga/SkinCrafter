@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildTextureInputsFromLayers } from '../data/appearance';
+import { buildTextureInputsFromItem } from '../data/textureItemDefinitions';
 import combineTextures from './combineTextures';
 
 interface LoadedImage {
@@ -140,7 +140,7 @@ describe('combineTextures explicit layer composition', () => {
     }
   });
 
-  it('applies shared and independent wardrobe slots to ordered tintable layers before fixed content', async () => {
+  it('applies shared and independent texture item slots to ordered tintable layers before fixed content', async () => {
     const images = installSuccessfulImages();
     const output = createOutputCanvas();
     const primaryFirst = createTintCanvas();
@@ -153,16 +153,32 @@ describe('combineTextures explicit layer composition', () => {
       .mockReturnValueOnce(secondary.canvas)
       .mockReturnValueOnce(primarySecond.canvas);
 
-    const inputs = buildTextureInputsFromLayers(
+    const inputs = buildTextureInputsFromItem(
       {
-        tintable: [
-          { texture: '/layer-named-fixed.png', colorSlot: 'primary' },
-          { texture: '/layer-secondary.png', colorSlot: 'secondary' },
-          { texture: '/layer-primary-again.png', colorSlot: 'primary' },
+        skinModel: 'classic',
+        textureLayers: {
+          tintable: [
+            { texture: '/layer-named-fixed.png', colorSlot: 'primary' },
+            { texture: '/layer-secondary.png', colorSlot: 'secondary' },
+            { texture: '/layer-primary-again.png', colorSlot: 'primary' },
+          ],
+          fixed: '/overlay-named-tintable.png',
+        },
+        colorSlots: [
+          {
+            id: 'primary',
+            labelKey: 'wardrobeColor.primary',
+            defaultColor: '#4A6FA5',
+            palette: ['#4A6FA5', '#A33A3A'],
+          },
+          {
+            id: 'secondary',
+            labelKey: 'wardrobeColor.secondary',
+            defaultColor: '#D6B15D',
+            palette: ['#D6B15D', '#2F8F4E'],
+          },
         ],
-        fixed: '/overlay-named-tintable.png',
       },
-      undefined,
       { primary: '#A33A3A', secondary: '#2F8F4E' }
     );
 
