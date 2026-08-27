@@ -245,7 +245,7 @@ test('Polish and English creator UI stay usable without mobile horizontal overfl
   await expect(editor).toBeVisible();
 
   const locales = [
-    { label: 'Polski', triggerLabel: 'Jezyk: Polski' },
+    { label: 'Polski', triggerLabel: 'Język: Polski' },
     { label: 'English', triggerLabel: 'Language: English' },
   ];
 

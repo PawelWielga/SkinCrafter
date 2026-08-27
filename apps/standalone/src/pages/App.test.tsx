@@ -86,7 +86,7 @@ describe('standalone app package integration', () => {
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'pl');
     expect(document.documentElement).toHaveAttribute('lang', 'pl');
 
-    fireEvent.click(screen.getByLabelText('Jezyk: Polski'));
+    fireEvent.click(screen.getByLabelText('Język: Polski'));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'English' }));
     expect(screen.getByTestId('packaged-editor')).toHaveAttribute('data-locale', 'en');
     expect(document.documentElement).toHaveAttribute('lang', 'en');

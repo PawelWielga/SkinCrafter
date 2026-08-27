@@ -407,7 +407,7 @@ describe('SkinCrafterEditor public contract', () => {
       assetUrl: '/preview.png',
     });
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Nie udalo sie uruchomic podgladu 3D. Edycja i pobieranie skina moga nadal dzialac.'
+      'Nie udało się uruchomić podglądu 3D. Edycja i pobieranie skina mogą nadal działać.'
     );
     expect(screen.getByTestId('skincrafter-editor')).toHaveAttribute(
       'data-skincrafter-generation-status',

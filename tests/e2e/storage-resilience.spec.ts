@@ -33,7 +33,7 @@ test('creator remains usable when browser storage is unavailable', async ({ page
   const languageMenu = page.locator('nav summary');
   await languageMenu.click();
   await page.getByRole('menuitemradio', { name: 'Polski' }).click();
-  await expect(languageMenu).toHaveAttribute('aria-label', 'Jezyk: Polski');
+  await expect(languageMenu).toHaveAttribute('aria-label', 'Język: Polski');
   await expect(page.getByRole('button', { name: 'Bluza' })).toHaveAttribute(
     'aria-pressed',
     'true'
