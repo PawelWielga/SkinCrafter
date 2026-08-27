@@ -4,10 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SkinCrafter</title>
-    <script type="module" crossorigin src="/assets/index-By7N6f_B.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-u_55NcJ2.css">
   </head>
   <body>
-    <div id="root"></div>
+    <script>
+      (function (location) {
+        var previewBase = '/dev/';
+        var base =
+          location.pathname.startsWith(previewBase) &&
+          location.pathname !== previewBase
+            ? previewBase
+            : '/';
+        var target = location.pathname + location.search + location.hash;
+
+        location.replace(
+          base + '?__skincrafter_spa=' + encodeURIComponent(target)
+        );
+      })(window.location);
+    </script>
   </body>
 </html>
