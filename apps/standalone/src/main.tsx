@@ -17,7 +17,14 @@ const restorePagesRoute = (): void => {
     return;
   }
 
-  const targetUrl = new URL(redirectTarget, window.location.origin);
+  let targetUrl: URL;
+
+  try {
+    targetUrl = new URL(redirectTarget, window.location.origin);
+  } catch {
+    return;
+  }
+
   const baseWithoutTrailingSlash = baseUrl.replace(/\/$/, '');
   const isWithinBase =
     baseUrl === '/' ||
