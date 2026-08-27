@@ -32,6 +32,25 @@ export type TextureItemVariants = Partial<
 
 const isHexColor = (value: string): boolean => /^#[0-9a-f]{6}$/i.test(value);
 
+function colorSlotContractsEqual(
+  left: readonly TextureItemColorSlotDefinition[] | undefined,
+  right: readonly TextureItemColorSlotDefinition[] | undefined
+): boolean {
+  const leftSlots = left ?? [];
+  const rightSlots = right ?? [];
+  if (leftSlots.length !== rightSlots.length) return false;
+
+  return leftSlots.every((slot, index) => {
+    const other = rightSlots[index];
+    return Boolean(other)
+      && slot.id === other.id
+      && slot.labelKey === other.labelKey
+      && slot.defaultColor === other.defaultColor
+      && slot.palette.length === other.palette.length
+      && slot.palette.every((color, paletteIndex) => color === other.palette[paletteIndex]);
+  });
+}
+
 function validateColorSlots(definition: TextureItemDefinition): void {
   const tintable = definition.textureLayers.tintable ?? [];
   const colorSlots = definition.colorSlots ?? [];
@@ -118,8 +137,8 @@ export function defineTextureItemVariants(
     (definition): definition is TextureItemDefinition => Boolean(definition?.colorSlots?.length)
   );
   if (colorableVariants.length > 1) {
-    const colorSlotContract = JSON.stringify(colorableVariants[0].colorSlots);
-    if (colorableVariants.some((definition) => JSON.stringify(definition.colorSlots) !== colorSlotContract)) {
+    const colorSlotContract = colorableVariants[0].colorSlots;
+    if (colorableVariants.some((definition) => !colorSlotContractsEqual(definition.colorSlots, colorSlotContract))) {
       throw new Error(
         'Colorable texture item variants must define identical color slots across skin models.'
       );
