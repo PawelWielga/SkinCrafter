@@ -97,10 +97,12 @@ const NBar: React.FC<NBarProps> = ({
           {onLanguageChange && (
             <details ref={languageMenuRef} className="group relative">
               <summary
-                className="pixel-button pixel-border flex min-w-16 cursor-pointer list-none items-center justify-center gap-2 bg-green-700 px-3 py-1 text-lg text-white transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-green-800 [&::-webkit-details-marker]:hidden"
+                className="pixel-button pixel-border flex h-9 min-w-16 cursor-pointer list-none items-center justify-center gap-2 bg-green-700 px-3 py-1 text-white transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-green-800 [&::-webkit-details-marker]:hidden"
                 aria-label={`${t('nav.language')}: ${selectedLanguage.label}`}
               >
-                <span aria-hidden="true">{selectedLanguage.flag}</span>
+                <span className="text-base" aria-hidden="true">
+                  {selectedLanguage.flag}
+                </span>
                 <span className="text-xs transition-transform group-open:rotate-180" aria-hidden="true">
                   ▾
                 </span>
@@ -120,7 +122,7 @@ const NBar: React.FC<NBarProps> = ({
                       type="button"
                       className={`pixel-button pixel-border mb-1 flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors last:mb-0 ${
                         isSelected
-                          ? 'bg-amber-600 font-semibold text-white'
+                          ? 'bg-amber-500 font-semibold text-green-950 hover:bg-amber-400 focus:bg-amber-400'
                           : 'bg-green-700 text-white hover:bg-green-600 focus:bg-green-600'
                       } focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-inset`}
                       role="menuitemradio"
