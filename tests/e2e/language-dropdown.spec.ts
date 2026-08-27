@@ -20,7 +20,21 @@ test('language dropdown follows the standalone pixel button styling', async ({ p
   await expect(menu).toHaveClass(/pixel-border/);
   await expect(english).toHaveClass(/pixel-button/);
   await expect(english).toHaveClass(/pixel-border/);
-  await expect(english).toHaveClass(/bg-amber-500/);
-  await expect(english).toHaveClass(/text-green-950/);
-  await expect(polish).toHaveClass(/bg-green-700/);
+  await expect(english).toHaveClass(/bg-green-700/);
+  await expect(english).toHaveClass(/text-white/);
+  await expect(polish).toHaveClass(/bg-gray-100/);
+  await expect(polish).toHaveClass(/text-gray-700/);
+});
+
+test('language trigger aligns to the right edge on mobile', async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width >= 640, 'mobile layout only');
+
+  await page.goto('/');
+
+  const trigger = page.getByLabel('Language: English');
+  const triggerBox = await trigger.boundingBox();
+
+  expect(triggerBox).not.toBeNull();
+  expect(Math.abs(viewport!.width - 16 - (triggerBox!.x + triggerBox!.width))).toBeLessThanOrEqual(2);
 });
