@@ -1,20 +1,28 @@
 import {
   appearanceCategories,
   cloneWardrobeColors,
+  getVisualLayerForControl,
   normalizeWardrobeColors,
   textureLayerCategories,
   type AppearanceCategoryId,
   type AppearanceState,
+  type AppearanceVisualLayerId,
   type TextureLayerCategoryId,
   type WardrobeColorState,
 } from './data/appearance';
 import type { SkinCrafterSkinModel, SkinCrafterState } from './publicTypes';
 import {
-  areActiveCategoriesEqual,
   areAppearanceStatesEqual,
   areTextureLayerOrdersEqual,
   areWardrobeColorsEqual,
 } from './stateEquality';
+
+const generationVisualLayers: readonly AppearanceVisualLayerId[] = [
+  'race',
+  'eyes',
+  'hair',
+  ...textureLayerCategories,
+];
 
 export interface SkinGenerationSnapshot {
   appearance: AppearanceState;
@@ -74,6 +82,23 @@ function wardrobeColorsIdentity(value: WardrobeColorState): string {
   }).join('');
 }
 
+function activeGenerationLayers(
+  activeCategories: readonly AppearanceCategoryId[]
+): AppearanceVisualLayerId[] {
+  const activeLayers = new Set(activeCategories.map(getVisualLayerForControl));
+  return generationVisualLayers.filter((layer) => activeLayers.has(layer));
+}
+
+function areActiveGenerationLayersEqual(
+  left: readonly AppearanceCategoryId[],
+  right: readonly AppearanceCategoryId[]
+): boolean {
+  const leftLayers = activeGenerationLayers(left);
+  const rightLayers = activeGenerationLayers(right);
+  return leftLayers.length === rightLayers.length
+    && leftLayers.every((layer, index) => layer === rightLayers[index]);
+}
+
 export function createSkinGenerationSnapshot({
   state,
   compositionSex,
@@ -106,7 +131,7 @@ export function createSkinGenerationKey(snapshot: SkinGenerationSnapshot): strin
     `composition:${appearanceIdentity(snapshot.compositionAppearance)}`,
     `layers:${encodeStringList(snapshot.layerOrder)}`,
     `colors:${wardrobeColorsIdentity(snapshot.wardrobeColors)}`,
-    `active:${encodeStringList(snapshot.activeCategories)}`,
+    `activeLayers:${encodeStringList(activeGenerationLayers(snapshot.activeCategories))}`,
     `assets:${encodeNullableString(snapshot.assetBaseUrl)}`,
     `import:${encodeNullableString(snapshot.importedFingerprint)}`,
     `model:${encodeString(snapshot.model)}`,
@@ -124,5 +149,5 @@ export function areSkinGenerationSnapshotsEqual(
     && areAppearanceStatesEqual(left.compositionAppearance, right.compositionAppearance)
     && areTextureLayerOrdersEqual(left.layerOrder, right.layerOrder)
     && areWardrobeColorsEqual(left.wardrobeColors, right.wardrobeColors)
-    && areActiveCategoriesEqual(left.activeCategories, right.activeCategories);
+    && areActiveGenerationLayersEqual(left.activeCategories, right.activeCategories);
 }
