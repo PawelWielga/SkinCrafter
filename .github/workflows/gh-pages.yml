@@ -116,6 +116,7 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const statePath = 'gh-pages-current/.skincrafter-pages-state.json';
+          const fallbackPath = 'gh-pages-current/404.html';
           let devBasePath;
           let devDestinationDir;
 
@@ -123,7 +124,17 @@ jobs:
             const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
             devBasePath = state.devBasePath;
             devDestinationDir = state.devDestinationDir;
-          } else {
+          } else if (fs.existsSync(fallbackPath)) {
+            const fallback = fs.readFileSync(fallbackPath, 'utf8');
+            const previewMatch = fallback.match(/var previewBase = ['"]([^'"]+)['"];/);
+
+            if (previewMatch) {
+              devBasePath = previewMatch[1];
+              devDestinationDir = devBasePath.slice(1, -1);
+            }
+          }
+
+          if (devBasePath === undefined && devDestinationDir === undefined) {
             const config = JSON.parse(
               fs.readFileSync('source/apps/standalone/deployment.config.json', 'utf8')
             );
@@ -134,7 +145,7 @@ jobs:
 
           if (
             typeof devBasePath !== 'string' ||
-            !/^\/(?:[A-Za-z0-9._~-]+\/)+$/.test(devBasePath) ||
+            !/^\/[A-Za-z0-9._~-]+\/$/.test(devBasePath) ||
             devDestinationDir !== devBasePath.slice(1, -1)
           ) {
             throw new Error(

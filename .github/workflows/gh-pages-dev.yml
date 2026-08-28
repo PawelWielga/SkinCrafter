@@ -100,7 +100,7 @@ jobs:
 
             if (
               typeof devBasePath !== 'string' ||
-              !/^\/(?:[A-Za-z0-9._~-]+\/)+$/.test(devBasePath)
+              !/^\/[A-Za-z0-9._~-]+\/$/.test(devBasePath)
             ) {
               throw new Error(`Invalid dev Pages base path: ${String(devBasePath)}`);
             }
@@ -139,25 +139,44 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const statePath = 'gh-pages-current/.skincrafter-pages-state.json';
+          const fallbackPath = 'gh-pages-current/404.html';
+          let previousBasePath;
+          let previousDestinationDir;
 
-          if (!fs.existsSync(statePath)) {
+          if (fs.existsSync(statePath)) {
+            const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+            previousBasePath = state.devBasePath;
+            previousDestinationDir = state.devDestinationDir;
+          } else if (fs.existsSync(fallbackPath)) {
+            const fallback = fs.readFileSync(fallbackPath, 'utf8');
+            const previewMatch = fallback.match(/var previewBase = ['"]([^'"]+)['"];/);
+
+            if (previewMatch) {
+              previousBasePath = previewMatch[1];
+              previousDestinationDir = previousBasePath.slice(1, -1);
+            }
+          }
+
+          if (previousBasePath === undefined && previousDestinationDir === undefined) {
             process.exit(0);
           }
 
-          const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
-          const destination = state.devDestinationDir;
-          const segments = typeof destination === 'string' ? destination.split('/') : [];
-
           if (
-            !destination ||
-            segments.some(segment => !segment || segment === '.' || segment === '..')
+            typeof previousBasePath !== 'string' ||
+            !/^\/[A-Za-z0-9._~-]+\/$/.test(previousBasePath) ||
+            previousDestinationDir !== previousBasePath.slice(1, -1)
           ) {
-            throw new Error(`Invalid deployed dev destination: ${String(destination)}`);
+            throw new Error(
+              `Invalid deployed dev state: ${JSON.stringify({
+                previousBasePath,
+                previousDestinationDir,
+              })}`
+            );
           }
 
           fs.appendFileSync(
             process.env.GITHUB_ENV,
-            `PREVIOUS_DEV_DESTINATION_DIR=${destination}\n`
+            `PREVIOUS_DEV_DESTINATION_DIR=${previousDestinationDir}\n`
           );
           NODE
       - name: Prepare Pages branch update
@@ -170,6 +189,11 @@ jobs:
           mkdir -p pages-publish
           cp -a gh-pages-current/. pages-publish/
           rm -rf pages-publish/.git
+
+          if [[ "$DEV_DESTINATION_DIR" != "${PREVIOUS_DEV_DESTINATION_DIR:-}" && ( -e "pages-publish/$DEV_DESTINATION_DIR" || -L "pages-publish/$DEV_DESTINATION_DIR" ) ]]; then
+            echo "Dev Pages destination '$DEV_DESTINATION_DIR' overlaps existing root output." >&2
+            exit 1
+          fi
 
           if [[ -n "${PREVIOUS_DEV_DESTINATION_DIR:-}" && "$PREVIOUS_DEV_DESTINATION_DIR" != "$DEV_DESTINATION_DIR" ]]; then
             rm -rf "pages-publish/$PREVIOUS_DEV_DESTINATION_DIR"
