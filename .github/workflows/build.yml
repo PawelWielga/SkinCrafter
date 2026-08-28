@@ -31,15 +31,15 @@ jobs:
       - run: npm run lint
       - run: npm run check:dead-code
       - run: npm test
-      - name: Configure dev Pages base path
+      - name: Configure dev Pages deployment
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-        run: echo 'VITE_BASE_PATH=/dev/' >> "$GITHUB_ENV"
+        run: echo 'SKINCRAFTER_DEPLOYMENT=dev' >> "$GITHUB_ENV"
       - run: npm run build
       - run: npm run test:consumer
       - name: Verify dev Pages build
         if: github.event_name == 'pull_request'
         env:
-          VITE_BASE_PATH: /dev/
+          SKINCRAFTER_DEPLOYMENT: dev
         run: npm run build -w @skincrafter/standalone
       - name: Upload validated standalone site
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')

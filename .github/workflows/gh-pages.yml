@@ -21,6 +21,7 @@ jobs:
     outputs:
       ready: ${{ steps.validation.outputs.ready }}
       build_run_id: ${{ steps.validation.outputs.build_run_id }}
+      dev_destination_dir: ${{ steps.validation.outputs.dev_destination_dir }}
     steps:
       - name: Verify full validation for the same main SHA
         id: validation
@@ -80,8 +81,45 @@ jobs:
               successfulRuns.set(workflow_id, run);
             }
 
+            const { data: configFile } = await github.rest.repos.getContent({
+              owner,
+              repo,
+              path: 'apps/standalone/deployment.config.json',
+              ref: sha,
+            });
+
+            if (Array.isArray(configFile) || configFile.type !== 'file' || !configFile.content) {
+              throw new Error('Standalone deployment configuration is not a readable file.');
+            }
+
+            const deploymentConfig = JSON.parse(
+              Buffer.from(configFile.content, 'base64').toString('utf8')
+            );
+            const devBasePath = deploymentConfig.dev?.basePath;
+
+            if (
+              typeof devBasePath !== 'string' ||
+              devBasePath === '/' ||
+              !devBasePath.startsWith('/') ||
+              !devBasePath.endsWith('/')
+            ) {
+              throw new Error(`Invalid dev Pages base path: ${String(devBasePath)}`);
+            }
+
+            const destinationDir = devBasePath.slice(1, -1);
+            const destinationSegments = destinationDir.split('/');
+
+            if (
+              destinationSegments.some(
+                segment => !segment || segment === '.' || segment === '..'
+              )
+            ) {
+              throw new Error(`Invalid dev Pages destination: ${destinationDir}`);
+            }
+
             core.setOutput('ready', 'true');
             core.setOutput('build_run_id', String(successfulRuns.get('build.yml').id));
+            core.setOutput('dev_destination_dir', destinationDir);
 
   deploy:
     needs: gate
@@ -106,9 +144,12 @@ jobs:
           persist-credentials: false
       - name: Preserve current dev preview
         shell: bash
+        env:
+          DEV_DESTINATION_DIR: ${{ needs.gate.outputs.dev_destination_dir }}
         run: |
-          if [[ -d gh-pages-current/dev ]]; then
-            cp -a gh-pages-current/dev apps/standalone/dist/dev
+          if [[ -d "gh-pages-current/$DEV_DESTINATION_DIR" ]]; then
+            mkdir -p "apps/standalone/dist/$DEV_DESTINATION_DIR"
+            cp -a "gh-pages-current/$DEV_DESTINATION_DIR/." "apps/standalone/dist/$DEV_DESTINATION_DIR/"
           fi
       - name: Deploy validated standalone site
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0

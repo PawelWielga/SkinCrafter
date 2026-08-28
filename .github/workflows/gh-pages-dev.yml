@@ -21,6 +21,7 @@ jobs:
     outputs:
       ready: ${{ steps.validation.outputs.ready }}
       build_run_id: ${{ steps.validation.outputs.build_run_id }}
+      destination_dir: ${{ steps.validation.outputs.destination_dir }}
     steps:
       - name: Verify full validation for the same dev SHA
         id: validation
@@ -80,8 +81,45 @@ jobs:
               successfulRuns.set(workflow_id, run);
             }
 
+            const { data: configFile } = await github.rest.repos.getContent({
+              owner,
+              repo,
+              path: 'apps/standalone/deployment.config.json',
+              ref: sha,
+            });
+
+            if (Array.isArray(configFile) || configFile.type !== 'file' || !configFile.content) {
+              throw new Error('Standalone deployment configuration is not a readable file.');
+            }
+
+            const deploymentConfig = JSON.parse(
+              Buffer.from(configFile.content, 'base64').toString('utf8')
+            );
+            const devBasePath = deploymentConfig.dev?.basePath;
+
+            if (
+              typeof devBasePath !== 'string' ||
+              devBasePath === '/' ||
+              !devBasePath.startsWith('/') ||
+              !devBasePath.endsWith('/')
+            ) {
+              throw new Error(`Invalid dev Pages base path: ${String(devBasePath)}`);
+            }
+
+            const destinationDir = devBasePath.slice(1, -1);
+            const destinationSegments = destinationDir.split('/');
+
+            if (
+              destinationSegments.some(
+                segment => !segment || segment === '.' || segment === '..'
+              )
+            ) {
+              throw new Error(`Invalid dev Pages destination: ${destinationDir}`);
+            }
+
             core.setOutput('ready', 'true');
             core.setOutput('build_run_id', String(successfulRuns.get('build.yml').id));
+            core.setOutput('destination_dir', destinationDir);
 
   deploy:
     needs: gate
@@ -103,6 +141,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apps/standalone/dist
-          destination_dir: dev
+          destination_dir: ${{ needs.gate.outputs.destination_dir }}
           exclude_assets: CNAME
           full_commit_message: "deploy(dev): ${{ github.event.workflow_run.head_sha }}"

@@ -1,32 +1,14 @@
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { createPagesFallbackHtml } from './pages-fallback.mjs';
 
 const distDirectory = fileURLToPath(new URL('../dist/', import.meta.url));
-const fallbackHtml = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SkinCrafter</title>
-  </head>
-  <body>
-    <script>
-      (function (location) {
-        var previewBase = '/dev/';
-        var base =
-          location.pathname.startsWith(previewBase) &&
-          location.pathname !== previewBase
-            ? previewBase
-            : '/';
-        var target = location.pathname + location.search + location.hash;
-
-        location.replace(
-          base + '?__skincrafter_spa=' + encodeURIComponent(target)
-        );
-      })(window.location);
-    </script>
-  </body>
-</html>
-`;
+const deploymentConfig = JSON.parse(
+  await readFile(new URL('../deployment.config.json', import.meta.url), 'utf8')
+);
+const fallbackHtml = createPagesFallbackHtml({
+  productionBasePath: deploymentConfig.production.basePath,
+  previewBasePath: deploymentConfig.dev.basePath,
+});
 
 await writeFile(`${distDirectory}404.html`, fallbackHtml, 'utf8');
