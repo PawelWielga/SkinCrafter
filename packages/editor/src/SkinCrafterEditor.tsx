@@ -248,6 +248,7 @@ export default function SkinCrafterEditor({
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
   const lastGeneratedKeyRef = useRef<number | null>(null);
+  const lastGeneratedSnapshotRef = useRef<SkinGenerationSnapshot | null>(null);
   const generationRequestRef = useRef<GenerationRequest | null>(null);
   const effectiveModelRef = useRef<SkinCrafterSkinModel>('classic');
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
@@ -588,8 +589,15 @@ export default function SkinCrafterEditor({
     !previousGenerationRequest
     || !areSkinGenerationSnapshotsEqual(previousGenerationRequest.snapshot, nextGenerationSnapshot)
   ) {
+    const lastGeneratedKey = lastGeneratedKeyRef.current;
+    const lastGeneratedSnapshot = lastGeneratedSnapshotRef.current;
+    const reusableGenerationKey = lastGeneratedKey !== null
+      && lastGeneratedSnapshot !== null
+      && areSkinGenerationSnapshotsEqual(lastGeneratedSnapshot, nextGenerationSnapshot)
+      ? lastGeneratedKey
+      : null;
     generationRequestRef.current = {
-      key: (previousGenerationRequest?.key ?? 0) + 1,
+      key: reusableGenerationKey ?? (previousGenerationRequest?.key ?? 0) + 1,
       snapshot: nextGenerationSnapshot,
     };
   }
@@ -688,6 +696,7 @@ export default function SkinCrafterEditor({
       if (!current) return;
 
       lastGeneratedKeyRef.current = generationKey;
+      lastGeneratedSnapshotRef.current = generationRequest.snapshot;
       setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
       setGenerationState({ key: generationKey, status: 'ready', error: null });
       notifyHost(onSkinChangeRef.current, result.output);
