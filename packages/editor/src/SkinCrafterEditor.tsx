@@ -12,10 +12,13 @@ import {
   normalizeWardrobeColors,
   textureLayerCategories,
   type AppearanceCategoryId,
-  type AppearanceState,
   type TextureLayerCategoryId,
-  type WardrobeColorState,
 } from './data/appearance';
+import {
+  areSkinGenerationSnapshotsEqual,
+  createSkinGenerationSnapshot,
+  type SkinGenerationSnapshot,
+} from './generationSnapshot';
 import { defaultLanguage, translate, type TranslationKey } from './i18n/translations';
 import { InvalidInitialSkinError, loadImportedSkin } from './importedSkin';
 import type {
@@ -30,19 +33,29 @@ import type {
   SkinCrafterTheme,
 } from './publicTypes';
 import { createSkinOutput } from './skinOutput';
+import {
+  areColorSlotValuesEqual,
+  areSkinCrafterStatesEqual,
+  cloneSkinCrafterState,
+} from './stateEquality';
 import { serializeSkinCrafterState } from './stateSerialization';
 import combineTextures, { TextureLoadError } from './utils/combineTextures';
 
 interface GeneratedSkinResult {
-  key: string;
+  key: number;
   texture: string;
   output: SkinCrafterSkinOutput;
 }
 
 interface GenerationState {
-  key: string | null;
+  key: number | null;
   status: SkinCrafterGenerationStatus;
   error: SkinCrafterError | null;
+}
+
+interface GenerationRequest {
+  key: number;
+  snapshot: SkinGenerationSnapshot;
 }
 
 interface ImportedSkinRuntime {
@@ -75,23 +88,6 @@ function normalizeState(
     layerOrder: normalizeTextureLayerOrder(value?.layerOrder),
     wardrobeColors: normalizeWardrobeColors(value?.wardrobeColors),
   };
-}
-
-function areWardrobeColorsEqual(
-  left: WardrobeColorState | undefined,
-  right: WardrobeColorState | undefined
-): boolean {
-  return JSON.stringify(normalizeWardrobeColors(left)) === JSON.stringify(normalizeWardrobeColors(right));
-}
-
-function areStatesEqual(left: SkinCrafterState, right: SkinCrafterState): boolean {
-  if (left.layerOrder.length !== right.layerOrder.length) return false;
-  if (left.layerOrder.some((category, index) => category !== right.layerOrder[index])) return false;
-  if (!areWardrobeColorsEqual(left.wardrobeColors, right.wardrobeColors)) return false;
-
-  return appearanceCategories.every(
-    ({ id }) => left.appearance[id] === right.appearance[id]
-  );
 }
 
 function persistenceErrorFrom(
@@ -132,14 +128,6 @@ function initializePersistence(
       error: persistenceErrorFrom('load', cause),
     };
   }
-}
-
-function cloneState(state: SkinCrafterState): SkinCrafterState {
-  return {
-    appearance: { ...state.appearance },
-    layerOrder: [...state.layerOrder],
-    wardrobeColors: cloneWardrobeColors(normalizeWardrobeColors(state.wardrobeColors)),
-  };
 }
 
 function themeStyle(theme?: SkinCrafterTheme): React.CSSProperties {
@@ -259,7 +247,8 @@ export default function SkinCrafterEditor({
   const onErrorRef = useRef(onError);
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
-  const lastGeneratedKeyRef = useRef<string | null>(null);
+  const lastGeneratedKeyRef = useRef<number | null>(null);
+  const generationRequestRef = useRef<GenerationRequest | null>(null);
   const effectiveModelRef = useRef<SkinCrafterSkinModel>('classic');
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
@@ -297,7 +286,7 @@ export default function SkinCrafterEditor({
     }
 
     const normalized = normalizeState(internalState, initialModel);
-    return areStatesEqual(internalState, normalized) ? internalState : normalized;
+    return areSkinCrafterStatesEqual(internalState, normalized) ? internalState : normalized;
   }, [importedLoadedCurrent, initialModel, internalState, sexWasExplicitlyActivated]);
   const state = controlledState ?? modelNormalizedInternalState;
   const stateWardrobeColors = useMemo(
@@ -320,7 +309,7 @@ export default function SkinCrafterEditor({
     if (!controlledState) return;
 
     setInternalState((current) => (
-      areStatesEqual(current, controlledState) ? current : controlledState
+      areSkinCrafterStatesEqual(current, controlledState) ? current : controlledState
     ));
   }, [controlledState]);
 
@@ -461,7 +450,7 @@ export default function SkinCrafterEditor({
     }
 
     let current = true;
-    const requestBaseline = cloneState(stateRef.current);
+    const requestBaseline = cloneSkinCrafterState(stateRef.current);
     const activationVersionAtRequest = activationVersionRef.current;
     setImportLoadState({ source: initialImage, model: initialModel, status: 'loading', error: null });
     notifyHost(onStatusChangeRef.current, 'generating');
@@ -553,9 +542,9 @@ export default function SkinCrafterEditor({
     for (const category of textureLayerCategories) {
       const selectedItem = state.appearance[category];
       if (selectedItem !== loadedImportedSkin.baselineState.appearance[category]) continue;
-      const current = stateWardrobeColors[category]?.[selectedItem] ?? {};
-      const baseline = baselineColors[category]?.[selectedItem] ?? {};
-      if (JSON.stringify(current) !== JSON.stringify(baseline)) {
+      const current = stateWardrobeColors[category]?.[selectedItem];
+      const baseline = baselineColors[category]?.[selectedItem];
+      if (!areColorSlotValuesEqual(current, baseline)) {
         active.add(category);
       }
     }
@@ -571,23 +560,7 @@ export default function SkinCrafterEditor({
     stateWardrobeColors,
   ]);
 
-  const {
-    race,
-    sex,
-    skinColor,
-    eyes,
-    eyesColor,
-    hair,
-    hairColor,
-    hat,
-    shirt,
-    pants,
-    shoes,
-    accessory,
-  } = state.appearance;
-  const layerOrderKey = JSON.stringify(state.layerOrder);
-  const wardrobeColorsKey = JSON.stringify(stateWardrobeColors);
-  const activeCategoriesKey = JSON.stringify(effectiveActiveCategories);
+  const { sex } = state.appearance;
   const canonicalAssetBaseUrl = assetBaseUrl?.replace(/\/+$/, '') || undefined;
   const sexWasEdited = effectiveActiveCategories.includes('sex');
   const compositionSex = importedLoadedCurrent && loadedImportedSkin && !sexWasEdited
@@ -601,26 +574,27 @@ export default function SkinCrafterEditor({
   effectiveModelRef.current = effectiveModel;
   const importedFingerprint = importedLoadedCurrent ? loadedImportedSkin?.fingerprint ?? null : null;
   const importedDataUrl = importedLoadedCurrent ? loadedImportedSkin?.dataUrl ?? null : null;
-  const generationKey = JSON.stringify([
-    race,
-    sex,
-    skinColor,
-    eyes,
-    eyesColor,
-    hair,
-    hairColor,
-    hat,
-    shirt,
-    pants,
-    shoes,
-    accessory,
-    layerOrderKey,
-    wardrobeColorsKey,
-    canonicalAssetBaseUrl ?? null,
+  const nextGenerationSnapshot = createSkinGenerationSnapshot({
+    state,
+    compositionSex,
+    wardrobeColors: stateWardrobeColors,
+    activeCategories: effectiveActiveCategories,
+    assetBaseUrl: canonicalAssetBaseUrl,
     importedFingerprint,
-    effectiveModel,
-    activeCategoriesKey,
-  ]);
+    model: effectiveModel,
+  });
+  const previousGenerationRequest = generationRequestRef.current;
+  if (
+    !previousGenerationRequest
+    || !areSkinGenerationSnapshotsEqual(previousGenerationRequest.snapshot, nextGenerationSnapshot)
+  ) {
+    generationRequestRef.current = {
+      key: (previousGenerationRequest?.key ?? 0) + 1,
+      snapshot: nextGenerationSnapshot,
+    };
+  }
+  const generationRequest = generationRequestRef.current!;
+  const generationKey = generationRequest.key;
   const currentGeneratedSkin = generatedSkin?.key === generationKey ? generatedSkin : null;
   const importLoadIsCurrent = hasImportedRequest
     && importLoadState.source === initialImage
@@ -651,27 +625,15 @@ export default function SkinCrafterEditor({
     }
 
     let current = true;
-    const appearanceSnapshot: AppearanceState = {
-      race,
-      sex,
-      skinColor,
-      eyes,
-      eyesColor,
-      hair,
-      hairColor,
-      hat,
-      shirt,
-      pants,
-      shoes,
-      accessory,
-    };
-    const compositionAppearanceSnapshot: AppearanceState = {
-      ...appearanceSnapshot,
-      sex: compositionSex,
-    };
-    const layerOrderSnapshot = JSON.parse(layerOrderKey) as TextureLayerCategoryId[];
-    const wardrobeColorSnapshot = JSON.parse(wardrobeColorsKey) as WardrobeColorState;
-    const activeCategorySnapshot = JSON.parse(activeCategoriesKey) as AppearanceCategoryId[];
+    const {
+      appearance: appearanceSnapshot,
+      compositionAppearance: compositionAppearanceSnapshot,
+      layerOrder: layerOrderSnapshot,
+      wardrobeColors: wardrobeColorSnapshot,
+      activeCategories: activeCategorySnapshot,
+      assetBaseUrl: generationAssetBaseUrl,
+      model: generationModel,
+    } = generationRequest.snapshot;
 
     setGenerationState({ key: generationKey, status: 'generating', error: null });
     notifyHost(onStatusChangeRef.current, 'generating');
@@ -686,8 +648,8 @@ export default function SkinCrafterEditor({
             compositionAppearanceSnapshot,
             layerOrderSnapshot,
             activeCategorySnapshot,
-            canonicalAssetBaseUrl,
-            effectiveModel,
+            generationAssetBaseUrl,
+            generationModel,
             wardrobeColorSnapshot
           );
           dataUrl = textureInputs.filter(Boolean).length === 0
@@ -697,8 +659,8 @@ export default function SkinCrafterEditor({
           const textureInputs = buildTextureInputs(
             appearanceSnapshot,
             layerOrderSnapshot,
-            canonicalAssetBaseUrl,
-            effectiveModel,
+            generationAssetBaseUrl,
+            generationModel,
             wardrobeColorSnapshot
           );
           dataUrl = await combineTextures(textureInputs);
@@ -709,7 +671,7 @@ export default function SkinCrafterEditor({
             dataUrl,
             appearanceSnapshot,
             layerOrderSnapshot,
-            effectiveModel,
+            generationModel,
             wardrobeColorSnapshot
           ),
         };
@@ -738,28 +700,11 @@ export default function SkinCrafterEditor({
       current = false;
     };
   }, [
-    accessory,
-    activeCategoriesKey,
-    canonicalAssetBaseUrl,
-    compositionSex,
-    effectiveModel,
-    eyes,
-    eyesColor,
     generationKey,
-    hair,
-    hairColor,
+    generationRequest,
     hasImportedRequest,
-    hat,
     importedDataUrl,
     importedLoadedCurrent,
-    layerOrderKey,
-    pants,
-    race,
-    sex,
-    shirt,
-    shoes,
-    skinColor,
-    wardrobeColorsKey,
   ]);
 
   const previewSkin = currentGeneratedSkin ?? generatedSkin;
