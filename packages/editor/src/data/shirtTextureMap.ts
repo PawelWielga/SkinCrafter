@@ -1,12 +1,12 @@
 import type { SkinCrafterSkinModel } from '../publicTypes';
 import { defineTextureLayers } from './textureLayers';
 import {
-  defineWardrobeItem,
-  defineWardrobeItemVariants,
-  resolveWardrobeItemVariant,
-  type ResolvedWardrobeItemDefinition,
-  type WardrobeItemVariants,
-} from './wardrobeDefinitions';
+  defineTextureItem,
+  defineTextureItemVariants,
+  resolveTextureItemVariant,
+  type ResolvedTextureItemDefinition,
+  type TextureItemVariants,
+} from './textureItemDefinitions';
 
 export const shirts = ['None', 'Hoodie'] as const;
 export type Shirt = (typeof shirts)[number];
@@ -23,8 +23,8 @@ const hoodiePalette = [
 ] as const;
 
 const shirtDefinitions = {
-  Hoodie: defineWardrobeItemVariants({
-    classic: defineWardrobeItem({
+  Hoodie: defineTextureItemVariants({
+    classic: defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({
         tintable: [
@@ -44,13 +44,13 @@ const shirtDefinitions = {
       ],
     }),
   }),
-} satisfies Record<Exclude<Shirt, 'None'>, WardrobeItemVariants>;
+} satisfies Record<Exclude<Shirt, 'None'>, TextureItemVariants>;
 
 export function getShirtDefinition(
   shirt: Shirt,
   skinModel: SkinCrafterSkinModel,
   assetBaseUrl?: string
-): ResolvedWardrobeItemDefinition | null {
+): ResolvedTextureItemDefinition | null {
   if (shirt === 'None') return null;
-  return resolveWardrobeItemVariant(shirtDefinitions[shirt], skinModel, assetBaseUrl);
+  return resolveTextureItemVariant(shirtDefinitions[shirt], skinModel, assetBaseUrl);
 }
