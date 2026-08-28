@@ -344,7 +344,7 @@ export default function SkinCrafterEditor({
 
   const publishState = useCallback((next: SkinCrafterState) => {
     if (!value) setInternalState(next);
-    onStateChange?.(next);
+    notifyHost(onStateChange, next);
   }, [onStateChange, value]);
 
   const handleAppearanceChange = useCallback((category: AppearanceCategoryId, nextValue: string) => {
@@ -767,7 +767,9 @@ export default function SkinCrafterEditor({
   const combinedTexture = previewSkin?.texture ?? null;
   const previewModel = previewSkin?.output.metadata.model ?? effectiveModel;
   const canSave = generationStatus === 'ready' && skinOutput !== null;
-  const handleSave = onSave && canSave && skinOutput ? () => onSave(skinOutput) : undefined;
+  const handleSave = onSave && canSave && skinOutput
+    ? () => notifyHost(onSave, skinOutput)
+    : undefined;
   const handlePreviewError = useCallback((error: SkinCrafterError): void => {
     notifyHost(onErrorRef.current, error);
   }, []);

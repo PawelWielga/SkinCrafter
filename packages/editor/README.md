@@ -65,6 +65,8 @@ function CharacterEditor() {
 - `className`, `style`, `theme`: host-shell integration without forking package CSS.
 - `previewBottomOffset`: lets a host reserve vertical space for its own shell/footer.
 
+All callbacks supplied by a host (`onStateChange`, `onSkinChange`, `onSave`, `onStatusChange` and `onError`) use the same exception-isolation policy. If a host callback throws, SkinCrafter logs `SkinCrafter host callback failed` to `console.error` and continues its own state and generation lifecycle. Callback exceptions are not forwarded to `onError`, which avoids recursively invoking failing host code.
+
 The package also exports `SkinPreview` for the standalone `/mcskinview` route and other read-only preview use cases. `SkinPreview` accepts the same `onError` callback for preview texture/WebGL failures. A transient texture-load failure exposes a localized retry action that retries the same URL through the existing mounted Three.js runtime instead of recreating the renderer. Consumers should import only from the package root, never from `dist` or repository-internal paths.
 
 ### Wardrobe color state
