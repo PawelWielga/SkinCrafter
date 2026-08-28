@@ -67,14 +67,15 @@ describe('editor state equality', () => {
         .filter((option) => option.textureItem?.colorSlots?.some((slot) => slot.palette.length > 1))
         .map((option) => ({ category, option }))
     )[0];
-    expect(colorable).toBeDefined();
+    if (!colorable) throw new Error('Expected at least one colorable classic wardrobe option.');
 
     const slot = colorable.option.textureItem?.colorSlots?.find((candidate) => candidate.palette.length > 1);
-    expect(slot).toBeDefined();
-    const nextColor = slot?.palette.find((color) => color !== slot.defaultColor);
-    expect(nextColor).toBeDefined();
+    if (!slot) throw new Error('Expected the colorable wardrobe option to expose a palette slot.');
 
-    changed[colorable.category]![colorable.option.id]![slot!.id] = nextColor!;
+    const nextColor = slot.palette.find((color) => color !== slot.defaultColor);
+    if (!nextColor) throw new Error('Expected the color slot palette to contain an alternate color.');
+
+    changed[colorable.category]![colorable.option.id]![slot.id] = nextColor;
     expect(areWardrobeColorsEqual(colors, changed)).toBe(false);
   });
 
