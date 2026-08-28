@@ -3,7 +3,6 @@ import {
   cloneWardrobeColors,
   normalizeWardrobeColors,
   textureLayerCategories,
-  type AppearanceCategoryId,
   type AppearanceState,
   type TextureLayerCategoryId,
   type WardrobeColorState,
@@ -18,13 +17,6 @@ function areOrderedValuesEqual<T>(left: readonly T[], right: readonly T[]): bool
 export function areTextureLayerOrdersEqual(
   left: readonly TextureLayerCategoryId[],
   right: readonly TextureLayerCategoryId[]
-): boolean {
-  return areOrderedValuesEqual(left, right);
-}
-
-export function areActiveCategoriesEqual(
-  left: readonly AppearanceCategoryId[],
-  right: readonly AppearanceCategoryId[]
 ): boolean {
   return areOrderedValuesEqual(left, right);
 }
