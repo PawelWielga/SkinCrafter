@@ -15,9 +15,8 @@ import {
   type TextureLayerCategoryId,
 } from './data/appearance';
 import {
-  areSkinGenerationSnapshotsEqual,
+  createSkinGenerationKey,
   createSkinGenerationSnapshot,
-  type SkinGenerationSnapshot,
 } from './generationSnapshot';
 import { defaultLanguage, translate, type TranslationKey } from './i18n/translations';
 import { InvalidInitialSkinError, loadImportedSkin } from './importedSkin';
@@ -42,20 +41,20 @@ import { serializeSkinCrafterState } from './stateSerialization';
 import combineTextures, { TextureLoadError } from './utils/combineTextures';
 
 interface GeneratedSkinResult {
-  key: number;
+  key: string;
   texture: string;
   output: SkinCrafterSkinOutput;
 }
 
 interface GenerationState {
-  key: number | null;
+  key: string | null;
   status: SkinCrafterGenerationStatus;
   error: SkinCrafterError | null;
 }
 
-interface GenerationRequest {
-  key: number;
-  snapshot: SkinGenerationSnapshot;
+interface GenerationRun {
+  key: string;
+  token: symbol | null;
 }
 
 interface ImportedSkinRuntime {
@@ -247,9 +246,8 @@ export default function SkinCrafterEditor({
   const onErrorRef = useRef(onError);
   const loadedImportedSkinRef = useRef<ImportedSkinRuntime | null>(null);
   const equivalentImportPendingRef = useRef(false);
-  const lastGeneratedKeyRef = useRef<number | null>(null);
-  const lastGeneratedSnapshotRef = useRef<SkinGenerationSnapshot | null>(null);
-  const generationRequestRef = useRef<GenerationRequest | null>(null);
+  const lastGeneratedKeyRef = useRef<string | null>(null);
+  const generationRunRef = useRef<GenerationRun | null>(null);
   const effectiveModelRef = useRef<SkinCrafterSkinModel>('classic');
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
@@ -420,6 +418,10 @@ export default function SkinCrafterEditor({
     onErrorRef.current = onError;
   }, [onError]);
 
+  useEffect(() => () => {
+    generationRunRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (initialPersistenceErrorReportedRef.current || !persistenceInitialization.error) return;
 
@@ -575,7 +577,7 @@ export default function SkinCrafterEditor({
   effectiveModelRef.current = effectiveModel;
   const importedFingerprint = importedLoadedCurrent ? loadedImportedSkin?.fingerprint ?? null : null;
   const importedDataUrl = importedLoadedCurrent ? loadedImportedSkin?.dataUrl ?? null : null;
-  const nextGenerationSnapshot = createSkinGenerationSnapshot({
+  const generationSnapshot = createSkinGenerationSnapshot({
     state,
     compositionSex,
     wardrobeColors: stateWardrobeColors,
@@ -584,25 +586,7 @@ export default function SkinCrafterEditor({
     importedFingerprint,
     model: effectiveModel,
   });
-  const previousGenerationRequest = generationRequestRef.current;
-  if (
-    !previousGenerationRequest
-    || !areSkinGenerationSnapshotsEqual(previousGenerationRequest.snapshot, nextGenerationSnapshot)
-  ) {
-    const lastGeneratedKey = lastGeneratedKeyRef.current;
-    const lastGeneratedSnapshot = lastGeneratedSnapshotRef.current;
-    const reusableGenerationKey = lastGeneratedKey !== null
-      && lastGeneratedSnapshot !== null
-      && areSkinGenerationSnapshotsEqual(lastGeneratedSnapshot, nextGenerationSnapshot)
-      ? lastGeneratedKey
-      : null;
-    generationRequestRef.current = {
-      key: reusableGenerationKey ?? (previousGenerationRequest?.key ?? 0) + 1,
-      snapshot: nextGenerationSnapshot,
-    };
-  }
-  const generationRequest = generationRequestRef.current!;
-  const generationKey = generationRequest.key;
+  const generationKey = createSkinGenerationKey(generationSnapshot);
   const currentGeneratedSkin = generatedSkin?.key === generationKey ? generatedSkin : null;
   const importLoadIsCurrent = hasImportedRequest
     && importLoadState.source === initialImage
@@ -624,15 +608,24 @@ export default function SkinCrafterEditor({
       : null;
 
   useEffect(() => {
-    if (hasImportedRequest && !importedLoadedCurrent) return undefined;
+    if (hasImportedRequest && !importedLoadedCurrent) {
+      generationRunRef.current = null;
+      return;
+    }
 
     if (equivalentImportPendingRef.current) {
       const currentImportAlreadyGenerated = lastGeneratedKeyRef.current === generationKey;
       equivalentImportPendingRef.current = false;
-      if (currentImportAlreadyGenerated) return undefined;
+      if (currentImportAlreadyGenerated) {
+        generationRunRef.current = { key: generationKey, token: null };
+        return;
+      }
     }
 
-    let current = true;
+    if (generationRunRef.current?.key === generationKey) return;
+
+    const generationToken = Symbol('SkinCrafter generation');
+    generationRunRef.current = { key: generationKey, token: generationToken };
     const {
       appearance: appearanceSnapshot,
       compositionAppearance: compositionAppearanceSnapshot,
@@ -641,7 +634,7 @@ export default function SkinCrafterEditor({
       activeCategories: activeCategorySnapshot,
       assetBaseUrl: generationAssetBaseUrl,
       model: generationModel,
-    } = generationRequest.snapshot;
+    } = generationSnapshot;
 
     setGenerationState({ key: generationKey, status: 'generating', error: null });
     notifyHost(onStatusChangeRef.current, 'generating');
@@ -684,7 +677,7 @@ export default function SkinCrafterEditor({
           ),
         };
       } catch (cause) {
-        if (!current) return;
+        if (generationRunRef.current?.token !== generationToken) return;
 
         const error = generationErrorFrom(cause);
         setGenerationState({ key: generationKey, status: 'error', error });
@@ -693,10 +686,9 @@ export default function SkinCrafterEditor({
         return;
       }
 
-      if (!current) return;
+      if (generationRunRef.current?.token !== generationToken) return;
 
       lastGeneratedKeyRef.current = generationKey;
-      lastGeneratedSnapshotRef.current = generationRequest.snapshot;
       setGeneratedSkin({ key: generationKey, texture: result.dataUrl, output: result.output });
       setGenerationState({ key: generationKey, status: 'ready', error: null });
       notifyHost(onSkinChangeRef.current, result.output);
@@ -704,13 +696,9 @@ export default function SkinCrafterEditor({
     };
 
     void generate();
-
-    return () => {
-      current = false;
-    };
   }, [
     generationKey,
-    generationRequest,
+    generationSnapshot,
     hasImportedRequest,
     importedDataUrl,
     importedLoadedCurrent,
