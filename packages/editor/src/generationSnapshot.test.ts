@@ -104,6 +104,37 @@ describe('skin generation snapshots', () => {
     expect(createSkinGenerationKey(first)).toBe(createSkinGenerationKey(second));
   });
 
+  it('treats controls that activate the same visual layer as one generation identity', () => {
+    const state = createState();
+    const baseInput = {
+      state,
+      compositionSex: state.appearance.sex,
+      wardrobeColors: normalizeWardrobeColors(state.wardrobeColors),
+      assetBaseUrl: undefined,
+      importedFingerprint: 'imported',
+      model: 'classic' as const,
+    };
+    const raceControl = createSkinGenerationSnapshot({
+      ...baseInput,
+      activeCategories: ['race'],
+    });
+    const skinColorControl = createSkinGenerationSnapshot({
+      ...baseInput,
+      activeCategories: ['skinColor'],
+    });
+    const eyesControl = createSkinGenerationSnapshot({
+      ...baseInput,
+      activeCategories: ['eyes'],
+    });
+
+    expect(raceControl.activeCategories).toEqual(['race']);
+    expect(skinColorControl.activeCategories).toEqual(['skinColor']);
+    expect(areSkinGenerationSnapshotsEqual(raceControl, skinColorControl)).toBe(true);
+    expect(createSkinGenerationKey(raceControl)).toBe(createSkinGenerationKey(skinColorControl));
+    expect(areSkinGenerationSnapshotsEqual(raceControl, eyesControl)).toBe(false);
+    expect(createSkinGenerationKey(raceControl)).not.toBe(createSkinGenerationKey(eyesControl));
+  });
+
   it('changes generation identity for relevant composition inputs', () => {
     const state = createState();
     const baseInput = {
