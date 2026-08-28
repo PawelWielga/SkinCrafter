@@ -21,6 +21,7 @@ jobs:
     outputs:
       ready: ${{ steps.validation.outputs.ready }}
       build_run_id: ${{ steps.validation.outputs.build_run_id }}
+      dev_base_path: ${{ steps.validation.outputs.dev_base_path }}
       destination_dir: ${{ steps.validation.outputs.destination_dir }}
     steps:
       - name: Verify full validation for the same dev SHA
@@ -99,26 +100,16 @@ jobs:
 
             if (
               typeof devBasePath !== 'string' ||
-              devBasePath === '/' ||
-              !devBasePath.startsWith('/') ||
-              !devBasePath.endsWith('/')
+              !/^\/(?:[A-Za-z0-9._~-]+\/)+$/.test(devBasePath)
             ) {
               throw new Error(`Invalid dev Pages base path: ${String(devBasePath)}`);
             }
 
             const destinationDir = devBasePath.slice(1, -1);
-            const destinationSegments = destinationDir.split('/');
-
-            if (
-              destinationSegments.some(
-                segment => !segment || segment === '.' || segment === '..'
-              )
-            ) {
-              throw new Error(`Invalid dev Pages destination: ${destinationDir}`);
-            }
 
             core.setOutput('ready', 'true');
             core.setOutput('build_run_id', String(successfulRuns.get('build.yml').id));
+            core.setOutput('dev_base_path', devBasePath);
             core.setOutput('destination_dir', destinationDir);
 
   deploy:
@@ -136,11 +127,75 @@ jobs:
           path: apps/standalone/dist
           github-token: ${{ github.token }}
           run-id: ${{ needs.gate.outputs.build_run_id }}
-      - name: Deploy validated dev preview
+      - name: Checkout current Pages branch
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages-current
+          persist-credentials: false
+      - name: Resolve previously deployed preview
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const statePath = 'gh-pages-current/.skincrafter-pages-state.json';
+
+          if (!fs.existsSync(statePath)) {
+            process.exit(0);
+          }
+
+          const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+          const destination = state.devDestinationDir;
+          const segments = typeof destination === 'string' ? destination.split('/') : [];
+
+          if (
+            !destination ||
+            segments.some(segment => !segment || segment === '.' || segment === '..')
+          ) {
+            throw new Error(`Invalid deployed dev destination: ${String(destination)}`);
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_ENV,
+            `PREVIOUS_DEV_DESTINATION_DIR=${destination}\n`
+          );
+          NODE
+      - name: Prepare Pages branch update
+        shell: bash
+        env:
+          DEV_BASE_PATH: ${{ needs.gate.outputs.dev_base_path }}
+          DEV_DESTINATION_DIR: ${{ needs.gate.outputs.destination_dir }}
+        run: |
+          rm -rf pages-publish
+          mkdir -p pages-publish
+          cp -a gh-pages-current/. pages-publish/
+          rm -rf pages-publish/.git
+
+          if [[ -n "${PREVIOUS_DEV_DESTINATION_DIR:-}" && "$PREVIOUS_DEV_DESTINATION_DIR" != "$DEV_DESTINATION_DIR" ]]; then
+            rm -rf "pages-publish/$PREVIOUS_DEV_DESTINATION_DIR"
+          fi
+
+          rm -rf "pages-publish/$DEV_DESTINATION_DIR"
+          mkdir -p "pages-publish/$DEV_DESTINATION_DIR"
+          cp -a apps/standalone/dist/. "pages-publish/$DEV_DESTINATION_DIR/"
+          rm -f "pages-publish/$DEV_DESTINATION_DIR/CNAME"
+          cp apps/standalone/dist/404.html pages-publish/404.html
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const state = {
+            devBasePath: process.env.DEV_BASE_PATH,
+            devDestinationDir: process.env.DEV_DESTINATION_DIR,
+          };
+          fs.writeFileSync(
+            'pages-publish/.skincrafter-pages-state.json',
+            `${JSON.stringify(state, null, 2)}\n`,
+            'utf8'
+          );
+          NODE
+      - name: Deploy validated dev preview and root fallback
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./apps/standalone/dist
-          destination_dir: ${{ needs.gate.outputs.destination_dir }}
-          exclude_assets: CNAME
+          publish_dir: ./pages-publish
           full_commit_message: "deploy(dev): ${{ github.event.workflow_run.head_sha }}"

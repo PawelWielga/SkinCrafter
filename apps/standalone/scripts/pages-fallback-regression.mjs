@@ -32,9 +32,10 @@ const runFallback = ({ productionBasePath, previewBasePath, pathname, search = '
   return redirectTarget;
 };
 
-test('deployment config keeps the current production and dev Pages base paths', () => {
+test('deployment config defines a root production base and a valid preview base', () => {
   assert.equal(deploymentConfig.production.basePath, '/');
-  assert.equal(deploymentConfig.dev.basePath, '/dev/');
+  assert.match(deploymentConfig.dev.basePath, /^\/(?:[A-Za-z0-9._~-]+\/)+$/);
+  assert.notEqual(deploymentConfig.dev.basePath, '/');
 });
 
 test('production nested routes redirect through the configured root base', () => {

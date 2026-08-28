@@ -21,7 +21,6 @@ jobs:
     outputs:
       ready: ${{ steps.validation.outputs.ready }}
       build_run_id: ${{ steps.validation.outputs.build_run_id }}
-      dev_destination_dir: ${{ steps.validation.outputs.dev_destination_dir }}
     steps:
       - name: Verify full validation for the same main SHA
         id: validation
@@ -81,45 +80,8 @@ jobs:
               successfulRuns.set(workflow_id, run);
             }
 
-            const { data: configFile } = await github.rest.repos.getContent({
-              owner,
-              repo,
-              path: 'apps/standalone/deployment.config.json',
-              ref: sha,
-            });
-
-            if (Array.isArray(configFile) || configFile.type !== 'file' || !configFile.content) {
-              throw new Error('Standalone deployment configuration is not a readable file.');
-            }
-
-            const deploymentConfig = JSON.parse(
-              Buffer.from(configFile.content, 'base64').toString('utf8')
-            );
-            const devBasePath = deploymentConfig.dev?.basePath;
-
-            if (
-              typeof devBasePath !== 'string' ||
-              devBasePath === '/' ||
-              !devBasePath.startsWith('/') ||
-              !devBasePath.endsWith('/')
-            ) {
-              throw new Error(`Invalid dev Pages base path: ${String(devBasePath)}`);
-            }
-
-            const destinationDir = devBasePath.slice(1, -1);
-            const destinationSegments = destinationDir.split('/');
-
-            if (
-              destinationSegments.some(
-                segment => !segment || segment === '.' || segment === '..'
-              )
-            ) {
-              throw new Error(`Invalid dev Pages destination: ${destinationDir}`);
-            }
-
             core.setOutput('ready', 'true');
             core.setOutput('build_run_id', String(successfulRuns.get('build.yml').id));
-            core.setOutput('dev_destination_dir', destinationDir);
 
   deploy:
     needs: gate
@@ -129,11 +91,17 @@ jobs:
       actions: read
       contents: write
     steps:
+      - name: Checkout validated main source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: source
+          persist-credentials: false
       - name: Download validated standalone site
         uses: actions/download-artifact@v8
         with:
           name: standalone-pages-${{ github.event.workflow_run.head_sha }}
-          path: apps/standalone/dist
+          path: source/apps/standalone/dist
           github-token: ${{ github.token }}
           run-id: ${{ needs.gate.outputs.build_run_id }}
       - name: Checkout current Pages branch
@@ -142,18 +110,70 @@ jobs:
           ref: gh-pages
           path: gh-pages-current
           persist-credentials: false
-      - name: Preserve current dev preview
+      - name: Resolve active dev preview
         shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const statePath = 'gh-pages-current/.skincrafter-pages-state.json';
+          let devBasePath;
+          let devDestinationDir;
+
+          if (fs.existsSync(statePath)) {
+            const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+            devBasePath = state.devBasePath;
+            devDestinationDir = state.devDestinationDir;
+          } else {
+            const config = JSON.parse(
+              fs.readFileSync('source/apps/standalone/deployment.config.json', 'utf8')
+            );
+            devBasePath = config.dev?.basePath;
+            devDestinationDir =
+              typeof devBasePath === 'string' ? devBasePath.slice(1, -1) : undefined;
+          }
+
+          if (
+            typeof devBasePath !== 'string' ||
+            !/^\/(?:[A-Za-z0-9._~-]+\/)+$/.test(devBasePath) ||
+            devDestinationDir !== devBasePath.slice(1, -1)
+          ) {
+            throw new Error(
+              `Invalid deployed dev state: ${JSON.stringify({ devBasePath, devDestinationDir })}`
+            );
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_ENV,
+            `DEV_BASE_PATH=${devBasePath}\nDEV_DESTINATION_DIR=${devDestinationDir}\n`
+          );
+          NODE
+      - name: Regenerate root fallback for the active dev preview
         env:
-          DEV_DESTINATION_DIR: ${{ needs.gate.outputs.dev_destination_dir }}
+          SKINCRAFTER_PAGES_PREVIEW_BASE_PATH: ${{ env.DEV_BASE_PATH }}
+        run: node ./source/apps/standalone/scripts/create-pages-fallback.mjs
+      - name: Preserve active dev preview and deployment state
+        shell: bash
         run: |
           if [[ -d "gh-pages-current/$DEV_DESTINATION_DIR" ]]; then
-            mkdir -p "apps/standalone/dist/$DEV_DESTINATION_DIR"
-            cp -a "gh-pages-current/$DEV_DESTINATION_DIR/." "apps/standalone/dist/$DEV_DESTINATION_DIR/"
+            mkdir -p "source/apps/standalone/dist/$DEV_DESTINATION_DIR"
+            cp -a "gh-pages-current/$DEV_DESTINATION_DIR/." "source/apps/standalone/dist/$DEV_DESTINATION_DIR/"
           fi
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const state = {
+            devBasePath: process.env.DEV_BASE_PATH,
+            devDestinationDir: process.env.DEV_DESTINATION_DIR,
+          };
+          fs.writeFileSync(
+            'source/apps/standalone/dist/.skincrafter-pages-state.json',
+            `${JSON.stringify(state, null, 2)}\n`,
+            'utf8'
+          );
+          NODE
       - name: Deploy validated standalone site
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./apps/standalone/dist
+          publish_dir: ./source/apps/standalone/dist
           full_commit_message: "deploy: ${{ github.event.workflow_run.head_sha }}"

@@ -1,27 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import deploymentConfig from './deployment.config.json';
+import { resolveStandaloneDeployment } from './src/deploymentConfig';
 
-type StandaloneDeployment = keyof typeof deploymentConfig;
-
-export const resolveStandaloneDeployment = (
-  deploymentName = process.env.SKINCRAFTER_DEPLOYMENT
-): { name: StandaloneDeployment; basePath: string } => {
-  const name = deploymentName?.trim() || 'production';
-
-  if (!(name in deploymentConfig)) {
-    throw new Error(`Unknown standalone deployment "${name}".`);
-  }
-
-  const resolvedName = name as StandaloneDeployment;
-
-  return {
-    name: resolvedName,
-    basePath: deploymentConfig[resolvedName].basePath,
-  };
-};
-
-export const createStandaloneViteConfig = (deploymentName?: string) => {
+export const createStandaloneViteConfig = (deploymentName = process.env.SKINCRAFTER_DEPLOYMENT) => {
   const deployment = resolveStandaloneDeployment(deploymentName);
 
   return {
