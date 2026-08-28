@@ -16,7 +16,7 @@ The current authoring path is deliberately small and typed:
 4. Category-specific files add only semantic metadata and option registries:
    - `raceTextureMap.ts` owns race -> available sex/model and skin palettes;
    - `characterTextureDefinitions.ts` owns Eyes and the Hair registry;
-   - wardrobe maps such as `hatTextureMap.ts`, `shirtTextureMap.ts` and `pantsTextureMap.ts` expose item definitions. `wardrobeDefinitions.ts` is only a compatibility alias layer over the neutral contract.
+   - wardrobe maps such as `hatTextureMap.ts`, `shirtTextureMap.ts` and `pantsTextureMap.ts` expose item definitions directly through the neutral texture-item contract.
 5. `appearance.ts` maps semantic controls to their owning visual layer and uses one resolver registry before calling the shared builder.
 
 Do not introduce a second manifest/schema/compositor path for a new texture-backed option.
@@ -203,8 +203,9 @@ For imported skins, an edit activates only its owning visual layer. The imported
 Important tests include:
 
 - `src/data/textureItemDefinitions.test.ts` for the neutral validator, explicit model behavior and shared builder;
+- `src/data/textureItemDefinitions.validation.test.ts` for detailed validation, resolution and model-compatibility behavior;
+- `src/data/textureItemDefinitions.colorVariants.test.ts` for color-slot contracts shared across Classic/Slim variants;
 - `src/data/appearance.test.ts` for control -> visual-layer mapping, composition and normalization;
-- `src/data/wardrobeDefinitions.test.ts` for the wardrobe compatibility aliases and slot behavior;
 - `src/components/wardrobe.texture-layers.test.tsx` for contextual palettes and layer-order behavior;
 - `src/components/wardrobe.eye-color-grouping.test.tsx` for real character item/sub-control DOM grouping;
 - `src/SkinCrafterEditor.importedSkin.owner-layers.test.tsx` for imported-skin owner activation;
