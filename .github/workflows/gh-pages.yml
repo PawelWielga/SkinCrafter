@@ -164,6 +164,11 @@ jobs:
       - name: Preserve active dev preview and deployment state
         shell: bash
         run: |
+          if [[ -e "source/apps/standalone/dist/$DEV_DESTINATION_DIR" || -L "source/apps/standalone/dist/$DEV_DESTINATION_DIR" ]]; then
+            echo "Active dev preview destination '$DEV_DESTINATION_DIR' overlaps generated production output." >&2
+            exit 1
+          fi
+
           if [[ -d "gh-pages-current/$DEV_DESTINATION_DIR" ]]; then
             mkdir -p "source/apps/standalone/dist/$DEV_DESTINATION_DIR"
             cp -a "gh-pages-current/$DEV_DESTINATION_DIR/." "source/apps/standalone/dist/$DEV_DESTINATION_DIR/"
