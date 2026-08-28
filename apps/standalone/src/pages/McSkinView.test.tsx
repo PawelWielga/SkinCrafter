@@ -129,7 +129,7 @@ describe('McSkinView model integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Podaj nazwe gracza Minecraft.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Podaj nazwę gracza Minecraft.');
     expect(mockedFetchSkin).not.toHaveBeenCalled();
   });
 
@@ -173,7 +173,7 @@ describe('McSkinView model integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Wczytaj Skin' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('PlayerDB jest chwilowo niedostepne. Sprobuj ponownie pozniej.');
+    expect(alert).toHaveTextContent('PlayerDB jest chwilowo niedostępne. Spróbuj ponownie później.');
     expect(alert).not.toHaveTextContent('Nie znaleziono gracza Minecraft.');
   });
 
@@ -190,7 +190,7 @@ describe('McSkinView model integration', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(
-      'Nie udalo sie polaczyc z PlayerDB. Sprawdz polaczenie i sprobuj ponownie.'
+      'Nie udało się połączyć z PlayerDB. Sprawdź połączenie i spróbuj ponownie.'
     );
     expect(alert).not.toHaveTextContent('Failed to fetch');
   });
