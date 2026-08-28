@@ -148,9 +148,8 @@ jobs:
           );
           NODE
       - name: Regenerate root fallback for the active dev preview
-        env:
-          SKINCRAFTER_PAGES_PREVIEW_BASE_PATH: ${{ env.DEV_BASE_PATH }}
-        run: node ./source/apps/standalone/scripts/create-pages-fallback.mjs
+        shell: bash
+        run: SKINCRAFTER_PAGES_PREVIEW_BASE_PATH="$DEV_BASE_PATH" node ./source/apps/standalone/scripts/create-pages-fallback.mjs
       - name: Preserve active dev preview and deployment state
         shell: bash
         run: |
