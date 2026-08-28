@@ -74,7 +74,7 @@ The same item definition is used for:
 - future real Hair items and the `primary` color slot;
 - wardrobe items and their generic contextual slots.
 
-`wardrobeDefinitions.ts` is a compatibility alias over the neutral item contract; it is not a separate validation/composition system.
+Wardrobe category maps use the neutral `TextureItemDefinition` / `TextureItemVariants` contract directly. There is no separate wardrobe definition or compatibility layer.
 
 Adding another option to an existing texture-backed category should require assets, typed definitions, translations and tests, not a new compositor branch.
 

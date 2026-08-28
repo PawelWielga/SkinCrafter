@@ -1,34 +1,34 @@
 import type { SkinCrafterSkinModel } from '../publicTypes';
 import { defineTextureLayers } from './textureLayers';
 import {
-  defineWardrobeItem,
-  defineWardrobeItemVariants,
-  resolveWardrobeItemVariant,
-  type ResolvedWardrobeItemDefinition,
-  type WardrobeItemVariants,
-} from './wardrobeDefinitions';
+  defineTextureItem,
+  defineTextureItemVariants,
+  resolveTextureItemVariant,
+  type ResolvedTextureItemDefinition,
+  type TextureItemVariants,
+} from './textureItemDefinitions';
 
 export const hats = ['None', 'Duck'] as const;
 export type Hat = (typeof hats)[number];
 
 const hatDefinitions = {
-  Duck: defineWardrobeItemVariants({
-    classic: defineWardrobeItem({
+  Duck: defineTextureItemVariants({
+    classic: defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
     }),
-    slim: defineWardrobeItem({
+    slim: defineTextureItem({
       skinModel: 'slim',
       textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
     }),
   }),
-} satisfies Record<Exclude<Hat, 'None'>, WardrobeItemVariants>;
+} satisfies Record<Exclude<Hat, 'None'>, TextureItemVariants>;
 
 export function getHatDefinition(
   hat: Hat,
   skinModel: SkinCrafterSkinModel,
   assetBaseUrl?: string
-): ResolvedWardrobeItemDefinition | null {
+): ResolvedTextureItemDefinition | null {
   if (hat === 'None') return null;
-  return resolveWardrobeItemVariant(hatDefinitions[hat], skinModel, assetBaseUrl);
+  return resolveTextureItemVariant(hatDefinitions[hat], skinModel, assetBaseUrl);
 }

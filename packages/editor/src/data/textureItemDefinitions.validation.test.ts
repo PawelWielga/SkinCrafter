@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { defineTextureLayers } from './textureLayers';
 import {
-  defineWardrobeItem,
-  defineWardrobeItemVariants,
-  isWardrobeItemCompatible,
-  resolveWardrobeItem,
-  resolveWardrobeItemVariant,
-  type WardrobeItemDefinition,
-} from './wardrobeDefinitions';
+  defineTextureItem,
+  defineTextureItemVariants,
+  isTextureItemCompatible,
+  resolveTextureItem,
+  resolveTextureItemVariant,
+  type TextureItemDefinition,
+} from './textureItemDefinitions';
 
 const primarySlot = {
   id: 'primary',
@@ -23,9 +23,9 @@ const secondarySlot = {
   palette: ['#D6B15D', '#7047A3'],
 };
 
-describe('wardrobe item definitions', () => {
+describe('texture item definition validation', () => {
   it('accepts an explicit classic model for a tintable item with a color slot', () => {
-    const definition = defineWardrobeItem({
+    const definition = defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({
         tintable: {
@@ -45,7 +45,7 @@ describe('wardrobe item definitions', () => {
   });
 
   it('preserves arbitrary ordered tintable layers, shared slots, different slots and fixed-last metadata', () => {
-    const definition = defineWardrobeItem({
+    const definition = defineTextureItem({
       skinModel: 'slim',
       textureLayers: defineTextureLayers({
         tintable: [
@@ -58,7 +58,7 @@ describe('wardrobe item definitions', () => {
       colorSlots: [primarySlot, secondarySlot],
     });
 
-    expect(resolveWardrobeItem(definition, '/assets')).toEqual({
+    expect(resolveTextureItem(definition, '/assets')).toEqual({
       skinModel: 'slim',
       textureLayers: {
         tintable: [
@@ -73,36 +73,36 @@ describe('wardrobe item definitions', () => {
   });
 
   it('supports fixed-only definitions without color slots', () => {
-    const variants = defineWardrobeItemVariants({
-      classic: defineWardrobeItem({
+    const variants = defineTextureItemVariants({
+      classic: defineTextureItem({
         skinModel: 'classic',
         textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
       }),
-      slim: defineWardrobeItem({
+      slim: defineTextureItem({
         skinModel: 'slim',
         textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
       }),
     });
 
-    expect(resolveWardrobeItemVariant(variants, 'classic', '/assets')).toEqual({
+    expect(resolveTextureItemVariant(variants, 'classic', '/assets')).toEqual({
       skinModel: 'classic',
       textureLayers: { fixed: '/assets/textures/hat/duck.png' },
     });
-    expect(resolveWardrobeItemVariant(variants, 'slim', '/assets')).toEqual({
+    expect(resolveTextureItemVariant(variants, 'slim', '/assets')).toEqual({
       skinModel: 'slim',
       textureLayers: { fixed: '/assets/textures/hat/duck.png' },
     });
   });
 
-  it('rejects tintable layers without declared color slots through the shared texture-item validator', () => {
-    expect(() => defineWardrobeItem({
+  it('rejects tintable layers without declared color slots', () => {
+    expect(() => defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({ tintable: 'textures/eyes/small.tintable.png' }),
     })).toThrow('Every tintable texture item must define at least one color slot.');
   });
 
   it('rejects tintable layers that reference an unknown slot', () => {
-    expect(() => defineWardrobeItem({
+    expect(() => defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({
         tintable: {
@@ -115,7 +115,7 @@ describe('wardrobe item definitions', () => {
   });
 
   it('rejects duplicate and unused color slots', () => {
-    expect(() => defineWardrobeItem({
+    expect(() => defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({
         tintable: {
@@ -126,7 +126,7 @@ describe('wardrobe item definitions', () => {
       colorSlots: [primarySlot, primarySlot],
     })).toThrow('Texture item color slot "primary" is defined more than once.');
 
-    expect(() => defineWardrobeItem({
+    expect(() => defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({
         tintable: {
@@ -139,12 +139,12 @@ describe('wardrobe item definitions', () => {
   });
 
   it('rejects a variant whose registry key disagrees with its declared model', () => {
-    const slim = defineWardrobeItem({
+    const slim = defineTextureItem({
       skinModel: 'slim',
       textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
     });
 
-    expect(() => defineWardrobeItemVariants({ classic: slim })).toThrow(
+    expect(() => defineTextureItemVariants({ classic: slim })).toThrow(
       'Texture item variant "classic" must declare the same skinModel.'
     );
   });
@@ -152,9 +152,9 @@ describe('wardrobe item definitions', () => {
   it('rejects a missing skinModel instead of silently assuming classic', () => {
     const invalid = {
       textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
-    } as unknown as WardrobeItemDefinition;
+    } as unknown as TextureItemDefinition;
 
-    expect(() => defineWardrobeItem(invalid)).toThrow(
+    expect(() => defineTextureItem(invalid)).toThrow(
       'A texture item must define skinModel as "classic" or "slim".'
     );
   });
@@ -163,26 +163,26 @@ describe('wardrobe item definitions', () => {
     const invalid = {
       skinModel: 'wide',
       textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
-    } as unknown as WardrobeItemDefinition;
+    } as unknown as TextureItemDefinition;
 
-    expect(() => defineWardrobeItem(invalid)).toThrow(
+    expect(() => defineTextureItem(invalid)).toThrow(
       'A texture item must define skinModel as "classic" or "slim".'
     );
   });
 
   it('treats classic and slim definitions as mutually incompatible when switching models', () => {
-    const classic = defineWardrobeItem({
+    const classic = defineTextureItem({
       skinModel: 'classic',
       textureLayers: defineTextureLayers({ fixed: 'textures/hat/duck.png' }),
     });
-    const slim = defineWardrobeItem({
+    const slim = defineTextureItem({
       skinModel: 'slim',
       textureLayers: defineTextureLayers({ fixed: 'textures/bottom/pants.png' }),
     });
 
-    expect(isWardrobeItemCompatible(classic, 'classic')).toBe(true);
-    expect(isWardrobeItemCompatible(classic, 'slim')).toBe(false);
-    expect(isWardrobeItemCompatible(slim, 'slim')).toBe(true);
-    expect(isWardrobeItemCompatible(slim, 'classic')).toBe(false);
+    expect(isTextureItemCompatible(classic, 'classic')).toBe(true);
+    expect(isTextureItemCompatible(classic, 'slim')).toBe(false);
+    expect(isTextureItemCompatible(slim, 'slim')).toBe(true);
+    expect(isTextureItemCompatible(slim, 'classic')).toBe(false);
   });
 });

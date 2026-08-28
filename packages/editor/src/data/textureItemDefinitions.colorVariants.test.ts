@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { defineTextureLayers } from './textureLayers';
 import {
-  defineWardrobeItem,
-  defineWardrobeItemVariants,
-} from './wardrobeDefinitions';
+  defineTextureItem,
+  defineTextureItemVariants,
+} from './textureItemDefinitions';
 import type { SkinCrafterSkinModel } from '../publicTypes';
 
 const primarySlot = {
@@ -17,7 +17,7 @@ function colorableVariant(
   skinModel: SkinCrafterSkinModel,
   palette: readonly string[] = primarySlot.palette
 ) {
-  return defineWardrobeItem({
+  return defineTextureItem({
     skinModel,
     textureLayers: defineTextureLayers({
       tintable: {
@@ -29,16 +29,16 @@ function colorableVariant(
   });
 }
 
-describe('wardrobe color contracts across model variants', () => {
+describe('texture item color contracts across model variants', () => {
   it('accepts identical color slots for Classic and Slim variants', () => {
-    expect(() => defineWardrobeItemVariants({
+    expect(() => defineTextureItemVariants({
       classic: colorableVariant('classic'),
       slim: colorableVariant('slim'),
     })).not.toThrow();
   });
 
   it('rejects conflicting color slots for two colorable variants of one item', () => {
-    expect(() => defineWardrobeItemVariants({
+    expect(() => defineTextureItemVariants({
       classic: colorableVariant('classic'),
       slim: colorableVariant('slim', ['#4A6FA5', '#2F8F4E']),
     })).toThrow(
@@ -47,9 +47,9 @@ describe('wardrobe color contracts across model variants', () => {
   });
 
   it('allows a fixed-only variant to coexist with a colorable variant', () => {
-    expect(() => defineWardrobeItemVariants({
+    expect(() => defineTextureItemVariants({
       classic: colorableVariant('classic'),
-      slim: defineWardrobeItem({
+      slim: defineTextureItem({
         skinModel: 'slim',
         textureLayers: defineTextureLayers({ fixed: 'textures/eyes/clasic.fixed.png' }),
       }),

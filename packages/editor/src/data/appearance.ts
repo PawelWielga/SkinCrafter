@@ -18,13 +18,10 @@ import races, { type Race } from './races';
 import { getShirtDefinition, shirts } from './shirtTextureMap';
 import {
   buildTextureInputsFromItem,
+  isTextureItemCompatible,
   type ResolvedTextureItemDefinition,
   type TextureItemColorSlotDefinition,
 } from './textureItemDefinitions';
-import {
-  isWardrobeItemCompatible,
-  type ResolvedWardrobeItemDefinition,
-} from './wardrobeDefinitions';
 import type { SkinCrafterSkinModel } from '../publicTypes';
 import type { TextureInput } from '../utils/combineTextures';
 import type { ResolvedTextureLayers } from './textureLayers';
@@ -173,10 +170,10 @@ function textureItemOption(
 function wardrobeOption(
   id: string,
   labelKey: string,
-  definition: ResolvedWardrobeItemDefinition | null,
+  definition: ResolvedTextureItemDefinition | null,
   skinModel: SkinCrafterSkinModel
 ): AppearanceOption[] {
-  if (!definition || !isWardrobeItemCompatible(definition, skinModel)) return [];
+  if (!definition || !isTextureItemCompatible(definition, skinModel)) return [];
   return textureItemOption(id, labelKey, definition);
 }
 
