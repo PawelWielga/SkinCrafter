@@ -91,11 +91,17 @@ jobs:
       actions: read
       contents: write
     steps:
+      - name: Checkout validated main source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: source
+          persist-credentials: false
       - name: Download validated standalone site
         uses: actions/download-artifact@v8
         with:
           name: standalone-pages-${{ github.event.workflow_run.head_sha }}
-          path: apps/standalone/dist
+          path: source/apps/standalone/dist
           github-token: ${{ github.token }}
           run-id: ${{ needs.gate.outputs.build_run_id }}
       - name: Checkout current Pages branch
@@ -104,15 +110,85 @@ jobs:
           ref: gh-pages
           path: gh-pages-current
           persist-credentials: false
-      - name: Preserve current dev preview
+      - name: Resolve active dev preview
         shell: bash
         run: |
-          if [[ -d gh-pages-current/dev ]]; then
-            cp -a gh-pages-current/dev apps/standalone/dist/dev
+          node <<'NODE'
+          const fs = require('node:fs');
+          const statePath = 'gh-pages-current/.skincrafter-pages-state.json';
+          const fallbackPath = 'gh-pages-current/404.html';
+          let devBasePath;
+          let devDestinationDir;
+
+          if (fs.existsSync(statePath)) {
+            const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+            devBasePath = state.devBasePath;
+            devDestinationDir = state.devDestinationDir;
+          } else if (fs.existsSync(fallbackPath)) {
+            const fallback = fs.readFileSync(fallbackPath, 'utf8');
+            const previewMatch = fallback.match(/var previewBase = ['"]([^'"]+)['"];/);
+
+            if (previewMatch) {
+              devBasePath = previewMatch[1];
+              devDestinationDir = devBasePath.slice(1, -1);
+            }
+          }
+
+          if (devBasePath === undefined && devDestinationDir === undefined) {
+            const config = JSON.parse(
+              fs.readFileSync('source/apps/standalone/deployment.config.json', 'utf8')
+            );
+            devBasePath = config.dev?.basePath;
+            devDestinationDir =
+              typeof devBasePath === 'string' ? devBasePath.slice(1, -1) : undefined;
+          }
+
+          if (
+            typeof devBasePath !== 'string' ||
+            !/^\/(?!(?:\.{1,2}|\.git)\/$)[A-Za-z0-9._~-]+\/$/i.test(devBasePath) ||
+            devDestinationDir !== devBasePath.slice(1, -1)
+          ) {
+            throw new Error(
+              `Invalid deployed dev state: ${JSON.stringify({ devBasePath, devDestinationDir })}`
+            );
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_ENV,
+            `DEV_BASE_PATH=${devBasePath}\nDEV_DESTINATION_DIR=${devDestinationDir}\n`
+          );
+          NODE
+      - name: Regenerate root fallback for the active dev preview
+        shell: bash
+        run: SKINCRAFTER_PAGES_PREVIEW_BASE_PATH="$DEV_BASE_PATH" node ./source/apps/standalone/scripts/create-pages-fallback.mjs
+      - name: Preserve active dev preview and deployment state
+        shell: bash
+        run: |
+          if [[ -e "source/apps/standalone/dist/$DEV_DESTINATION_DIR" || -L "source/apps/standalone/dist/$DEV_DESTINATION_DIR" ]]; then
+            echo "Active dev preview destination '$DEV_DESTINATION_DIR' overlaps generated production output." >&2
+            exit 1
           fi
+
+          if [[ -d "gh-pages-current/$DEV_DESTINATION_DIR" ]]; then
+            mkdir -p "source/apps/standalone/dist/$DEV_DESTINATION_DIR"
+            cp -a "gh-pages-current/$DEV_DESTINATION_DIR/." "source/apps/standalone/dist/$DEV_DESTINATION_DIR/"
+          fi
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const state = {
+            devBasePath: process.env.DEV_BASE_PATH,
+            devDestinationDir: process.env.DEV_DESTINATION_DIR,
+          };
+          fs.writeFileSync(
+            'source/apps/standalone/dist/.skincrafter-pages-state.json',
+            `${JSON.stringify(state, null, 2)}\n`,
+            'utf8'
+          );
+          NODE
       - name: Deploy validated standalone site
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./apps/standalone/dist
+          publish_dir: ./source/apps/standalone/dist
           full_commit_message: "deploy: ${{ github.event.workflow_run.head_sha }}"

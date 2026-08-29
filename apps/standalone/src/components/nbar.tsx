@@ -34,10 +34,10 @@ const languageOptions: Record<Language, LanguageOption> = {
 
 export const getLanguageOption = (language: Language): LanguageOption => languageOptions[language];
 
-export const getEnvironmentBadge = (baseUrl: string): string | null =>
-  baseUrl === '/dev/' ? 'DEV' : null;
+export const getEnvironmentBadge = (deployment: string): string | null =>
+  deployment === 'dev' ? 'DEV' : null;
 
-const environmentBadge = getEnvironmentBadge(import.meta.env.BASE_URL);
+const environmentBadge = getEnvironmentBadge(import.meta.env.VITE_SKINCRAFTER_DEPLOYMENT);
 
 const LanguageFlag: React.FC<{ src: string }> = ({ src }) => (
   <img

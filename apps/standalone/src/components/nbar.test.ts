@@ -5,12 +5,16 @@ import { describe, expect, it } from 'vitest';
 import NBar, { getEnvironmentBadge, getLanguageOption } from './nbar';
 
 describe('standalone environment badge', () => {
-  it('is hidden for the production root build', () => {
-    expect(getEnvironmentBadge('/')).toBeNull();
+  it('is hidden for the production deployment', () => {
+    expect(getEnvironmentBadge('production')).toBeNull();
   });
 
   it('labels the dev Pages preview', () => {
-    expect(getEnvironmentBadge('/dev/')).toBe('DEV');
+    expect(getEnvironmentBadge('dev')).toBe('DEV');
+  });
+
+  it('does not infer the environment from a base-path literal', () => {
+    expect(getEnvironmentBadge('/dev/')).toBeNull();
   });
 });
 
