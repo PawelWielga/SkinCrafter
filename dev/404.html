@@ -8,12 +8,12 @@
   <body>
     <script>
       (function (location) {
-        var previewBase = '/dev/';
+        var previewBase = "/dev/";
         var base =
           location.pathname.startsWith(previewBase) &&
           location.pathname !== previewBase
             ? previewBase
-            : '/';
+            : "/";
         var target = location.pathname + location.search + location.hash;
 
         location.replace(
