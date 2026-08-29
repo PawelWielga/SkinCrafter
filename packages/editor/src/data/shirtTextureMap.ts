@@ -1,4 +1,4 @@
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 import { defineTextureLayers } from './textureLayers';
 import {
   defineTextureItem,
@@ -48,7 +48,7 @@ const shirtDefinitions = {
 
 export function getShirtDefinition(
   shirt: Shirt,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ): ResolvedTextureItemDefinition | null {
   if (shirt === 'None') return null;

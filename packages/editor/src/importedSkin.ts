@@ -1,4 +1,4 @@
-import type { SkinCrafterSkinModel } from './publicTypes';
+import type { SkinModel } from './skinModel';
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 const MINECRAFT_SKIN_SIZE = 64;
@@ -6,7 +6,7 @@ const MINECRAFT_SKIN_SIZE = 64;
 export interface LoadedImportedSkin {
   dataUrl: string;
   fingerprint: string;
-  model: SkinCrafterSkinModel;
+  model: SkinModel;
 }
 
 export class InvalidInitialSkinError extends Error {
@@ -118,7 +118,7 @@ async function validateDecodedImage(dataUrl: string): Promise<void> {
 
 export async function loadImportedSkin(
   image: Blob,
-  model: SkinCrafterSkinModel
+  model: SkinModel
 ): Promise<LoadedImportedSkin> {
   if (image.type && image.type.toLowerCase() !== 'image/png') {
     throw new InvalidInitialSkinError('Initial skin must use the image/png MIME type.');

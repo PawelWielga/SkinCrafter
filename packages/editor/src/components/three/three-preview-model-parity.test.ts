@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { SkinModel } from '../../skinModel';
 import {
   ThreePreviewRuntime,
   type ThreePreviewRuntimeDependencies,
@@ -11,7 +12,7 @@ type RuntimeInternals = { modelMeshes: BoxMesh[] };
 
 const runtimes: ThreePreviewRuntime[] = [];
 
-function createRuntime(model: 'classic' | 'slim' = 'classic'): ThreePreviewRuntime {
+function createRuntime(model: SkinModel = 'classic'): ThreePreviewRuntime {
   const container = document.createElement('div');
   Object.defineProperty(container, 'clientWidth', { configurable: true, value: 320 });
   Object.defineProperty(container, 'clientHeight', { configurable: true, value: 480 });

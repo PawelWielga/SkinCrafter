@@ -1,15 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import { defaultPreviewTextureUrl } from '../../assetResolver';
 import type { SkinCrafterError } from '../../publicTypes';
+import type { SkinModel } from '../../skinModel';
 import type { Pose } from './pose-utils';
 import {
   createThreePreviewRuntime,
-  type SkinModel,
   type ThreePreviewRuntime,
   type ThreePreviewRuntimeError,
 } from './three-preview-runtime';
 
-export type { SkinModel } from './three-preview-runtime';
+export type { SkinModel } from '../../skinModel';
 
 interface ThreePreviewProps {
   texture: string | null;

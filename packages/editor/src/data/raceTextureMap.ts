@@ -1,4 +1,4 @@
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 import type { Race } from './races';
 import { defineTextureLayers, type TextureLayers } from './textureLayers';
 import {
@@ -14,7 +14,7 @@ export type Sex = 'Male' | 'Female' | 'None';
 
 interface RaceDefinition {
   skinColors: readonly string[];
-  sexes: Partial<Record<SkinCrafterSkinModel, Sex>>;
+  sexes: Partial<Record<SkinModel, Sex>>;
   variants: TextureItemVariants;
 }
 
@@ -28,7 +28,7 @@ function skinColorSlot(palette: readonly string[]): TextureItemColorSlotDefiniti
 }
 
 function colorableRaceItem(
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   textureLayers: TextureLayers,
   palette: readonly string[]
 ) {
@@ -148,7 +148,7 @@ export function getRaceSkinColors(race: Race): readonly string[] {
 
 export function getRaceTextureItem(
   race: Race,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ): ResolvedTextureItemDefinition | null {
   return resolveTextureItemVariant(raceTextureMap[race].variants, skinModel, assetBaseUrl);
@@ -156,7 +156,7 @@ export function getRaceTextureItem(
 
 export function getRaceTextureLayers(
   race: Race,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ) {
   return getRaceTextureItem(race, skinModel, assetBaseUrl)?.textureLayers ?? null;

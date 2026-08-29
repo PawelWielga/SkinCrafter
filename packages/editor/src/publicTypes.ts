@@ -6,8 +6,9 @@ import type {
   WardrobeColorState,
 } from './data/appearance';
 import type { Language } from './i18n/translations';
+import type { SkinModel } from './skinModel';
 
-export type SkinCrafterSkinModel = 'classic' | 'slim';
+export type { SkinModel as SkinCrafterSkinModel } from './skinModel';
 
 export interface SkinCrafterState {
   appearance: AppearanceState;
@@ -28,7 +29,7 @@ export interface SkinCrafterImportedInitialSkin {
   layerOrder?: readonly string[];
   wardrobeColors?: WardrobeColorState;
   image: Blob;
-  model: SkinCrafterSkinModel;
+  model: SkinModel;
 }
 
 export type SkinCrafterInitialSkin =
@@ -110,7 +111,7 @@ export interface SkinCrafterSkinMetadata {
   width: 64;
   height: 64;
   mimeType: 'image/png';
-  model: SkinCrafterSkinModel;
+  model: SkinModel;
   appearance: AppearanceState;
   layerOrder: TextureLayerCategoryId[];
   wardrobeColors: WardrobeColorState;

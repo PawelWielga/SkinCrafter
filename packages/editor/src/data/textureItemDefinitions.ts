@@ -1,5 +1,5 @@
 import type { TranslationKey } from '../i18n/translations';
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 import type { TextureInput } from '../utils/combineTextures';
 import {
   resolveTextureLayers,
@@ -15,19 +15,19 @@ export interface TextureItemColorSlotDefinition {
 }
 
 export interface TextureItemDefinition {
-  skinModel: SkinCrafterSkinModel;
+  skinModel: SkinModel;
   textureLayers: TextureLayers;
   colorSlots?: readonly TextureItemColorSlotDefinition[];
 }
 
 export interface ResolvedTextureItemDefinition {
-  skinModel: SkinCrafterSkinModel;
+  skinModel: SkinModel;
   textureLayers: ResolvedTextureLayers;
   colorSlots?: readonly TextureItemColorSlotDefinition[];
 }
 
 export type TextureItemVariants = Partial<
-  Record<SkinCrafterSkinModel, TextureItemDefinition>
+  Record<SkinModel, TextureItemDefinition>
 >;
 
 const isHexColor = (value: string): boolean => /^#[0-9a-f]{6}$/i.test(value);
@@ -161,7 +161,7 @@ export function resolveTextureItem(
 
 export function resolveTextureItemVariant(
   variants: TextureItemVariants,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ): ResolvedTextureItemDefinition | null {
   const definition = variants[skinModel];
@@ -170,7 +170,7 @@ export function resolveTextureItemVariant(
 
 export function isTextureItemCompatible(
   definition: Pick<TextureItemDefinition, 'skinModel'>,
-  skinModel: SkinCrafterSkinModel
+  skinModel: SkinModel
 ): boolean {
   return definition.skinModel === skinModel;
 }

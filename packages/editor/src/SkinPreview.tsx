@@ -1,11 +1,12 @@
 import React from 'react';
 import PreviewArea from './components/previewArea';
 import { defaultLanguage, translate, type Language, type TranslationKey } from './i18n/translations';
-import type { SkinCrafterError, SkinCrafterTheme } from './publicTypes';
+import type { SkinCrafterError, SkinCrafterSkinModel, SkinCrafterTheme } from './publicTypes';
+import { createThemeStyle } from './themeStyle';
 
 export interface SkinPreviewProps {
   texture: string | null;
-  model?: 'classic' | 'slim';
+  model?: SkinCrafterSkinModel;
   locale?: Language;
   bottomOffset?: number;
   className?: string;
@@ -25,17 +26,8 @@ export default function SkinPreview({
   onError,
 }: SkinPreviewProps): React.JSX.Element {
   const t = (key: TranslationKey): string => translate(locale, key);
-  const themeVars = {
-    '--skincrafter-accent': theme?.accent,
-    '--skincrafter-accent-strong': theme?.accentStrong,
-    '--skincrafter-surface': theme?.surface,
-    '--skincrafter-text': theme?.text,
-    '--skincrafter-muted': theme?.muted,
-    '--skincrafter-border': theme?.border,
-  } as React.CSSProperties;
-
   return (
-    <div className={`skincrafter-editor h-full min-h-0 ${className}`.trim()} style={{ ...themeVars, ...style }}>
+    <div className={`skincrafter-editor h-full min-h-0 ${className}`.trim()} style={{ ...createThemeStyle(theme), ...style }}>
       <PreviewArea
         texture={texture}
         model={model}
