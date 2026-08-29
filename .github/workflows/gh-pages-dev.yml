@@ -100,7 +100,7 @@ jobs:
 
             if (
               typeof devBasePath !== 'string' ||
-              !/^\/[A-Za-z0-9._~-]+\/$/.test(devBasePath)
+              !/^\/(?!(?:\.{1,2}|\.git)\/$)[A-Za-z0-9._~-]+\/$/i.test(devBasePath)
             ) {
               throw new Error(`Invalid dev Pages base path: ${String(devBasePath)}`);
             }
@@ -163,7 +163,7 @@ jobs:
 
           if (
             typeof previousBasePath !== 'string' ||
-            !/^\/[A-Za-z0-9._~-]+\/$/.test(previousBasePath) ||
+            !/^\/(?!(?:\.{1,2}|\.git)\/$)[A-Za-z0-9._~-]+\/$/i.test(previousBasePath) ||
             previousDestinationDir !== previousBasePath.slice(1, -1)
           ) {
             throw new Error(

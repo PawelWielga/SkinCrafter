@@ -145,7 +145,7 @@ jobs:
 
           if (
             typeof devBasePath !== 'string' ||
-            !/^\/[A-Za-z0-9._~-]+\/$/.test(devBasePath) ||
+            !/^\/(?!(?:\.{1,2}|\.git)\/$)[A-Za-z0-9._~-]+\/$/i.test(devBasePath) ||
             devDestinationDir !== devBasePath.slice(1, -1)
           ) {
             throw new Error(

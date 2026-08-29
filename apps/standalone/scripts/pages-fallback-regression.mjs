@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import { resolvePagesDestinationDir } from './deployment-path.mjs';
 import { createPagesFallbackHtml } from './pages-fallback.mjs';
 
 const deploymentConfig = JSON.parse(
@@ -34,7 +35,16 @@ const runFallback = ({ productionBasePath, previewBasePath, pathname, search = '
 
 test('deployment config defines a root production base and a dedicated preview base', () => {
   assert.equal(deploymentConfig.production.basePath, '/');
-  assert.match(deploymentConfig.dev.basePath, /^\/[A-Za-z0-9._~-]+\/$/);
+  assert.equal(resolvePagesDestinationDir(deploymentConfig.dev.basePath), 'dev');
+});
+
+test('preview base path validation rejects Git-reserved destinations', () => {
+  for (const basePath of ['/./', '/../', '/.git/', '/.GIT/']) {
+    assert.throws(
+      () => resolvePagesDestinationDir(basePath),
+      new RegExp(`Invalid dev Pages base path: ${basePath.replaceAll('.', '\\.')}`)
+    );
+  }
 });
 
 test('production nested routes redirect through the configured root base', () => {
