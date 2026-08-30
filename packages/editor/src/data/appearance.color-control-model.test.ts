@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { SkinModel } from '../skinModel';
 
 vi.mock('./characterTextureDefinitions', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./characterTextureDefinitions')>();
   return {
     ...actual,
-    getEyeDefinition: (_eye: string, skinModel: 'classic' | 'slim') => skinModel === 'slim'
+    getEyeDefinition: (_eye: string, skinModel: SkinModel) => skinModel === 'slim'
       ? {
           skinModel: 'slim' as const,
           textureLayers: {

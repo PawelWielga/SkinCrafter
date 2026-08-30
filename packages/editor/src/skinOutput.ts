@@ -5,7 +5,8 @@ import {
   type TextureLayerCategoryId,
   type WardrobeColorState,
 } from './data/appearance';
-import type { SkinCrafterSkinModel, SkinCrafterSkinOutput } from './publicTypes';
+import type { SkinCrafterSkinOutput } from './publicTypes';
+import type { SkinModel } from './skinModel';
 
 export function dataUrlToBlob(dataUrl: string): Blob {
   const [header, payload] = dataUrl.split(',', 2);
@@ -24,7 +25,7 @@ export function createSkinOutput(
   dataUrl: string,
   appearance: AppearanceState,
   layerOrder: TextureLayerCategoryId[],
-  model: SkinCrafterSkinModel = appearance.sex === 'Female' ? 'slim' : 'classic',
+  model: SkinModel = appearance.sex === 'Female' ? 'slim' : 'classic',
   wardrobeColors?: WardrobeColorState
 ): SkinCrafterSkinOutput {
   const blob = dataUrlToBlob(dataUrl);

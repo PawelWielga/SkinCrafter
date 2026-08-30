@@ -1,4 +1,4 @@
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 import { defineTextureLayers } from './textureLayers';
 import {
   defineTextureItem,
@@ -26,7 +26,7 @@ const hatDefinitions = {
 
 export function getHatDefinition(
   hat: Hat,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ): ResolvedTextureItemDefinition | null {
   if (hat === 'None') return null;

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { SkinModel } from '../skinModel';
 
 const { slimOnlyTexture } = vi.hoisted(() => ({
   slimOnlyTexture: 'data:image/png;base64,c2xpbS1vbmx5',
@@ -8,7 +9,7 @@ vi.mock('./shirtTextureMap', () => ({
   shirts: ['None', 'Hoodie', 'SlimOnly'] as const,
   getShirtDefinition: (
     shirt: string,
-    skinModel: 'classic' | 'slim'
+    skinModel: SkinModel
   ) => {
     if (shirt === 'Hoodie' && skinModel === 'classic') {
       return {

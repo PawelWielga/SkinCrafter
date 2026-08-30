@@ -23,7 +23,7 @@ import {
 } from '../data/appearance';
 import type { TextureItemColorSlotDefinition } from '../data/textureItemDefinitions';
 import type { TranslationKey } from '../i18n/translations';
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 
 interface WardrobeProps {
   appearance: AppearanceState;
@@ -39,7 +39,7 @@ interface WardrobeProps {
   onLayerOrderChange: (layerOrder: TextureLayerCategoryId[]) => void;
   t: (key: TranslationKey) => string;
   assetBaseUrl?: string;
-  skinModel?: SkinCrafterSkinModel;
+  skinModel?: SkinModel;
 }
 
 interface TextureItemColorPalettesProps {

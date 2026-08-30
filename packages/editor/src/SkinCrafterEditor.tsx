@@ -26,12 +26,12 @@ import type {
   SkinCrafterGenerationStatus,
   SkinCrafterInitialSkin,
   SkinCrafterPersistenceAdapter,
-  SkinCrafterSkinModel,
   SkinCrafterSkinOutput,
   SkinCrafterState,
-  SkinCrafterTheme,
 } from './publicTypes';
+import type { SkinModel } from './skinModel';
 import { createSkinOutput } from './skinOutput';
+import { createThemeStyle } from './themeStyle';
 import {
   areColorSlotValuesEqual,
   areSkinCrafterStatesEqual,
@@ -61,13 +61,13 @@ interface ImportedSkinRuntime {
   source: Blob;
   dataUrl: string;
   fingerprint: string;
-  model: SkinCrafterSkinModel;
+  model: SkinModel;
   baselineState: SkinCrafterState;
 }
 
 interface ImportLoadState {
   source: Blob | null;
-  model: SkinCrafterSkinModel | null;
+  model: SkinModel | null;
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: SkinCrafterError | null;
 }
@@ -80,7 +80,7 @@ interface PersistenceInitialization {
 
 function normalizeState(
   value?: SkinCrafterInitialSkin | SkinCrafterState | null,
-  skinModel?: SkinCrafterSkinModel
+  skinModel?: SkinModel
 ): SkinCrafterState {
   return {
     appearance: normalizeAppearance(value?.appearance ?? null, skinModel),
@@ -127,18 +127,6 @@ function initializePersistence(
       error: persistenceErrorFrom('load', cause),
     };
   }
-}
-
-function themeStyle(theme?: SkinCrafterTheme): React.CSSProperties {
-  if (!theme) return {};
-  return {
-    '--skincrafter-accent': theme.accent,
-    '--skincrafter-accent-strong': theme.accentStrong,
-    '--skincrafter-surface': theme.surface,
-    '--skincrafter-text': theme.text,
-    '--skincrafter-muted': theme.muted,
-    '--skincrafter-border': theme.border,
-  } as React.CSSProperties;
 }
 
 function generationErrorFrom(cause: unknown): SkinCrafterError {
@@ -248,7 +236,7 @@ export default function SkinCrafterEditor({
   const equivalentImportPendingRef = useRef(false);
   const lastGeneratedKeyRef = useRef<string | null>(null);
   const generationRunRef = useRef<GenerationRun | null>(null);
-  const effectiveModelRef = useRef<SkinCrafterSkinModel>('classic');
+  const effectiveModelRef = useRef<SkinModel>('classic');
   const checkedPersistenceRef = useRef<SkinCrafterPersistenceAdapter | undefined>(persistence);
   const persistenceWasCheckedRef = useRef(!value);
   const persistenceWritesBlockedRef = useRef(persistenceInitialization.writesBlocked);
@@ -337,7 +325,7 @@ export default function SkinCrafterEditor({
 
   const handleAppearanceChange = useCallback((category: AppearanceCategoryId, nextValue: string) => {
     if (hasImportedRequest) markCategoryActivated(category);
-    const nextModel: SkinCrafterSkinModel = category === 'sex'
+    const nextModel: SkinModel = category === 'sex'
       ? nextValue === 'Female' ? 'slim' : 'classic'
       : effectiveModelRef.current;
     publishState({
@@ -569,7 +557,7 @@ export default function SkinCrafterEditor({
   const compositionSex = importedLoadedCurrent && loadedImportedSkin && !sexWasEdited
     ? loadedImportedSkin.model === 'slim' ? 'Female' : 'Male'
     : sex;
-  const effectiveModel: SkinCrafterSkinModel = importedLoadedCurrent
+  const effectiveModel: SkinModel = importedLoadedCurrent
     && loadedImportedSkin
     && !sexWasEdited
     ? loadedImportedSkin.model
@@ -719,7 +707,7 @@ export default function SkinCrafterEditor({
   return (
     <div
       className={`skincrafter-editor h-full min-h-0 w-full ${className}`.trim()}
-      style={{ ...themeStyle(theme), ...style }}
+      style={{ ...createThemeStyle(theme), ...style }}
       data-testid="skincrafter-editor"
       data-skincrafter-locale={locale}
       data-skincrafter-generation-status={generationStatus}

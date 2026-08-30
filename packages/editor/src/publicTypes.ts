@@ -6,8 +6,9 @@ import type {
   WardrobeColorState,
 } from './data/appearance';
 import type { Language } from './i18n/translations';
+import type { SkinModel } from './skinModel';
 
-export type SkinCrafterSkinModel = 'classic' | 'slim';
+export type SkinCrafterSkinModel = SkinModel;
 
 export interface SkinCrafterState {
   appearance: AppearanceState;

@@ -1,4 +1,4 @@
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 import { defineTextureLayers, type TextureLayers } from './textureLayers';
 import {
   defineTextureItem,
@@ -85,7 +85,7 @@ export const hairStyles = Object.keys(hairDefinitions) as HairStyle[];
 
 export function getEyeDefinition(
   eye: string,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ): ResolvedTextureItemDefinition | null {
   const variants = eyeDefinitions[eye as EyeStyle];
@@ -94,7 +94,7 @@ export function getEyeDefinition(
 
 export function getHairDefinition(
   hair: string,
-  skinModel: SkinCrafterSkinModel,
+  skinModel: SkinModel,
   assetBaseUrl?: string
 ): ResolvedTextureItemDefinition | null {
   const variants = hairDefinitions[hair as HairStyle];

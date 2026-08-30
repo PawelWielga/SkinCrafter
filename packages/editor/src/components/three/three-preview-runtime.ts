@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { SkinModel } from '../../skinModel';
 import createBox from './create-box';
 import applyPose, { type Pose } from './pose-utils';
 import {
@@ -19,8 +20,6 @@ import {
   slimLeftArmMap,
   slimLeftArmOverlayMap,
 } from './skin-maps';
-
-export type SkinModel = 'classic' | 'slim';
 
 type BoxMesh = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 

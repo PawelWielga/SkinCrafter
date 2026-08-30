@@ -10,7 +10,8 @@ import {
   type TextureLayerCategoryId,
   type WardrobeColorState,
 } from './data/appearance';
-import type { SkinCrafterSkinModel, SkinCrafterState } from './publicTypes';
+import type { SkinCrafterState } from './publicTypes';
+import type { SkinModel } from './skinModel';
 import {
   areAppearanceStatesEqual,
   areTextureLayerOrdersEqual,
@@ -32,7 +33,7 @@ export interface SkinGenerationSnapshot {
   activeCategories: AppearanceCategoryId[];
   assetBaseUrl: string | undefined;
   importedFingerprint: string | null;
-  model: SkinCrafterSkinModel;
+  model: SkinModel;
 }
 
 interface CreateSkinGenerationSnapshotInput {
@@ -42,7 +43,7 @@ interface CreateSkinGenerationSnapshotInput {
   activeCategories: readonly AppearanceCategoryId[];
   assetBaseUrl: string | undefined;
   importedFingerprint: string | null;
-  model: SkinCrafterSkinModel;
+  model: SkinModel;
 }
 
 function encodeString(value: string): string {

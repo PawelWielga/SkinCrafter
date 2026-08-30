@@ -22,7 +22,7 @@ import {
   type ResolvedTextureItemDefinition,
   type TextureItemColorSlotDefinition,
 } from './textureItemDefinitions';
-import type { SkinCrafterSkinModel } from '../publicTypes';
+import type { SkinModel } from '../skinModel';
 import type { TextureInput } from '../utils/combineTextures';
 import type { ResolvedTextureLayers } from './textureLayers';
 
@@ -148,7 +148,7 @@ const sexOptions: Record<Sex, AppearanceOption> = {
   None: noneOption,
 };
 
-function getSkinModelForAppearance(appearance: AppearanceState): SkinCrafterSkinModel {
+function getSkinModelForAppearance(appearance: AppearanceState): SkinModel {
   return appearance.sex === 'Female' ? 'slim' : 'classic';
 }
 
@@ -171,7 +171,7 @@ function wardrobeOption(
   id: string,
   labelKey: string,
   definition: ResolvedTextureItemDefinition | null,
-  skinModel: SkinCrafterSkinModel
+  skinModel: SkinModel
 ): AppearanceOption[] {
   if (!definition || !isTextureItemCompatible(definition, skinModel)) return [];
   return textureItemOption(id, labelKey, definition);
@@ -197,7 +197,7 @@ export function getOptions(
   categoryId: AppearanceCategoryId,
   appearance: AppearanceState,
   assetBaseUrl?: string,
-  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
+  skinModel: SkinModel = getSkinModelForAppearance(appearance)
 ): AppearanceOption[] {
   if (categoryId === 'race') {
     return races.flatMap((race) => textureItemOption(
@@ -256,7 +256,7 @@ export function getOptions(
 
 export function normalizeAppearance(
   value: Partial<AppearanceState> | null,
-  skinModel?: SkinCrafterSkinModel
+  skinModel?: SkinModel
 ): AppearanceState {
   const next: AppearanceState = { ...defaultAppearance, ...(value ?? {}) };
   const raceOptions = skinModel
@@ -346,7 +346,7 @@ export function normalizeTextureLayerOrder(value: readonly string[] | null | und
 interface TextureItemCompositionContext {
   appearance: AppearanceState;
   assetBaseUrl: string | undefined;
-  skinModel: SkinCrafterSkinModel;
+  skinModel: SkinModel;
   wardrobeColors: WardrobeColorState;
 }
 
@@ -409,7 +409,7 @@ export function buildTextureInputs(
   appearance: AppearanceState,
   textureLayerOrder: readonly string[] = textureLayerCategories,
   assetBaseUrl?: string,
-  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance),
+  skinModel: SkinModel = getSkinModelForAppearance(appearance),
   wardrobeColors?: WardrobeColorState
 ): TextureInput[] {
   const context: TextureItemCompositionContext = {
@@ -426,7 +426,7 @@ export function buildTextureInputsForCategories(
   textureLayerOrder: readonly string[],
   activeCategories: readonly AppearanceCategoryId[],
   assetBaseUrl?: string,
-  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance),
+  skinModel: SkinModel = getSkinModelForAppearance(appearance),
   wardrobeColors?: WardrobeColorState
 ): TextureInput[] {
   const activeLayers = new Set(activeCategories.map(getVisualLayerForControl));
@@ -446,7 +446,7 @@ export function isColorControlEffective(
   categoryId: AppearanceCategoryId,
   appearance: AppearanceState,
   assetBaseUrl?: string,
-  skinModel: SkinCrafterSkinModel = getSkinModelForAppearance(appearance)
+  skinModel: SkinModel = getSkinModelForAppearance(appearance)
 ): boolean {
   const binding = getColorControlBinding(categoryId);
   if (!binding) return true;
