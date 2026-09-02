@@ -167,7 +167,7 @@ function textureItemOption(
   }];
 }
 
-function wardrobeOption(
+function textureLayerOption(
   id: string,
   labelKey: string,
   definition: ResolvedTextureItemDefinition | null,
@@ -175,6 +175,45 @@ function wardrobeOption(
 ): AppearanceOption[] {
   if (!definition || !isTextureItemCompatible(definition, skinModel)) return [];
   return textureItemOption(id, labelKey, definition);
+}
+
+interface TextureLayerOptionSource {
+  getOptions: (skinModel: SkinModel, assetBaseUrl?: string) => AppearanceOption[];
+}
+
+function createTextureLayerOptionSource<const ItemId extends string>(
+  categoryId: TextureLayerCategoryId,
+  itemIds: readonly ItemId[],
+  getDefinition?: (
+    itemId: ItemId,
+    skinModel: SkinModel,
+    assetBaseUrl?: string
+  ) => ResolvedTextureItemDefinition | null
+): TextureLayerOptionSource {
+  return {
+    getOptions: (skinModel, assetBaseUrl) => itemIds.flatMap((itemId) => {
+      if (itemId === 'None') return [noneOption];
+      const definition = getDefinition?.(itemId, skinModel, assetBaseUrl) ?? null;
+      return textureLayerOption(
+        itemId,
+        `option.${categoryId}.${itemId}`,
+        definition,
+        skinModel
+      );
+    }),
+  };
+}
+
+const textureLayerOptionSources: Record<TextureLayerCategoryId, TextureLayerOptionSource> = {
+  hat: createTextureLayerOptionSource('hat', hats, getHatDefinition),
+  shirt: createTextureLayerOptionSource('shirt', shirts, getShirtDefinition),
+  pants: createTextureLayerOptionSource('pants', pants, getPantsDefinition),
+  shoes: createTextureLayerOptionSource('shoes', ['None'] as const),
+  accessory: createTextureLayerOptionSource('accessory', ['None'] as const),
+};
+
+function isTextureLayerCategoryId(categoryId: AppearanceCategoryId): categoryId is TextureLayerCategoryId {
+  return textureLayerCategories.includes(categoryId as TextureLayerCategoryId);
 }
 
 function colorOptions(colors: readonly string[], keyPrefix = 'option.color'): AppearanceOption[] {
@@ -230,26 +269,8 @@ export function getOptions(
       : textureItemOption(hair, `option.hair.${hair}`, getHairDefinition(hair, skinModel, assetBaseUrl)));
   }
   if (categoryId === 'hairColor') return colorOptions(getHairColorPalette());
-  if (categoryId === 'hat') {
-    return hats.flatMap((hat) =>
-      hat === 'None'
-        ? [noneOption]
-        : wardrobeOption(hat, `option.hat.${hat}`, getHatDefinition(hat, skinModel, assetBaseUrl), skinModel)
-    );
-  }
-  if (categoryId === 'shirt') {
-    return shirts.flatMap((shirt) =>
-      shirt === 'None'
-        ? [noneOption]
-        : wardrobeOption(shirt, `option.shirt.${shirt}`, getShirtDefinition(shirt, skinModel, assetBaseUrl), skinModel)
-    );
-  }
-  if (categoryId === 'pants') {
-    return pants.flatMap((item) =>
-      item === 'None'
-        ? [noneOption]
-        : wardrobeOption(item, `option.pants.${item}`, getPantsDefinition(item, skinModel, assetBaseUrl), skinModel)
-    );
+  if (isTextureLayerCategoryId(categoryId)) {
+    return textureLayerOptionSources[categoryId].getOptions(skinModel, assetBaseUrl);
   }
   return [noneOption];
 }
